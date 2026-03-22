@@ -247,34 +247,34 @@ function DashboardTab({
 
   return (
     <div className="flex flex-col gap-12">
-      <div className="flex items-start justify-between gap-6">
-        <p className="text-xs text-zinc-400">Latest results</p>
-        <div className="flex shrink-0 gap-6">
-          <AsciiBox className="px-6 py-6 text-center">
-            <p className="text-xl leading-6 font-semibold text-zinc-900">
-              {normalCount}
-            </p>
-            <p className="text-[10px] leading-6 tracking-widest text-zinc-400 uppercase">
-              Normal
-            </p>
-          </AsciiBox>
-          <AsciiBox className="px-6 py-6 text-center">
-            <p className="text-xl leading-6 font-semibold text-zinc-900">
-              {borderlineCount}
-            </p>
-            <p className="text-[10px] leading-6 tracking-widest text-zinc-400 uppercase">
-              Borderline
-            </p>
-          </AsciiBox>
-          <AsciiBox className="px-6 py-6 text-center">
-            <p className="text-xl leading-6 font-semibold text-zinc-900">
-              {highCount}
-            </p>
-            <p className="text-[10px] leading-6 tracking-widest text-zinc-400 uppercase">
-              High
-            </p>
-          </AsciiBox>
+      <div className="grid grid-cols-4 gap-6">
+        <div className="flex items-center">
+          <p className="text-xs text-zinc-400">Latest results</p>
         </div>
+        <AsciiBox className="px-6 py-6 text-center">
+          <p className="text-xl leading-6 font-semibold text-zinc-900">
+            {normalCount}
+          </p>
+          <p className="text-[10px] leading-6 tracking-widest text-zinc-400 uppercase">
+            Normal
+          </p>
+        </AsciiBox>
+        <AsciiBox className="px-6 py-6 text-center">
+          <p className="text-xl leading-6 font-semibold text-zinc-900">
+            {borderlineCount}
+          </p>
+          <p className="text-[10px] leading-6 tracking-widest text-zinc-400 uppercase">
+            Borderline
+          </p>
+        </AsciiBox>
+        <AsciiBox className="px-6 py-6 text-center">
+          <p className="text-xl leading-6 font-semibold text-zinc-900">
+            {highCount}
+          </p>
+          <p className="text-[10px] leading-6 tracking-widest text-zinc-400 uppercase">
+            High
+          </p>
+        </AsciiBox>
       </div>
 
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">

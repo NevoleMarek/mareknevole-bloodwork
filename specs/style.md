@@ -8,7 +8,7 @@ The UI looks like a technical document printed on dot-grid paper — the kind yo
 
 - Color: `#f6f5f0` — warm off-white, like aged paper
 - Dot grid: `radial-gradient(#a8a89a 1px, transparent 1px)` at `24px × 24px`
-- The dot pattern lives on the `<main>` element (CSS `main` selector), not `<body>`. This anchors the grid to the content container so its origin is at `<main>`'s top-left corner. The outer page margins stay plain.
+- The dot pattern lives on `<body>`, anchored to the viewport origin. This keeps the grid fixed — on window resize, new dots appear at the edges instead of existing dots shifting.
 - All layout spacing uses multiples of 24px (`gap-6`, `p-6`, `gap-12`, `py-12`) to snap to the grid
   - 1 grid unit = 24px — use between sibling components at the same level
   - 2 grid units = 48px — use between distinct sections
