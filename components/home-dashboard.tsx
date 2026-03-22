@@ -295,10 +295,10 @@ function DashboardTab({
                   <button
                     key={line.key}
                     onClick={() => toggleVar(line.key)}
-                    className={`text-[10px] tracking-widest uppercase transition-colors ${
+                    className={`cursor-pointer text-[10px] tracking-widest uppercase transition-[transform,color] duration-75 hover:-translate-y-px active:translate-y-px ${
                       !hiddenVars.has(line.key)
                         ? "text-zinc-700"
-                        : "text-zinc-300"
+                        : "text-zinc-300 hover:text-zinc-500"
                     }`}
                   >
                     {line.key}
@@ -310,7 +310,7 @@ function DashboardTab({
                   <button
                     key={p.label}
                     onClick={() => setPeriod(p)}
-                    className={`px-3 py-1 text-[10px] tracking-widest uppercase transition-colors ${
+                    className={`cursor-pointer px-3 py-1 text-[10px] tracking-widest uppercase transition-[transform,color,background-color] duration-75 hover:-translate-y-px active:translate-y-px ${
                       period.label === p.label
                         ? "bg-zinc-900 text-white"
                         : "text-zinc-400 hover:text-zinc-600"
@@ -574,7 +574,7 @@ function VocabularyTab({
                 max: "",
               })
             }
-            className="text-[10px] tracking-widest text-zinc-400 uppercase hover:text-zinc-700"
+            className="cursor-pointer text-[10px] tracking-widest text-zinc-400 uppercase transition-[transform,color] duration-75 hover:-translate-y-px hover:text-zinc-700 active:translate-y-px"
           >
             + Add
           </button>
@@ -649,13 +649,13 @@ function VocabularyTab({
                       <div className="flex justify-end gap-3">
                         <button
                           onClick={saveEdit}
-                          className="text-zinc-700 hover:text-zinc-900"
+                          className="cursor-pointer text-zinc-700 transition-[transform,color] duration-75 hover:-translate-y-px hover:text-zinc-900 active:translate-y-px"
                         >
                           save
                         </button>
                         <button
                           onClick={() => setEditing({ kind: "none" })}
-                          className="text-zinc-400 hover:text-zinc-600"
+                          className="cursor-pointer text-zinc-400 transition-[transform,color] duration-75 hover:-translate-y-px hover:text-zinc-600 active:translate-y-px"
                         >
                           cancel
                         </button>
@@ -677,13 +677,13 @@ function VocabularyTab({
                       <div className="flex justify-end gap-3">
                         <button
                           onClick={() => startEdit(e)}
-                          className="text-zinc-400 hover:text-zinc-700"
+                          className="cursor-pointer text-zinc-400 transition-[transform,color] duration-75 hover:-translate-y-px hover:text-zinc-700 active:translate-y-px"
                         >
                           edit
                         </button>
                         <button
                           onClick={() => deleteEntry(e.key)}
-                          className="text-zinc-400 hover:text-zinc-900"
+                          className="cursor-pointer text-zinc-400 transition-[transform,color] duration-75 hover:-translate-y-px hover:text-zinc-900 active:translate-y-px"
                         >
                           delete
                         </button>
@@ -742,13 +742,13 @@ function VocabularyTab({
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={saveAdd}
-                    className="text-zinc-700 hover:text-zinc-900"
+                    className="cursor-pointer text-zinc-700 transition-[transform,color] duration-75 hover:-translate-y-px hover:text-zinc-900 active:translate-y-px"
                   >
                     save
                   </button>
                   <button
                     onClick={() => setEditing({ kind: "none" })}
-                    className="text-zinc-400 hover:text-zinc-600"
+                    className="cursor-pointer text-zinc-400 transition-[transform,color] duration-75 hover:-translate-y-px hover:text-zinc-600 active:translate-y-px"
                   >
                     cancel
                   </button>
@@ -776,6 +776,8 @@ function buildMarkdown(
   readings: BloodworkReading[],
 ): string {
   const lines: string[] = ["# Bloodwork Results", ""];
+
+  // Results per reading
   for (const reading of [...readings].reverse()) {
     const date = new Date(reading.date).toLocaleDateString("en-US", {
       year: "numeric",
@@ -783,19 +785,27 @@ function buildMarkdown(
       day: "numeric",
     });
     lines.push(`## ${date}`, "");
-    lines.push("| Test | Value | Unit | Range | Status |");
-    lines.push("|------|-------|------|-------|--------|");
+    lines.push("| Test | Value | Unit | Status |");
+    lines.push("|------|-------|------|--------|");
     for (const m of reading.measurements) {
       const entry = vocabulary.find((e) => e.key === m.vocabularyKey);
       const label = entry?.label ?? m.vocabularyKey;
-      const min = entry?.referenceRange.min ?? "—";
-      const max = entry?.referenceRange.max ?? "—";
-      lines.push(
-        `| ${label} | ${m.value} | ${m.unit} | ${min}–${max} | ${m.status} |`,
-      );
+      lines.push(`| ${label} | ${m.value} | ${m.unit} | ${m.status} |`);
     }
     lines.push("");
   }
+
+  // Reference ranges (once, at the bottom)
+  lines.push("## Reference Ranges", "");
+  lines.push("| Test | Unit | Range |");
+  lines.push("|------|------|-------|");
+  for (const entry of vocabulary) {
+    lines.push(
+      `| ${entry.label} | ${entry.unit} | ${entry.referenceRange.min}–${entry.referenceRange.max} |`,
+    );
+  }
+  lines.push("");
+
   return lines.join("\n");
 }
 
@@ -884,7 +894,7 @@ export function HomeDashboard() {
             disabled={
               dataState.kind !== "ready" || dataState.readings.length === 0
             }
-            className="relative border border-zinc-400 bg-[#f6f5f0] px-6 py-3 text-xs tracking-widest text-zinc-700 uppercase transition-colors hover:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="relative cursor-pointer border border-zinc-400 bg-[#f6f5f0] px-6 py-3 text-xs tracking-widest text-zinc-700 uppercase transition-[transform,border-color] duration-75 hover:-translate-y-px hover:border-zinc-700 active:translate-y-px active:border-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
           >
             <span className="pointer-events-none absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
               +
@@ -910,7 +920,7 @@ export function HomeDashboard() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importState.kind === "loading"}
-            className="relative border border-zinc-400 bg-[#f6f5f0] px-6 py-3 text-xs tracking-widest text-zinc-700 uppercase transition-colors hover:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="relative cursor-pointer border border-zinc-400 bg-[#f6f5f0] px-6 py-3 text-xs tracking-widest text-zinc-700 uppercase transition-[transform,border-color] duration-75 hover:-translate-y-px hover:border-zinc-700 active:translate-y-px active:border-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
           >
             <span className="pointer-events-none absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
               +
@@ -934,7 +944,7 @@ export function HomeDashboard() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`mb-[-1px] pb-3 text-xs tracking-widest uppercase transition-colors ${
+            className={`mb-[-1px] cursor-pointer pb-3 text-xs tracking-widest uppercase transition-[transform,color] duration-75 hover:-translate-y-px active:translate-y-px ${
               activeTab === tab
                 ? "border-b-2 border-zinc-900 text-zinc-900"
                 : "text-zinc-400 hover:text-zinc-600"
