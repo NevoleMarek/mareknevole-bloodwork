@@ -66,13 +66,24 @@ function statusLabel(status: Status): string {
   throw new Error(`Unknown status: ${status}`);
 }
 
-function rangePercent(metric: Metric): number {
+function rangeBarData(metric: Metric): {
+  zoneLeft: number;
+  zoneWidth: number;
+  valuePos: number;
+} {
   const range = metric.max - metric.min;
-  if (range === 0) return 100;
-  return Math.min(
-    100,
-    Math.max(0, ((metric.value - metric.min) / range) * 100),
+  if (range === 0) return { zoneLeft: 20, zoneWidth: 60, valuePos: 50 };
+  const pad = range * 0.25;
+  const viewMin = metric.min - pad;
+  const viewMax = metric.max + pad;
+  const span = viewMax - viewMin;
+  const zoneLeft = ((metric.min - viewMin) / span) * 100;
+  const zoneWidth = (range / span) * 100;
+  const valuePos = Math.min(
+    97,
+    Math.max(3, ((metric.value - viewMin) / span) * 100),
   );
+  return { zoneLeft, zoneWidth, valuePos };
 }
 
 function deriveMetrics(
@@ -171,6 +182,22 @@ function AsciiBox({
   );
 }
 
+function RangeBar({ metric }: { metric: Metric }) {
+  const { zoneLeft, zoneWidth, valuePos } = rangeBarData(metric);
+  return (
+    <div className="relative h-1 w-full bg-zinc-100">
+      <div
+        className="absolute top-0 h-full bg-zinc-200"
+        style={{ left: `${zoneLeft}%`, width: `${zoneWidth}%` }}
+      />
+      <div
+        className={`absolute top-1/2 h-3 w-0.5 -translate-x-1/2 -translate-y-1/2 ${statusBarFill[metric.status]}`}
+        style={{ left: `${valuePos}%` }}
+      />
+    </div>
+  );
+}
+
 function MetricCard({ metric }: { metric: Metric }) {
   return (
     <AsciiBox className="p-6">
@@ -184,12 +211,7 @@ function MetricCard({ metric }: { metric: Metric }) {
         <span className="text-xs leading-6 text-zinc-400">{metric.unit}</span>
       </div>
       <div className="mt-6 flex h-6 items-center">
-        <div className="h-px w-full bg-zinc-100">
-          <div
-            className={`h-full ${statusBarFill[metric.status]}`}
-            style={{ width: `${rangePercent(metric)}%` }}
-          />
-        </div>
+        <RangeBar metric={metric} />
       </div>
       <div className="mt-6 flex items-center justify-between">
         <span className={`text-xs leading-6 ${statusText[metric.status]}`}>
@@ -389,11 +411,8 @@ function DashboardTab({
               <span className="w-36 shrink-0 text-xs text-zinc-400">
                 {m.label}
               </span>
-              <div className="relative h-px flex-1 bg-zinc-100">
-                <div
-                  className={`absolute top-0 left-0 h-full ${statusBarFill[m.status]}`}
-                  style={{ width: `${rangePercent(m)}%` }}
-                />
+              <div className="flex flex-1 items-center">
+                <RangeBar metric={m} />
               </div>
               <span
                 className={`w-24 shrink-0 text-right text-xs ${statusText[m.status]}`}
