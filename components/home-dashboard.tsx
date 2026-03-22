@@ -1,86 +1,902 @@
-const quickChecks = [
-  "Run bun run check during everyday development.",
-  "Use bun run check:full before larger milestones.",
-  "Keep specs and agent guidance aligned with code changes.",
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+import type {
+  BloodworkReading,
+  Status,
+  VocabularyEntry,
+} from "@/types/bloodwork";
+
+type Metric = {
+  label: string;
+  value: number;
+  unit: string;
+  min: number;
+  max: number;
+  status: Status;
+};
+
+type Tab = "dashboard" | "data" | "vocabulary";
+
+type ImportState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "done" }
+  | { kind: "error"; message: string };
+
+type DataState =
+  | { kind: "loading" }
+  | {
+      kind: "ready";
+      vocabulary: VocabularyEntry[];
+      readings: BloodworkReading[];
+    };
+
+// Bar fill darkness signals severity
+const statusBarFill: Record<Status, string> = {
+  normal: "bg-zinc-300",
+  borderline: "bg-zinc-600",
+  high: "bg-zinc-900",
+  low: "bg-zinc-400",
+};
+
+const statusText: Record<Status, string> = {
+  normal: "text-zinc-400",
+  borderline: "text-zinc-700",
+  high: "text-zinc-900 font-semibold",
+  low: "text-zinc-500",
+};
+
+function statusLabel(status: Status): string {
+  if (status === "normal") return "normal";
+  if (status === "borderline") return "borderline";
+  if (status === "high") return "↑ high";
+  if (status === "low") return "↓ low";
+  throw new Error(`Unknown status: ${status}`);
+}
+
+function rangePercent(metric: Metric): number {
+  const range = metric.max - metric.min;
+  if (range === 0) return 100;
+  return Math.min(
+    100,
+    Math.max(0, ((metric.value - metric.min) / range) * 100),
+  );
+}
+
+function deriveMetrics(
+  vocabulary: VocabularyEntry[],
+  readings: BloodworkReading[],
+): Metric[] {
+  if (readings.length === 0) return [];
+  const latest = readings[readings.length - 1];
+  return latest.measurements.map((m) => {
+    const entry = vocabulary.find((e) => e.key === m.vocabularyKey);
+    if (!entry) throw new Error(`Unknown vocabulary key: ${m.vocabularyKey}`);
+    return {
+      label: entry.label,
+      value: m.value,
+      unit: m.unit,
+      min: entry.referenceRange.min,
+      max: entry.referenceRange.max,
+      status: m.status,
+    };
+  });
+}
+
+function deriveTrendData(
+  vocabulary: VocabularyEntry[],
+  readings: BloodworkReading[],
+): Record<string, unknown>[] {
+  return readings.map((r) => {
+    const point: Record<string, unknown> = {
+      date: new Date(r.date).toLocaleDateString("en-US", {
+        month: "short",
+        year: "2-digit",
+      }),
+    };
+    for (const m of r.measurements) {
+      const entry = vocabulary.find((e) => e.key === m.vocabularyKey);
+      if (entry) point[entry.label] = m.value;
+    }
+    return point;
+  });
+}
+
+const STROKE_COLORS = ["#1a1a1a", "#555555", "#888888", "#bbbbbb"];
+const STROKE_DASHES: (string | undefined)[] = [undefined, "6 3", "2 3", "10 4"];
+
+function deriveTrendLines(trendData: Record<string, unknown>[]) {
+  const allKeys = new Set<string>();
+  for (const point of trendData) {
+    for (const key of Object.keys(point)) {
+      if (key !== "date") allKeys.add(key);
+    }
+  }
+  return Array.from(allKeys)
+    .slice(0, 4)
+    .map((key, i) => ({
+      key,
+      stroke: STROKE_COLORS[i],
+      dash: STROKE_DASHES[i],
+    }));
+}
+
+const PERIODS: { label: string; count: number }[] = [
+  { label: "6m", count: 3 },
+  { label: "1y", count: 4 },
+  { label: "All", count: Infinity },
 ];
 
-const starterTracks = [
-  {
-    title: "Build fast",
-    description:
-      "Next.js, React, TypeScript, and Bun keep the local feedback loop quick.",
-  },
-  {
-    title: "Stay consistent",
-    description:
-      "ESLint, Prettier, and typed paths keep code quality high without much ceremony.",
-  },
-  {
-    title: "Test the UI",
-    description:
-      "Vitest and Testing Library are ready for components and small interaction checks.",
-  },
-];
+// Box with + corners over CSS border lines. Corner spans use bg-[#f6f5f0] to
+// cover the border junction so + reads as the corner, not an overlay.
+function AsciiBox({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const c =
+    "pointer-events-none absolute bg-[#f6f5f0] leading-none text-zinc-400 select-none";
+  return (
+    <div
+      className={`relative border border-zinc-400 bg-[#f6f5f0] ${className ?? ""}`}
+    >
+      <span className={`${c} top-0 left-0 -translate-x-1/2 -translate-y-1/2`}>
+        +
+      </span>
+      <span className={`${c} top-0 right-0 translate-x-1/2 -translate-y-1/2`}>
+        +
+      </span>
+      <span className={`${c} bottom-0 left-0 -translate-x-1/2 translate-y-1/2`}>
+        +
+      </span>
+      <span className={`${c} right-0 bottom-0 translate-x-1/2 translate-y-1/2`}>
+        +
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function MetricCard({ metric }: { metric: Metric }) {
+  return (
+    <AsciiBox className="p-6">
+      <p className="mb-1 text-[10px] tracking-widest text-zinc-400 uppercase">
+        {metric.label}
+      </p>
+      <div className="flex items-end gap-1.5">
+        <span className="text-xl font-semibold text-zinc-900">
+          {metric.value}
+        </span>
+        <span className="mb-0.5 text-xs text-zinc-400">{metric.unit}</span>
+      </div>
+      <div className="mt-6 h-px bg-zinc-100">
+        <div
+          className={`h-full ${statusBarFill[metric.status]}`}
+          style={{ width: `${rangePercent(metric)}%` }}
+        />
+      </div>
+      <div className="mt-3 flex items-center justify-between">
+        <span className={`text-xs ${statusText[metric.status]}`}>
+          {statusLabel(metric.status)}
+        </span>
+        <span className="text-xs text-zinc-400">
+          {metric.min}–{metric.max}
+        </span>
+      </div>
+    </AsciiBox>
+  );
+}
+
+function DashboardTab({
+  metrics,
+  trendData,
+  trendLines,
+}: {
+  metrics: Metric[];
+  trendData: Record<string, unknown>[];
+  trendLines: { key: string; stroke: string; dash?: string }[];
+}) {
+  const [hiddenVars, setHiddenVars] = useState<Set<string>>(new Set());
+  const [period, setPeriod] = useState(PERIODS[PERIODS.length - 1]);
+
+  function toggleVar(key: string) {
+    setHiddenVars((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        if (trendLines.length - next.size <= 1) return prev;
+        next.add(key);
+      }
+      return next;
+    });
+  }
+
+  const visibleLines = trendLines.filter((l) => !hiddenVars.has(l.key));
+  const visibleData = trendData.slice(-period.count);
+
+  const normalCount = metrics.filter((m) => m.status === "normal").length;
+  const borderlineCount = metrics.filter(
+    (m) => m.status === "borderline",
+  ).length;
+  const highCount = metrics.filter((m) => m.status === "high").length;
+
+  if (metrics.length === 0) {
+    return (
+      <p className="text-xs text-zinc-400">
+        No data yet — import a PDF to get started.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-12">
+      <div className="flex items-start justify-between gap-6">
+        <p className="text-xs text-zinc-400">Latest results</p>
+        <div className="flex shrink-0 gap-6">
+          <AsciiBox className="px-6 py-3 text-center">
+            <p className="text-xl font-semibold text-zinc-900">{normalCount}</p>
+            <p className="text-[10px] tracking-widest text-zinc-400 uppercase">
+              Normal
+            </p>
+          </AsciiBox>
+          <AsciiBox className="px-6 py-3 text-center">
+            <p className="text-xl font-semibold text-zinc-900">
+              {borderlineCount}
+            </p>
+            <p className="text-[10px] tracking-widest text-zinc-400 uppercase">
+              Borderline
+            </p>
+          </AsciiBox>
+          <AsciiBox className="px-6 py-3 text-center">
+            <p className="text-xl font-semibold text-zinc-900">{highCount}</p>
+            <p className="text-[10px] tracking-widest text-zinc-400 uppercase">
+              High
+            </p>
+          </AsciiBox>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+        {metrics.map((m) => (
+          <MetricCard key={m.label} metric={m} />
+        ))}
+      </div>
+
+      {trendData.length > 1 && (
+        <AsciiBox className="p-6">
+          <div className="mb-6 flex items-center justify-between gap-6">
+            <p className="text-[10px] tracking-widest text-zinc-400 uppercase">
+              Trends over time
+            </p>
+            <div className="flex items-center gap-4">
+              <div className="flex gap-2">
+                {trendLines.map((line) => (
+                  <button
+                    key={line.key}
+                    onClick={() => toggleVar(line.key)}
+                    className={`text-[10px] tracking-widest uppercase transition-colors ${
+                      !hiddenVars.has(line.key)
+                        ? "text-zinc-700"
+                        : "text-zinc-300"
+                    }`}
+                  >
+                    {line.key}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-1 border border-zinc-200">
+                {PERIODS.map((p) => (
+                  <button
+                    key={p.label}
+                    onClick={() => setPeriod(p)}
+                    className={`px-3 py-1 text-[10px] tracking-widest uppercase transition-colors ${
+                      period.label === p.label
+                        ? "bg-zinc-900 text-white"
+                        : "text-zinc-400 hover:text-zinc-600"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={visibleData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.08)" />
+              <XAxis
+                dataKey="date"
+                tick={{
+                  fill: "#a1a1aa",
+                  fontSize: 11,
+                  fontFamily: "monospace",
+                }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{
+                  fill: "#a1a1aa",
+                  fontSize: 11,
+                  fontFamily: "monospace",
+                }}
+                axisLine={false}
+                tickLine={false}
+                width={36}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "#f6f5f0",
+                  border: "1px solid #d4d4d8",
+                  borderRadius: 0,
+                  fontFamily: "monospace",
+                  fontSize: 12,
+                }}
+                labelStyle={{ color: "#71717a" }}
+                itemStyle={{ color: "#1a1a1a" }}
+              />
+              <Legend
+                wrapperStyle={{
+                  fontSize: 11,
+                  color: "#a1a1aa",
+                  fontFamily: "monospace",
+                }}
+              />
+              {visibleLines.map((line) => (
+                <Line
+                  key={line.key}
+                  type="monotone"
+                  dataKey={line.key}
+                  stroke={line.stroke}
+                  strokeWidth={1.5}
+                  strokeDasharray={line.dash}
+                  dot={{ r: 2 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </AsciiBox>
+      )}
+
+      <AsciiBox className="p-6">
+        <p className="mb-6 text-[10px] tracking-widest text-zinc-400 uppercase">
+          Reference ranges
+        </p>
+        <div className="flex flex-col gap-6">
+          {metrics.map((m) => (
+            <div key={m.label} className="flex items-center gap-6">
+              <span className="w-36 shrink-0 text-xs text-zinc-400">
+                {m.label}
+              </span>
+              <div className="relative h-px flex-1 bg-zinc-100">
+                <div
+                  className={`absolute top-0 left-0 h-full ${statusBarFill[m.status]}`}
+                  style={{ width: `${rangePercent(m)}%` }}
+                />
+              </div>
+              <span
+                className={`w-24 shrink-0 text-right text-xs ${statusText[m.status]}`}
+              >
+                {m.value} {m.unit}
+              </span>
+            </div>
+          ))}
+        </div>
+      </AsciiBox>
+    </div>
+  );
+}
+
+function DataTab({ metrics }: { metrics: Metric[] }) {
+  if (metrics.length === 0) {
+    return (
+      <p className="text-xs text-zinc-400">
+        No data yet — import a PDF to get started.
+      </p>
+    );
+  }
+
+  return (
+    <AsciiBox>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-zinc-200">
+            <th className="px-6 py-3 text-left tracking-widest text-zinc-400 uppercase">
+              Test
+            </th>
+            <th className="px-6 py-3 text-right tracking-widest text-zinc-400 uppercase">
+              Value
+            </th>
+            <th className="px-6 py-3 text-right tracking-widest text-zinc-400 uppercase">
+              Unit
+            </th>
+            <th className="px-6 py-3 text-right tracking-widest text-zinc-400 uppercase">
+              Range
+            </th>
+            <th className="px-6 py-3 text-right tracking-widest text-zinc-400 uppercase">
+              Status
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {metrics.map((m, i) => (
+            <tr
+              key={m.label}
+              className={
+                i < metrics.length - 1 ? "border-b border-zinc-100" : ""
+              }
+            >
+              <td className="px-6 py-4 text-zinc-900">{m.label}</td>
+              <td className="px-6 py-4 text-right text-zinc-700">{m.value}</td>
+              <td className="px-6 py-4 text-right text-zinc-400">{m.unit}</td>
+              <td className="px-6 py-4 text-right text-zinc-400">
+                {m.min}–{m.max}
+              </td>
+              <td className={`px-6 py-4 text-right ${statusText[m.status]}`}>
+                {statusLabel(m.status)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </AsciiBox>
+  );
+}
+
+type VocabEditing =
+  | { kind: "none" }
+  | {
+      kind: "editing";
+      key: string;
+      label: string;
+      unit: string;
+      min: string;
+      max: string;
+    }
+  | { kind: "adding"; label: string; unit: string; min: string; max: string };
+
+const inputCls =
+  "bg-transparent border-b border-zinc-400 text-xs text-zinc-900 outline-none w-full";
+
+function VocabularyTab({
+  vocabulary,
+  onRefresh,
+}: {
+  vocabulary: VocabularyEntry[];
+  onRefresh: () => void;
+}) {
+  const [editing, setEditing] = useState<VocabEditing>({ kind: "none" });
+
+  function startEdit(e: VocabularyEntry) {
+    setEditing({
+      kind: "editing",
+      key: e.key,
+      label: e.label,
+      unit: e.unit,
+      min: String(e.referenceRange.min),
+      max: String(e.referenceRange.max),
+    });
+  }
+
+  async function saveEdit() {
+    if (editing.kind !== "editing") return;
+    await fetch("/api/vocabulary", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        entry: {
+          key: editing.key,
+          label: editing.label,
+          unit: editing.unit,
+          referenceRange: {
+            min: Number(editing.min),
+            max: Number(editing.max),
+          },
+        },
+      }),
+    });
+    setEditing({ kind: "none" });
+    onRefresh();
+  }
+
+  async function saveAdd() {
+    if (editing.kind !== "adding") return;
+    const key = editing.label.toLowerCase().replace(/\s+/g, "_");
+    await fetch("/api/vocabulary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        entry: {
+          key,
+          label: editing.label,
+          unit: editing.unit,
+          referenceRange: {
+            min: Number(editing.min),
+            max: Number(editing.max),
+          },
+        },
+      }),
+    });
+    setEditing({ kind: "none" });
+    onRefresh();
+  }
+
+  async function deleteEntry(key: string) {
+    await fetch("/api/vocabulary", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key }),
+    });
+    onRefresh();
+  }
+
+  return (
+    <AsciiBox>
+      <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-3">
+        <span className="text-[10px] tracking-widest text-zinc-400 uppercase">
+          Vocabulary
+        </span>
+        {editing.kind === "none" && (
+          <button
+            onClick={() =>
+              setEditing({
+                kind: "adding",
+                label: "",
+                unit: "",
+                min: "",
+                max: "",
+              })
+            }
+            className="text-[10px] tracking-widest text-zinc-400 uppercase hover:text-zinc-700"
+          >
+            + Add
+          </button>
+        )}
+      </div>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-zinc-200">
+            <th className="px-6 py-3 text-left tracking-widest text-zinc-400 uppercase">
+              Test
+            </th>
+            <th className="px-6 py-3 text-right tracking-widest text-zinc-400 uppercase">
+              Unit
+            </th>
+            <th className="px-6 py-3 text-right tracking-widest text-zinc-400 uppercase">
+              Reference Range
+            </th>
+            <th className="px-6 py-3" />
+          </tr>
+        </thead>
+        <tbody>
+          {vocabulary.map((e, i) => {
+            const isEditing =
+              editing.kind === "editing" && editing.key === e.key;
+            const isLast =
+              i === vocabulary.length - 1 && editing.kind !== "adding";
+            return (
+              <tr
+                key={e.key}
+                className={isLast ? "" : "border-b border-zinc-100"}
+              >
+                {isEditing ? (
+                  <>
+                    <td className="px-6 py-3">
+                      <input
+                        className={inputCls}
+                        value={editing.label}
+                        onChange={(ev) =>
+                          setEditing({ ...editing, label: ev.target.value })
+                        }
+                      />
+                    </td>
+                    <td className="px-6 py-3">
+                      <input
+                        className={inputCls + " text-right"}
+                        value={editing.unit}
+                        onChange={(ev) =>
+                          setEditing({ ...editing, unit: ev.target.value })
+                        }
+                      />
+                    </td>
+                    <td className="px-6 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <input
+                          className={inputCls + " w-16 text-right"}
+                          value={editing.min}
+                          onChange={(ev) =>
+                            setEditing({ ...editing, min: ev.target.value })
+                          }
+                        />
+                        <span className="text-zinc-400">–</span>
+                        <input
+                          className={inputCls + " w-16 text-right"}
+                          value={editing.max}
+                          onChange={(ev) =>
+                            setEditing({ ...editing, max: ev.target.value })
+                          }
+                        />
+                      </div>
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={saveEdit}
+                          className="text-zinc-700 hover:text-zinc-900"
+                        >
+                          save
+                        </button>
+                        <button
+                          onClick={() => setEditing({ kind: "none" })}
+                          className="text-zinc-400 hover:text-zinc-600"
+                        >
+                          cancel
+                        </button>
+                      </div>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="px-6 py-4 text-zinc-900">{e.label}</td>
+                    <td className="px-6 py-4 text-right text-zinc-400">
+                      {e.unit}
+                    </td>
+                    <td className="px-6 py-4 text-right text-zinc-400">
+                      {e.referenceRange.min}–{e.referenceRange.max}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={() => startEdit(e)}
+                          className="text-zinc-400 hover:text-zinc-700"
+                        >
+                          edit
+                        </button>
+                        <button
+                          onClick={() => deleteEntry(e.key)}
+                          className="text-zinc-400 hover:text-zinc-900"
+                        >
+                          delete
+                        </button>
+                      </div>
+                    </td>
+                  </>
+                )}
+              </tr>
+            );
+          })}
+          {editing.kind === "adding" && (
+            <tr>
+              <td className="px-6 py-3">
+                <input
+                  className={inputCls}
+                  placeholder="Label"
+                  value={editing.label}
+                  autoFocus
+                  onChange={(ev) =>
+                    setEditing({ ...editing, label: ev.target.value })
+                  }
+                />
+              </td>
+              <td className="px-6 py-3">
+                <input
+                  className={inputCls + " text-right"}
+                  placeholder="Unit"
+                  value={editing.unit}
+                  onChange={(ev) =>
+                    setEditing({ ...editing, unit: ev.target.value })
+                  }
+                />
+              </td>
+              <td className="px-6 py-3">
+                <div className="flex items-center justify-end gap-1">
+                  <input
+                    className={inputCls + " w-16 text-right"}
+                    placeholder="Min"
+                    value={editing.min}
+                    onChange={(ev) =>
+                      setEditing({ ...editing, min: ev.target.value })
+                    }
+                  />
+                  <span className="text-zinc-400">–</span>
+                  <input
+                    className={inputCls + " w-16 text-right"}
+                    placeholder="Max"
+                    value={editing.max}
+                    onChange={(ev) =>
+                      setEditing({ ...editing, max: ev.target.value })
+                    }
+                  />
+                </div>
+              </td>
+              <td className="px-6 py-3 text-right">
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={saveAdd}
+                    className="text-zinc-700 hover:text-zinc-900"
+                  >
+                    save
+                  </button>
+                  <button
+                    onClick={() => setEditing({ kind: "none" })}
+                    className="text-zinc-400 hover:text-zinc-600"
+                  >
+                    cancel
+                  </button>
+                </div>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </AsciiBox>
+  );
+}
+
+type AppDataBody = {
+  vocabulary: { entries: VocabularyEntry[] };
+  readings: BloodworkReading[];
+};
+
+function fetchAppData(): Promise<AppDataBody> {
+  return fetch("/api/data").then((res) => res.json() as Promise<AppDataBody>);
+}
 
 export function HomeDashboard() {
+  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [importState, setImportState] = useState<ImportState>({ kind: "idle" });
+  const [dataState, setDataState] = useState<DataState>({ kind: "loading" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchAppData().then((body) => {
+      setDataState({
+        kind: "ready",
+        vocabulary: body.vocabulary.entries,
+        readings: body.readings,
+      });
+    });
+  }, []);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.currentTarget.files?.[0];
+    if (!file) return;
+
+    setImportState({ kind: "loading" });
+
+    const formData = new FormData();
+    formData.append("pdf", file);
+
+    const res = await fetch("/api/extract", { method: "POST", body: formData });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setImportState({
+        kind: "error",
+        message: (body as { error?: string }).error ?? "Extraction failed",
+      });
+      return;
+    }
+
+    setImportState({ kind: "done" });
+    e.currentTarget.value = "";
+    const body = await fetchAppData();
+    setDataState({
+      kind: "ready",
+      vocabulary: body.vocabulary.entries,
+      readings: body.readings,
+    });
+  }
+
+  const metrics =
+    dataState.kind === "ready"
+      ? deriveMetrics(dataState.vocabulary, dataState.readings)
+      : [];
+
+  const trendData =
+    dataState.kind === "ready"
+      ? deriveTrendData(dataState.vocabulary, dataState.readings)
+      : [];
+
+  const trendLines = deriveTrendLines(trendData);
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-16 px-6 py-12 sm:px-10 lg:px-12">
-      <section className="grid gap-10 lg:grid-cols-[1.4fr_0.9fr] lg:items-end">
-        <div className="space-y-6">
-          <span className="inline-flex w-fit items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-zinc-300 backdrop-blur">
-            Local-first starter
-          </span>
-          <div className="space-y-4">
-            <h1 className="max-w-3xl text-5xl font-semibold tracking-tight text-white sm:text-6xl">
-              Bloodwork is ready for rapid local development.
-            </h1>
-            <p className="max-w-2xl text-lg leading-8 text-zinc-300">
-              This scaffold gives you a polished Next.js foundation with fast
-              verification, modern styling, and a test setup that stays out of
-              the way while you build.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3 text-sm">
-            <div className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-cyan-100">
-              Next.js 16 + React 19
-            </div>
-            <div className="rounded-full border border-fuchsia-400/30 bg-fuchsia-400/10 px-4 py-2 text-fuchsia-100">
-              Bun-managed workflow
-            </div>
-            <div className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-emerald-100">
-              Fast checks by default
-            </div>
-          </div>
-        </div>
-
-        <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-cyan-950/20 backdrop-blur">
-          <p className="text-sm font-medium tracking-[0.2em] text-zinc-400 uppercase">
-            Suggested loop
-          </p>
-          <ul className="mt-4 space-y-4 text-sm leading-7 text-zinc-200">
-            {quickChecks.map((item) => (
-              <li key={item} className="flex gap-3">
-                <span className="mt-2 h-2 w-2 rounded-full bg-cyan-300" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </section>
-
-      <section className="grid gap-5 md:grid-cols-3">
-        {starterTracks.map((track) => (
-          <article
-            key={track.title}
-            className="rounded-3xl border border-white/10 bg-zinc-950/70 p-6"
+    <main className="mx-auto flex min-h-screen w-full max-w-[984px] flex-col gap-6 px-6 py-12">
+      <div className="flex h-12 items-center justify-between gap-6">
+        <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
+          Bloodwork
+        </h1>
+        <div className="flex items-center gap-6">
+          {importState.kind === "error" && (
+            <p className="text-xs text-zinc-500">{importState.message}</p>
+          )}
+          {importState.kind === "done" && (
+            <p className="text-xs text-zinc-400">Imported</p>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importState.kind === "loading"}
+            className="relative border border-zinc-400 bg-[#f6f5f0] px-6 py-3 text-xs tracking-widest text-zinc-700 uppercase transition-colors hover:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <p className="text-sm font-medium text-cyan-200">{track.title}</p>
-            <p className="mt-3 text-base leading-7 text-zinc-300">
-              {track.description}
-            </p>
-          </article>
+            <span className="pointer-events-none absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
+              +
+            </span>
+            <span className="pointer-events-none absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
+              +
+            </span>
+            <span className="pointer-events-none absolute bottom-0 left-0 -translate-x-1/2 translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
+              +
+            </span>
+            <span className="pointer-events-none absolute right-0 bottom-0 translate-x-1/2 translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
+              +
+            </span>
+            {importState.kind === "loading" ? "Importing…" : "Import PDF"}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex h-12 items-end gap-6 border-b border-zinc-200 bg-[#f6f5f0]">
+        {(["dashboard", "data", "vocabulary"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`mb-[-1px] pb-3 text-xs tracking-widest uppercase transition-colors ${
+              activeTab === tab
+                ? "border-b-2 border-zinc-900 text-zinc-900"
+                : "text-zinc-400 hover:text-zinc-600"
+            }`}
+          >
+            {tab}
+          </button>
         ))}
-      </section>
+      </div>
+
+      {dataState.kind === "loading" ? (
+        <p className="text-xs text-zinc-400">Loading…</p>
+      ) : activeTab === "dashboard" ? (
+        <DashboardTab
+          metrics={metrics}
+          trendData={trendData}
+          trendLines={trendLines}
+        />
+      ) : activeTab === "data" ? (
+        <DataTab metrics={metrics} />
+      ) : (
+        <VocabularyTab
+          vocabulary={dataState.vocabulary}
+          onRefresh={() =>
+            fetchAppData().then((body) =>
+              setDataState({
+                kind: "ready",
+                vocabulary: body.vocabulary.entries,
+                readings: body.readings,
+              }),
+            )
+          }
+        />
+      )}
     </main>
   );
 }
