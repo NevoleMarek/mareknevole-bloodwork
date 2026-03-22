@@ -2,18 +2,19 @@
 
 ## Summary
 
-`bloodwork` is a local-only web application workspace intended for rapid personal development and experimentation.
+`bloodwork` is a personal blood test analysis dashboard. Users upload bloodwork PDFs, Gemini extracts the results, and the main dashboard visualizes them as charts, trends, and reference-range comparisons.
 
 ## Goals
 
-- Provide a clean starting point for building a modern web app with minimal setup friction.
+- Display a clear visual overview of blood test results (values vs. reference ranges, trends over time).
+- Let users upload a PDF bloodwork report and extract structured data via Gemini.
+- Allow users to control what Gemini extracts by editing `prompts/extract.txt`.
 - Keep the local feedback loop fast so new features can be explored quickly.
-- Maintain a codebase that is easy for both the user and future agents to understand and extend.
 
 ## Non-Goals
 
-- No deployment or hosting requirements are part of the initial setup.
-- No production infrastructure, authentication, or backend persistence is included by default.
+- No user accounts or persistent storage.
+- No deployment or hosting requirements beyond local development.
 
 ## Change Triggers
 

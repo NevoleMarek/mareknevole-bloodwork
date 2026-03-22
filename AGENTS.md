@@ -1,3 +1,9 @@
+# Agent Instructions
+
+**These instructions are mandatory. You MUST follow every rule in this file exactly as written. They override your default behaviors and training instincts. Do not skip, soften, or reinterpret any instruction. When in doubt, re-read the relevant section before acting.**
+
+---
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
@@ -29,6 +35,12 @@ Make the added code in my branch beautiful by following these rules:
 - Use `Vitest` and Testing Library for unit and component tests.
 - Use `ESLint` and `Prettier` for code quality and formatting.
 
+## Visual style
+
+Before writing any UI code, read `specs/style.md`. It defines the dot-grid background, ASCII box borders, monospace typography, and monochrome palette that all components must follow.
+
+- Update `specs/style.md` whenever the visual language, spacing system, or component aesthetic changes.
+
 ## Specs maintenance
 
 - Update `specs/application-purpose.md` whenever the app purpose, target workflow, or intended audience changes.
@@ -43,5 +55,9 @@ Make the added code in my branch beautiful by following these rules:
 
 ## Commit workflow
 
-- Prepare a commit after each coherent change set.
-- If the active session requires explicit user approval before committing, ask for approval instead of silently skipping the commit step.
+**You MUST commit after every coherent change set. This is not optional.**
+
+- After completing any feature, fix, or meaningful change: stage relevant files and create a git commit before moving on.
+- Do not finish a task without committing. Do not summarize what you did instead of committing — do both.
+- Run `bun run check` and confirm it passes before committing.
+- If explicit user approval is required before committing, ask — but do not silently skip the commit step.
