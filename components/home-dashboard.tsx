@@ -757,10 +757,39 @@ function fetchAppData(): Promise<AppDataBody> {
   return fetch("/api/data").then((res) => res.json() as Promise<AppDataBody>);
 }
 
+function buildMarkdown(
+  vocabulary: VocabularyEntry[],
+  readings: BloodworkReading[],
+): string {
+  const lines: string[] = ["# Bloodwork Results", ""];
+  for (const reading of [...readings].reverse()) {
+    const date = new Date(reading.date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    lines.push(`## ${date}`, "");
+    lines.push("| Test | Value | Unit | Range | Status |");
+    lines.push("|------|-------|------|-------|--------|");
+    for (const m of reading.measurements) {
+      const entry = vocabulary.find((e) => e.key === m.vocabularyKey);
+      const label = entry?.label ?? m.vocabularyKey;
+      const min = entry?.referenceRange.min ?? "—";
+      const max = entry?.referenceRange.max ?? "—";
+      lines.push(
+        `| ${label} | ${m.value} | ${m.unit} | ${min}–${max} | ${m.status} |`,
+      );
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
 export function HomeDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [importState, setImportState] = useState<ImportState>({ kind: "idle" });
   const [dataState, setDataState] = useState<DataState>({ kind: "loading" });
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -772,6 +801,14 @@ export function HomeDashboard() {
       });
     });
   }, []);
+
+  function copyMarkdown() {
+    if (dataState.kind !== "ready") return;
+    const md = buildMarkdown(dataState.vocabulary, dataState.readings);
+    navigator.clipboard.writeText(md);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.currentTarget.files?.[0];
@@ -828,6 +865,27 @@ export function HomeDashboard() {
           {importState.kind === "done" && (
             <p className="text-xs text-zinc-400">Imported</p>
           )}
+          <button
+            onClick={copyMarkdown}
+            disabled={
+              dataState.kind !== "ready" || dataState.readings.length === 0
+            }
+            className="relative border border-zinc-400 bg-[#f6f5f0] px-6 py-3 text-xs tracking-widest text-zinc-700 uppercase transition-colors hover:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <span className="pointer-events-none absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
+              +
+            </span>
+            <span className="pointer-events-none absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
+              +
+            </span>
+            <span className="pointer-events-none absolute bottom-0 left-0 -translate-x-1/2 translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
+              +
+            </span>
+            <span className="pointer-events-none absolute right-0 bottom-0 translate-x-1/2 translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
+              +
+            </span>
+            {copied ? "Copied!" : "Copy as Markdown"}
+          </button>
           <input
             ref={fileInputRef}
             type="file"
