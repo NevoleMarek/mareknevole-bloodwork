@@ -877,7 +877,7 @@ export function HomeDashboard() {
   const trendLines = deriveTrendLines(trendData);
 
   return (
-    <main className="flex min-h-screen w-full max-w-[984px] flex-col gap-6 px-6 py-12">
+    <main className="mx-auto flex min-h-screen w-full max-w-[984px] flex-col gap-6 px-6 py-12">
       <div className="flex h-12 items-center justify-between gap-6">
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
           Bloodwork
