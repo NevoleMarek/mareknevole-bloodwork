@@ -939,17 +939,29 @@ export function HomeDashboard() {
         </div>
       </div>
 
-      <div className="flex h-12 items-end gap-6 border-b border-zinc-200 bg-[#f6f5f0]">
+      <div className="flex h-12 items-center gap-6">
         {(["dashboard", "data", "vocabulary"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`mb-[-1px] cursor-pointer pb-3 text-xs tracking-widest uppercase transition-[transform,color] duration-75 hover:-translate-y-px active:translate-y-px ${
+            className={`relative cursor-pointer border px-4 py-2 text-xs tracking-widest uppercase transition-[transform,border-color,color] duration-75 hover:-translate-y-px active:translate-y-px ${
               activeTab === tab
-                ? "border-b-2 border-zinc-900 text-zinc-900"
-                : "text-zinc-400 hover:text-zinc-600"
+                ? "border-zinc-900 text-zinc-900"
+                : "border-zinc-200 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600"
             }`}
           >
+            <span className="pointer-events-none absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
+              +
+            </span>
+            <span className="pointer-events-none absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
+              +
+            </span>
+            <span className="pointer-events-none absolute bottom-0 left-0 -translate-x-1/2 translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
+              +
+            </span>
+            <span className="pointer-events-none absolute right-0 bottom-0 translate-x-1/2 translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
+              +
+            </span>
             {tab}
           </button>
         ))}

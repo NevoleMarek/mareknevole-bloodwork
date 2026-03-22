@@ -64,6 +64,6 @@ Four grayscale tones with distinct dash patterns so lines are distinguishable wi
 ## Interactive elements
 
 - Buttons: same `AsciiBox` corner pattern applied inline with `position: relative`
-- Tabs: plain text underline (`border-b border-zinc-900`) for the active tab — no box
+- Tabs: ASCII box corners + border, same inline pattern as buttons. Active: `border-zinc-900 text-zinc-900`. Inactive: `border-zinc-200 text-zinc-400`, hover darkens border to `border-zinc-400`
 - Period selector: small borderless buttons inside a `border-zinc-200` wrapper
 - All hover states use border darkening, never background color change
