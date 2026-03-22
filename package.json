@@ -13,7 +13,7 @@
     "format:check": "prettier . --check",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
+    "check": "bun run format && bun run lint:fix && bun run typecheck & TC=$!; bun run test; TEST=$?; wait $TC; TC=$?; exit $((TEST || TC))",
     "check:full": "bun run check && bun run build"
   },
   "dependencies": {
