@@ -24,11 +24,14 @@ html {
 body {
   min-height: 100vh;
   background-color: var(--background);
-  background-image: radial-gradient(var(--dot) 1px, transparent 1px);
-  background-size: 24px 24px;
   color: var(--foreground);
   font-family: var(--font-geist-mono), monospace;
   line-height: 1.5;
+}
+
+main {
+  background-image: radial-gradient(var(--dot) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 a {

@@ -174,26 +174,28 @@ function AsciiBox({
 function MetricCard({ metric }: { metric: Metric }) {
   return (
     <AsciiBox className="p-6">
-      <p className="mb-1 text-[10px] tracking-widest text-zinc-400 uppercase">
+      <p className="text-[10px] leading-6 tracking-widest text-zinc-400 uppercase">
         {metric.label}
       </p>
-      <div className="flex items-end gap-1.5">
-        <span className="text-xl font-semibold text-zinc-900">
+      <div className="flex items-center gap-1.5">
+        <span className="text-xl leading-6 font-semibold text-zinc-900">
           {metric.value}
         </span>
-        <span className="mb-0.5 text-xs text-zinc-400">{metric.unit}</span>
+        <span className="text-xs leading-6 text-zinc-400">{metric.unit}</span>
       </div>
-      <div className="mt-6 h-px bg-zinc-100">
-        <div
-          className={`h-full ${statusBarFill[metric.status]}`}
-          style={{ width: `${rangePercent(metric)}%` }}
-        />
+      <div className="mt-6 flex h-6 items-center">
+        <div className="h-px w-full bg-zinc-100">
+          <div
+            className={`h-full ${statusBarFill[metric.status]}`}
+            style={{ width: `${rangePercent(metric)}%` }}
+          />
+        </div>
       </div>
-      <div className="mt-3 flex items-center justify-between">
-        <span className={`text-xs ${statusText[metric.status]}`}>
+      <div className="mt-6 flex items-center justify-between">
+        <span className={`text-xs leading-6 ${statusText[metric.status]}`}>
           {statusLabel(metric.status)}
         </span>
-        <span className="text-xs text-zinc-400">
+        <span className="text-xs leading-6 text-zinc-400">
           {metric.min}–{metric.max}
         </span>
       </div>
@@ -248,23 +250,27 @@ function DashboardTab({
       <div className="flex items-start justify-between gap-6">
         <p className="text-xs text-zinc-400">Latest results</p>
         <div className="flex shrink-0 gap-6">
-          <AsciiBox className="px-6 py-3 text-center">
-            <p className="text-xl font-semibold text-zinc-900">{normalCount}</p>
-            <p className="text-[10px] tracking-widest text-zinc-400 uppercase">
+          <AsciiBox className="px-6 py-6 text-center">
+            <p className="text-xl leading-6 font-semibold text-zinc-900">
+              {normalCount}
+            </p>
+            <p className="text-[10px] leading-6 tracking-widest text-zinc-400 uppercase">
               Normal
             </p>
           </AsciiBox>
-          <AsciiBox className="px-6 py-3 text-center">
-            <p className="text-xl font-semibold text-zinc-900">
+          <AsciiBox className="px-6 py-6 text-center">
+            <p className="text-xl leading-6 font-semibold text-zinc-900">
               {borderlineCount}
             </p>
-            <p className="text-[10px] tracking-widest text-zinc-400 uppercase">
+            <p className="text-[10px] leading-6 tracking-widest text-zinc-400 uppercase">
               Borderline
             </p>
           </AsciiBox>
-          <AsciiBox className="px-6 py-3 text-center">
-            <p className="text-xl font-semibold text-zinc-900">{highCount}</p>
-            <p className="text-[10px] tracking-widest text-zinc-400 uppercase">
+          <AsciiBox className="px-6 py-6 text-center">
+            <p className="text-xl leading-6 font-semibold text-zinc-900">
+              {highCount}
+            </p>
+            <p className="text-[10px] leading-6 tracking-widest text-zinc-400 uppercase">
               High
             </p>
           </AsciiBox>
@@ -416,19 +422,19 @@ function DataTab({ metrics }: { metrics: Metric[] }) {
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-zinc-200">
-            <th className="px-6 py-3 text-left tracking-widest text-zinc-400 uppercase">
+            <th className="px-6 py-6 text-left leading-6 tracking-widest text-zinc-400 uppercase">
               Test
             </th>
-            <th className="px-6 py-3 text-right tracking-widest text-zinc-400 uppercase">
+            <th className="px-6 py-6 text-right leading-6 tracking-widest text-zinc-400 uppercase">
               Value
             </th>
-            <th className="px-6 py-3 text-right tracking-widest text-zinc-400 uppercase">
+            <th className="px-6 py-6 text-right leading-6 tracking-widest text-zinc-400 uppercase">
               Unit
             </th>
-            <th className="px-6 py-3 text-right tracking-widest text-zinc-400 uppercase">
+            <th className="px-6 py-6 text-right leading-6 tracking-widest text-zinc-400 uppercase">
               Range
             </th>
-            <th className="px-6 py-3 text-right tracking-widest text-zinc-400 uppercase">
+            <th className="px-6 py-6 text-right leading-6 tracking-widest text-zinc-400 uppercase">
               Status
             </th>
           </tr>
@@ -441,13 +447,19 @@ function DataTab({ metrics }: { metrics: Metric[] }) {
                 i < metrics.length - 1 ? "border-b border-zinc-100" : ""
               }
             >
-              <td className="px-6 py-4 text-zinc-900">{m.label}</td>
-              <td className="px-6 py-4 text-right text-zinc-700">{m.value}</td>
-              <td className="px-6 py-4 text-right text-zinc-400">{m.unit}</td>
-              <td className="px-6 py-4 text-right text-zinc-400">
+              <td className="px-6 py-6 leading-6 text-zinc-900">{m.label}</td>
+              <td className="px-6 py-6 text-right leading-6 text-zinc-700">
+                {m.value}
+              </td>
+              <td className="px-6 py-6 text-right leading-6 text-zinc-400">
+                {m.unit}
+              </td>
+              <td className="px-6 py-6 text-right leading-6 text-zinc-400">
                 {m.min}–{m.max}
               </td>
-              <td className={`px-6 py-4 text-right ${statusText[m.status]}`}>
+              <td
+                className={`px-6 py-6 text-right leading-6 ${statusText[m.status]}`}
+              >
                 {statusLabel(m.status)}
               </td>
             </tr>
@@ -547,8 +559,8 @@ function VocabularyTab({
 
   return (
     <AsciiBox>
-      <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-3">
-        <span className="text-[10px] tracking-widest text-zinc-400 uppercase">
+      <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-6">
+        <span className="text-[10px] leading-6 tracking-widest text-zinc-400 uppercase">
           Vocabulary
         </span>
         {editing.kind === "none" && (
@@ -571,16 +583,16 @@ function VocabularyTab({
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-zinc-200">
-            <th className="px-6 py-3 text-left tracking-widest text-zinc-400 uppercase">
+            <th className="px-6 py-6 text-left leading-6 tracking-widest text-zinc-400 uppercase">
               Test
             </th>
-            <th className="px-6 py-3 text-right tracking-widest text-zinc-400 uppercase">
+            <th className="px-6 py-6 text-right leading-6 tracking-widest text-zinc-400 uppercase">
               Unit
             </th>
-            <th className="px-6 py-3 text-right tracking-widest text-zinc-400 uppercase">
+            <th className="px-6 py-6 text-right leading-6 tracking-widest text-zinc-400 uppercase">
               Reference Range
             </th>
-            <th className="px-6 py-3" />
+            <th className="px-6 py-6" />
           </tr>
         </thead>
         <tbody>
@@ -596,7 +608,7 @@ function VocabularyTab({
               >
                 {isEditing ? (
                   <>
-                    <td className="px-6 py-3">
+                    <td className="px-6 py-6">
                       <input
                         className={inputCls}
                         value={editing.label}
@@ -605,7 +617,7 @@ function VocabularyTab({
                         }
                       />
                     </td>
-                    <td className="px-6 py-3">
+                    <td className="px-6 py-6">
                       <input
                         className={inputCls + " text-right"}
                         value={editing.unit}
@@ -614,7 +626,7 @@ function VocabularyTab({
                         }
                       />
                     </td>
-                    <td className="px-6 py-3">
+                    <td className="px-6 py-6">
                       <div className="flex items-center justify-end gap-1">
                         <input
                           className={inputCls + " w-16 text-right"}
@@ -633,7 +645,7 @@ function VocabularyTab({
                         />
                       </div>
                     </td>
-                    <td className="px-6 py-3 text-right">
+                    <td className="px-6 py-6 text-right">
                       <div className="flex justify-end gap-3">
                         <button
                           onClick={saveEdit}
@@ -652,14 +664,16 @@ function VocabularyTab({
                   </>
                 ) : (
                   <>
-                    <td className="px-6 py-4 text-zinc-900">{e.label}</td>
-                    <td className="px-6 py-4 text-right text-zinc-400">
+                    <td className="px-6 py-6 leading-6 text-zinc-900">
+                      {e.label}
+                    </td>
+                    <td className="px-6 py-6 text-right leading-6 text-zinc-400">
                       {e.unit}
                     </td>
-                    <td className="px-6 py-4 text-right text-zinc-400">
+                    <td className="px-6 py-6 text-right leading-6 text-zinc-400">
                       {e.referenceRange.min}–{e.referenceRange.max}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-6 text-right">
                       <div className="flex justify-end gap-3">
                         <button
                           onClick={() => startEdit(e)}
@@ -682,7 +696,7 @@ function VocabularyTab({
           })}
           {editing.kind === "adding" && (
             <tr>
-              <td className="px-6 py-3">
+              <td className="px-6 py-6">
                 <input
                   className={inputCls}
                   placeholder="Label"
@@ -693,7 +707,7 @@ function VocabularyTab({
                   }
                 />
               </td>
-              <td className="px-6 py-3">
+              <td className="px-6 py-6">
                 <input
                   className={inputCls + " text-right"}
                   placeholder="Unit"
@@ -703,7 +717,7 @@ function VocabularyTab({
                   }
                 />
               </td>
-              <td className="px-6 py-3">
+              <td className="px-6 py-6">
                 <div className="flex items-center justify-end gap-1">
                   <input
                     className={inputCls + " w-16 text-right"}
@@ -724,7 +738,7 @@ function VocabularyTab({
                   />
                 </div>
               </td>
-              <td className="px-6 py-3 text-right">
+              <td className="px-6 py-6 text-right">
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={saveAdd}

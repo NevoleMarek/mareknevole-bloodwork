@@ -7,9 +7,12 @@ The UI looks like a technical document printed on dot-grid paper — the kind yo
 ## Background
 
 - Color: `#f6f5f0` — warm off-white, like aged paper
-- Dot grid: `radial-gradient(#a8a89a 2px, transparent 2px)` at `24px × 24px`
-- The dot pattern lives on the `<main>` element, not `<body>`. This anchors the grid to the content container so internal spacing always lands on dot positions. The outer page margins stay plain.
+- Dot grid: `radial-gradient(#a8a89a 1px, transparent 1px)` at `24px × 24px`
+- The dot pattern lives on the `<main>` element (CSS `main` selector), not `<body>`. This anchors the grid to the content container so its origin is at `<main>`'s top-left corner. The outer page margins stay plain.
 - All layout spacing uses multiples of 24px (`gap-6`, `p-6`, `gap-12`, `py-12`) to snap to the grid
+  - 1 grid unit = 24px — use between sibling components at the same level
+  - 2 grid units = 48px — use between distinct sections
+- All text in block rows uses `leading-6` (24px line height) so row heights are exact grid multiples. Purely inline gaps (number + unit, button clusters) are exempt.
 
 ## Typography
 
