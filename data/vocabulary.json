@@ -1,0 +1,52 @@
+{
+  "entries": [
+    {
+      "key": "glucose",
+      "label": "Glucose",
+      "unit": "mg/dL",
+      "referenceRange": { "min": 70, "max": 100 }
+    },
+    {
+      "key": "hemoglobin",
+      "label": "Hemoglobin",
+      "unit": "g/dL",
+      "referenceRange": { "min": 12, "max": 17.5 }
+    },
+    {
+      "key": "total_cholesterol",
+      "label": "Total Cholesterol",
+      "unit": "mg/dL",
+      "referenceRange": { "min": 0, "max": 200 }
+    },
+    {
+      "key": "hdl",
+      "label": "HDL",
+      "unit": "mg/dL",
+      "referenceRange": { "min": 40, "max": 60 }
+    },
+    {
+      "key": "ldl",
+      "label": "LDL",
+      "unit": "mg/dL",
+      "referenceRange": { "min": 0, "max": 130 }
+    },
+    {
+      "key": "wbc",
+      "label": "WBC",
+      "unit": "K/μL",
+      "referenceRange": { "min": 4.5, "max": 11 }
+    },
+    {
+      "key": "platelets",
+      "label": "Platelets",
+      "unit": "K/μL",
+      "referenceRange": { "min": 150, "max": 400 }
+    },
+    {
+      "key": "creatinine",
+      "label": "Creatinine",
+      "unit": "mg/dL",
+      "referenceRange": { "min": 0.6, "max": 1.2 }
+    }
+  ]
+}

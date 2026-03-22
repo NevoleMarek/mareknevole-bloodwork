@@ -1,0 +1,159 @@
+[
+  {
+    "date": "2025-06-15",
+    "source": "sample-2025-06.pdf",
+    "measurements": [
+      {
+        "vocabularyKey": "glucose",
+        "value": 92,
+        "unit": "mg/dL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "hemoglobin",
+        "value": 14.8,
+        "unit": "g/dL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "total_cholesterol",
+        "value": 188,
+        "unit": "mg/dL",
+        "status": "normal"
+      },
+      { "vocabularyKey": "hdl", "value": 38, "unit": "mg/dL", "status": "low" },
+      {
+        "vocabularyKey": "ldl",
+        "value": 118,
+        "unit": "mg/dL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "wbc",
+        "value": 6.2,
+        "unit": "K/μL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "platelets",
+        "value": 210,
+        "unit": "K/μL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "creatinine",
+        "value": 1.0,
+        "unit": "mg/dL",
+        "status": "normal"
+      }
+    ]
+  },
+  {
+    "date": "2025-09-20",
+    "source": "sample-2025-09.pdf",
+    "measurements": [
+      {
+        "vocabularyKey": "glucose",
+        "value": 98,
+        "unit": "mg/dL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "hemoglobin",
+        "value": 15.1,
+        "unit": "g/dL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "total_cholesterol",
+        "value": 204,
+        "unit": "mg/dL",
+        "status": "borderline"
+      },
+      {
+        "vocabularyKey": "hdl",
+        "value": 41,
+        "unit": "mg/dL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "ldl",
+        "value": 135,
+        "unit": "mg/dL",
+        "status": "high"
+      },
+      {
+        "vocabularyKey": "wbc",
+        "value": 7.8,
+        "unit": "K/μL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "platelets",
+        "value": 195,
+        "unit": "K/μL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "creatinine",
+        "value": 1.1,
+        "unit": "mg/dL",
+        "status": "normal"
+      }
+    ]
+  },
+  {
+    "date": "2026-01-10",
+    "source": "sample-2026-01.pdf",
+    "measurements": [
+      {
+        "vocabularyKey": "glucose",
+        "value": 107,
+        "unit": "mg/dL",
+        "status": "borderline"
+      },
+      {
+        "vocabularyKey": "hemoglobin",
+        "value": 14.3,
+        "unit": "g/dL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "total_cholesterol",
+        "value": 215,
+        "unit": "mg/dL",
+        "status": "high"
+      },
+      {
+        "vocabularyKey": "hdl",
+        "value": 44,
+        "unit": "mg/dL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "ldl",
+        "value": 142,
+        "unit": "mg/dL",
+        "status": "high"
+      },
+      {
+        "vocabularyKey": "wbc",
+        "value": 5.5,
+        "unit": "K/μL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "platelets",
+        "value": 230,
+        "unit": "K/μL",
+        "status": "normal"
+      },
+      {
+        "vocabularyKey": "creatinine",
+        "value": 0.9,
+        "unit": "mg/dL",
+        "status": "normal"
+      }
+    ]
+  }
+]
