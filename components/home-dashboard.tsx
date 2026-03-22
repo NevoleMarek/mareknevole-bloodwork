@@ -251,7 +251,7 @@ function DashboardTab({
         <div className="flex items-center">
           <p className="text-xs text-zinc-400">Latest results</p>
         </div>
-        <AsciiBox className="px-6 py-6 text-center">
+        <AsciiBox className="self-start px-6 py-6 text-center">
           <p className="text-xl leading-6 font-semibold text-zinc-900">
             {normalCount}
           </p>
@@ -259,7 +259,7 @@ function DashboardTab({
             Normal
           </p>
         </AsciiBox>
-        <AsciiBox className="px-6 py-6 text-center">
+        <AsciiBox className="self-start px-6 py-6 text-center">
           <p className="text-xl leading-6 font-semibold text-zinc-900">
             {borderlineCount}
           </p>
@@ -267,7 +267,7 @@ function DashboardTab({
             Borderline
           </p>
         </AsciiBox>
-        <AsciiBox className="px-6 py-6 text-center">
+        <AsciiBox className="self-start px-6 py-6 text-center">
           <p className="text-xl leading-6 font-semibold text-zinc-900">
             {highCount}
           </p>
@@ -877,7 +877,7 @@ export function HomeDashboard() {
   const trendLines = deriveTrendLines(trendData);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-[984px] flex-col gap-6 px-6 py-12">
+    <main className="flex min-h-screen w-full max-w-[984px] flex-col gap-6 px-6 py-12">
       <div className="flex h-12 items-center justify-between gap-6">
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
           Bloodwork
@@ -894,7 +894,7 @@ export function HomeDashboard() {
             disabled={
               dataState.kind !== "ready" || dataState.readings.length === 0
             }
-            className="relative cursor-pointer border border-zinc-400 bg-[#f6f5f0] px-6 py-3 text-xs tracking-widest text-zinc-700 uppercase transition-[transform,border-color] duration-75 hover:-translate-y-px hover:border-zinc-700 active:translate-y-px active:border-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
+            className="relative flex h-12 cursor-pointer items-center border border-zinc-400 bg-[#f6f5f0] px-6 text-xs tracking-widest text-zinc-700 uppercase transition-[transform,border-color] duration-75 hover:-translate-y-px hover:border-zinc-700 active:translate-y-px active:border-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
           >
             <span className="pointer-events-none absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
               +
@@ -920,7 +920,7 @@ export function HomeDashboard() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importState.kind === "loading"}
-            className="relative cursor-pointer border border-zinc-400 bg-[#f6f5f0] px-6 py-3 text-xs tracking-widest text-zinc-700 uppercase transition-[transform,border-color] duration-75 hover:-translate-y-px hover:border-zinc-700 active:translate-y-px active:border-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
+            className="relative flex h-12 cursor-pointer items-center border border-zinc-400 bg-[#f6f5f0] px-6 text-xs tracking-widest text-zinc-700 uppercase transition-[transform,border-color] duration-75 hover:-translate-y-px hover:border-zinc-700 active:translate-y-px active:border-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
           >
             <span className="pointer-events-none absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 bg-[#f6f5f0] leading-none text-zinc-400 select-none">
               +
@@ -944,7 +944,7 @@ export function HomeDashboard() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`relative cursor-pointer border px-4 py-2 text-xs tracking-widest uppercase transition-[transform,border-color,color] duration-75 hover:-translate-y-px active:translate-y-px ${
+            className={`relative flex h-12 cursor-pointer items-center border px-6 text-xs tracking-widest uppercase transition-[transform,border-color,color] duration-75 hover:-translate-y-px active:translate-y-px ${
               activeTab === tab
                 ? "border-zinc-900 text-zinc-900"
                 : "border-zinc-200 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600"
