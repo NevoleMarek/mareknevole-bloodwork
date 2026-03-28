@@ -71,25 +71,23 @@ export default function Home() {
         <p className="text-[10px] tracking-widest text-zinc-400 uppercase">
           Marek Nevole
         </p>
-        <div className="mt-6 border border-zinc-200 bg-white p-6 text-xs leading-relaxed text-zinc-500">
-          <p className="mb-4">
-            This dashboard exists because better decisions come from better
-            data, and better data starts with putting everything in one place,
-            structured and accessible. When consistently collecting the data,
-            the patterns become impossible to ignore. In an age where language
-            models can reason over years of personal data, every month of
-            structured collection is an investment that compounds into sharper,
-            earlier, more informed decisions.
-          </p>
-          <p>
-            It&apos;s public because the upside is shared. If seeing this
-            inspires you to take your own measurements more seriously, or to
-            build something like it, then openness costs nothing and creates
-            something. We obsess over data collection in professional settings
-            because it works. There&apos;s no reason not to apply that same
-            discipline to the thing that matters most.
-          </p>
-        </div>
+        <p className="mt-4 max-w-[640px] text-xs leading-relaxed text-zinc-400">
+          This dashboard exists because better decisions come from better data,
+          and better data starts with putting everything in one place,
+          structured and accessible. When consistently collecting the data, the
+          patterns become impossible to ignore. In an age where language models
+          can reason over years of personal data, every month of structured
+          collection is an investment that compounds into sharper, earlier, more
+          informed decisions.
+        </p>
+        <p className="mt-3 max-w-[640px] text-xs leading-relaxed text-zinc-400">
+          It&apos;s public because the upside is shared. If seeing this inspires
+          you to take your own measurements more seriously, or to build
+          something like it, then openness costs nothing and creates something.
+          We obsess over data collection in professional settings because it
+          works. There&apos;s no reason not to apply that same discipline to the
+          thing that matters most.
+        </p>
       </header>
 
       <section className="mb-8">
