@@ -71,7 +71,7 @@ export default function Home() {
         <p className="mt-1 text-[10px] tracking-widest text-zinc-400 uppercase">
           Marek Nevole
         </p>
-        <div className="mt-8 columns-2 gap-12 text-[13px] leading-[1.7] text-zinc-500">
+        <div className="mt-8 columns-2 gap-12 text-justify text-[13px] leading-[1.7] text-zinc-500">
           <p>
             This dashboard exists because better decisions come from better
             data, and better data starts with putting everything in one place,
