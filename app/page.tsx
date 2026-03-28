@@ -66,28 +66,30 @@ export default function Home() {
 
   return (
     <main className="mx-auto w-full max-w-[960px] px-6 py-8">
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">BLOODWORK</h1>
-        <p className="text-[10px] tracking-widest text-zinc-400 uppercase">
+      <header className="mb-12 border-b border-zinc-200 pb-10">
+        <h1 className="text-4xl font-bold tracking-tight">BLOODWORK</h1>
+        <p className="mt-1 text-[10px] tracking-widest text-zinc-400 uppercase">
           Marek Nevole
         </p>
-        <p className="mt-4 max-w-[640px] text-xs leading-relaxed text-zinc-400">
-          This dashboard exists because better decisions come from better data,
-          and better data starts with putting everything in one place,
-          structured and accessible. When consistently collecting the data, the
-          patterns become impossible to ignore. In an age where language models
-          can reason over years of personal data, every month of structured
-          collection is an investment that compounds into sharper, earlier, more
-          informed decisions.
-        </p>
-        <p className="mt-3 max-w-[640px] text-xs leading-relaxed text-zinc-400">
-          It&apos;s public because the upside is shared. If seeing this inspires
-          you to take your own measurements more seriously, or to build
-          something like it, then openness costs nothing and creates something.
-          We obsess over data collection in professional settings because it
-          works. There&apos;s no reason not to apply that same discipline to the
-          thing that matters most.
-        </p>
+        <div className="mt-8 grid grid-cols-[3fr_2fr] gap-12">
+          <p className="text-[13px] leading-[1.7] text-zinc-500">
+            This dashboard exists because better decisions come from better
+            data, and better data starts with putting everything in one place,
+            structured and accessible. When consistently collecting the data,
+            the patterns become impossible to ignore. In an age where language
+            models can reason over years of personal data, every month of
+            structured collection is an investment that compounds into sharper,
+            earlier, more informed decisions.
+          </p>
+          <p className="text-[13px] leading-[1.7] text-zinc-500">
+            It&apos;s public because the upside is shared. If seeing this
+            inspires you to take your own measurements more seriously, or to
+            build something like it, then openness costs nothing and creates
+            something. We obsess over data collection in professional settings
+            because it works. There&apos;s no reason not to apply that same
+            discipline to the thing that matters most.
+          </p>
+        </div>
       </header>
 
       <section className="mb-8">
