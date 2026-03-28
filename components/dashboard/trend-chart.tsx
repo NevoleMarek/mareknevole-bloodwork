@@ -16,7 +16,9 @@ type Period = "6M" | "1Y" | "ALL";
 
 const LINE_STYLES = [
   { stroke: "#18181b", strokeDasharray: undefined },
-  { stroke: "#71717a", strokeDasharray: "6 3" },
+  { stroke: "#555555", strokeDasharray: "6 3" },
+  { stroke: "#888888", strokeDasharray: "2 3" },
+  { stroke: "#bbbbbb", strokeDasharray: "10 4" },
 ] as const;
 
 function filterByPeriod(
@@ -86,7 +88,7 @@ export function TrendChart({
         if (prev.length <= 1) return prev;
         return prev.filter((k) => k !== key);
       }
-      if (prev.length >= 2) return [prev[1], key];
+      if (prev.length >= 4) return [...prev.slice(1), key];
       return [...prev, key];
     });
   }
