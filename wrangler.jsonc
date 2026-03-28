@@ -1,0 +1,11 @@
+{
+  "name": "bloodwork",
+  "compatibility_date": "2025-12-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bloodwork-db",
+      "database_id": "placeholder-replace-after-creation",
+    },
+  ],
+}
