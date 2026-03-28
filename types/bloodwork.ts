@@ -43,3 +43,21 @@ export type MergeResult = {
   normalizedMeasurements: Measurement[];
   date: string;
 };
+
+export type Supplement = {
+  id: string;
+  name: string;
+  dose: string;
+  frequency: string;
+  startedAt: string;
+  stoppedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SupplementChangelog = {
+  id: string;
+  date: string;
+  description: string;
+  createdAt: string;
+};
