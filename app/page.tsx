@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { MetricCard } from "@/components/dashboard/metric-card";
@@ -23,9 +23,21 @@ export default function Home() {
   const { entries: vocabulary } = loadJson<Vocabulary>("vocabulary.json");
   const readings = loadJson<BloodworkReading[]>("readings.json");
 
-  // Supplements: empty until DB is wired up
-  const supplements: Supplement[] = [];
-  const changelog: SupplementChangelog[] = [];
+  const supplementsFile = dataPath("supplements.json");
+  const { supplements: allSupplements, changelog } = existsSync(supplementsFile)
+    ? loadJson<{ supplements: Supplement[]; changelog: SupplementChangelog[] }>(
+        "supplements.json",
+      )
+    : {
+        supplements: [] as Supplement[],
+        changelog: [] as SupplementChangelog[],
+      };
+
+  const supplements = allSupplements.filter((s) => s.stoppedAt === null);
+
+  const supplementsLastUpdated = allSupplements.reduce((latest, s) => {
+    return s.updatedAt > latest ? s.updatedAt : latest;
+  }, "");
 
   const latest = readings.at(-1);
   const latestDate = latest
@@ -61,15 +73,13 @@ export default function Home() {
         </p>
       </header>
 
-      {supplements.length > 0 && (
-        <section className="mb-8">
-          <SupplementStack
-            supplements={supplements}
-            changelog={changelog}
-            lastUpdated=""
-          />
-        </section>
-      )}
+      <section className="mb-8">
+        <SupplementStack
+          supplements={supplements}
+          changelog={changelog}
+          lastUpdated={supplementsLastUpdated}
+        />
+      </section>
 
       <section className="mb-8">
         <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
