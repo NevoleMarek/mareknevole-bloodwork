@@ -66,7 +66,7 @@ export default function Home() {
 
   return (
     <main className="mx-auto w-full max-w-[960px] px-6 py-8">
-      <header className="mb-12 border-b border-zinc-200 pb-10">
+      <header className="mb-8 border-b border-zinc-200 pb-8">
         <h1 className="text-4xl font-bold tracking-tight">BLOODWORK</h1>
         <p className="mt-1 text-[10px] tracking-widest text-zinc-400 uppercase">
           Marek Nevole
