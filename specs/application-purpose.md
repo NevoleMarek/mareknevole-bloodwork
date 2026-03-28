@@ -2,19 +2,20 @@
 
 ## Summary
 
-`bloodwork` is a personal blood test analysis dashboard. Users upload bloodwork PDFs, Gemini extracts the results, and the main dashboard visualizes them as charts, trends, and reference-range comparisons.
+`bloodwork` is a personal blood test tracking dashboard for Marek Nevole. A public dashboard shows metrics, trends, and the current supplement stack. An admin area behind password auth provides data management — PDF upload, vocabulary editing, and supplement tracking.
 
 ## Goals
 
 - Display a clear visual overview of blood test results (values vs. reference ranges, trends over time).
-- Let users upload a PDF bloodwork report and extract structured data via Gemini.
-- Allow users to control what Gemini extracts by editing `prompts/extract.txt`.
-- Keep the local feedback loop fast so new features can be explored quickly.
+- Show the current supplement stack with dosages and a generated changelog.
+- Let the admin upload PDF bloodwork reports and extract structured data via Gemini.
+- Provide vocabulary and supplement management behind password authentication.
+- Deploy to Cloudflare Pages for public access.
 
 ## Non-Goals
 
-- No user accounts or persistent storage.
-- No deployment or hosting requirements beyond local development.
+- No multi-user accounts — single admin, public readers.
+- No real-time data or external API integrations beyond Gemini.
 
 ## Change Triggers
 

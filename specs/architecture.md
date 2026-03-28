@@ -9,29 +9,69 @@
 - Testing: `Vitest`, `jsdom`, and Testing Library
 - Code quality: `ESLint` and `Prettier`
 - AI: `@google-cloud/vertexai` — Gemini 2.5 Flash via Vertex AI
+- Deployment: Cloudflare Pages with `@opennextjs/cloudflare` adapter
+
+## Route Structure
+
+| Route                | Access | Purpose                         |
+| -------------------- | ------ | ------------------------------- |
+| `/`                  | Public | Dashboard with metrics & trends |
+| `/admin`             | Auth   | Login page                      |
+| `/admin/data`        | Auth   | Readings management             |
+| `/admin/vocabulary`  | Auth   | Vocabulary editor               |
+| `/admin/supplements` | Auth   | Supplement stack editor         |
+
+## Auth
+
+Password-based authentication via middleware + session cookie. Middleware protects all `/admin/*` routes except the login page itself.
+
+## API Routes
+
+| Method | Route              | Purpose                            |
+| ------ | ------------------ | ---------------------------------- |
+| GET    | `/api/data`        | Return vocabulary and all readings |
+| POST   | `/api/extract`     | PDF upload → Gemini extraction     |
+| POST   | `/api/auth`        | Login, returns session cookie      |
+| GET    | `/api/vocabulary`  | Return vocabulary                  |
+| PUT    | `/api/vocabulary`  | Update vocabulary entries          |
+| GET    | `/api/supplements` | Return supplement stack            |
+| PUT    | `/api/supplements` | Update supplement stack            |
+
+## Component Architecture
+
+- `components/dashboard/` — public dashboard components
+  - `metric-card` — single metric with value, unit, status, and range bar
+  - `range-bar` — bounded zone visualization with value marker
+  - `trend-chart` — sparkline trends over time
+  - `supplement-stack` — current supplement list with dosages
+- `components/admin/` — admin data management
+  - `pdf-uploader` — PDF upload with extraction trigger
+  - `readings-table` — tabular view of all readings
+  - `vocabulary-editor` — edit test names, units, and ranges
+  - `supplement-editor` — edit supplements with changelog
+- `components/ui/` — shared primitives
+  - `accordion` — collapsible section
+
+## Data
+
+Currently JSON files in `data/`. D1 SQLite migration pending.
+
+- `data/vocabulary.json` — known test names, units, and reference ranges
+- `data/readings.json` — all ingested bloodwork readings
+- `data/supplements.json` — current supplement stack
+
+Target D1 tables: `vocabulary`, `readings`, `measurements`, `supplements`, `supplement_changelog`.
 
 ## Project Structure
 
-- `app/`: Next.js routes, layout, and global styles
-- `app/api/extract/route.ts`: POST route — 2-agent pipeline: Agent 1 extracts structured JSON from a PDF; Agent 2 merges it against the vocabulary, persists new entries and the reading
-- `app/api/data/route.ts`: GET route that returns vocabulary and all stored readings
-- `components/`: reusable UI building blocks
-- `data/vocabulary.json`: dynamic registry of known test names, units, and reference ranges; grows as new PDFs are imported
-- `data/readings.json`: all ingested bloodwork readings (one entry per PDF import)
-- `prompts/extract.txt`: Agent 1 prompt — instructs Gemini to output a structured `ExtractedReading` JSON
-- `prompts/vocabulary-merge.txt`: Agent 2 prompt — normalizes extracted measurements against the vocabulary and identifies new entries
-- `types/bloodwork.ts`: shared TypeScript types for vocabulary, readings, and agent I/O
-- `specs/`: living product and architecture documentation
-- `public/`: static assets served by Next.js
-
-## Ingestion Pipeline
-
-1. User uploads a PDF via the dashboard.
-2. **Agent 1** (Gemini + `prompts/extract.txt`): parses the PDF and returns an `ExtractedReading` JSON with raw test labels, values, units, and reference ranges.
-3. **Agent 2** (Gemini + `prompts/vocabulary-merge.txt`): receives the extracted reading and the current vocabulary; fuzzy-matches tests to vocabulary entries, identifies any new tests, and returns a `MergeResult` with normalized measurements and new vocabulary entries.
-4. New vocabulary entries are appended to `data/vocabulary.json`.
-5. A `BloodworkReading` is appended to `data/readings.json`.
-6. The dashboard reloads from `/api/data` and derives metrics from the latest reading.
+- `app/` — Next.js routes, layout, and global styles
+- `components/` — reusable UI components (dashboard, admin, ui)
+- `data/` — JSON data files
+- `types/bloodwork.ts` — shared TypeScript types
+- `prompts/` — Gemini prompt templates
+- `specs/` — living product and architecture documentation
+- `middleware.ts` — auth middleware for admin routes
+- `public/` — static assets
 
 ## Environment Variables
 
@@ -39,20 +79,16 @@ Copy `.env.local.example` to `.env.local` and fill in:
 
 - `GOOGLE_CLOUD_PROJECT` — GCP project ID (required)
 - `GOOGLE_CLOUD_LOCATION` — Vertex AI region (optional, defaults to `us-central1`)
-
-Authentication uses Application Default Credentials. Run `gcloud auth application-default login` before starting the dev server.
+- `ADMIN_PASSWORD` — password for admin login
 
 ## Verification Workflow
 
-- Fast iteration command: `bun run check`
-- Full verification command: `bun run check:full`
-- Watch mode for tests: `bun run test:watch`
-
-`bun run check` is intended for the everyday inner loop and should stay fast.
-`bun run check:full` adds slower milestone validation, including a production build.
+- Fast iteration: `bun run check` — auto-fixes formatting and lint, then runs typecheck + test in parallel
+- Full validation: `bun run check:full` — adds production build
+- Watch mode: `bun run test:watch`
 
 ## Architectural Constraints
 
-- Keep the project local-only unless the user asks for deployment-oriented changes.
-- Prefer simple synchronous UI components when possible to keep unit testing straightforward.
+- Keep data in JSON files until D1 migration is implemented.
+- Prefer simple synchronous UI components for straightforward testing.
 - When architecture or toolchain choices change, update this document in the same task.
