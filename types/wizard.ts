@@ -1,4 +1,4 @@
-import type { VocabularyEntry } from "@/types/bloodwork";
+import type { Status, VocabularyEntry } from "@/types/bloodwork";
 
 export type ExtractedVariable = {
   label: string;
@@ -40,7 +40,7 @@ export type SaveReadingRequest = {
     vocabularyKey: string;
     value: number;
     unit: string;
-    status: "normal" | "high" | "low";
+    status: Status;
   }[];
   newVocabulary: VocabularyEntry[];
 };
