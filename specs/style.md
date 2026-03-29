@@ -2,68 +2,62 @@
 
 ## Core concept
 
-The UI looks like a technical document printed on dot-grid paper — the kind you'd find in an engineering notebook. Every component sits on a visible dot grid, uses monospace type, and draws its structure with ASCII box characters.
+Typography-driven design built on Geist Mono. Structure comes from whitespace and type hierarchy — no dot grid, no ASCII box corners, no decorative elements.
 
 ## Background
 
-- Color: `#f6f5f0` — warm off-white, like aged paper
-- Dot grid: `radial-gradient(#a8a89a 1px, transparent 1px)` at `24px × 24px`
-- The dot pattern lives on `<main>` (CSS `main` selector), not `<body>`. The grid origin is at `<main>`'s top-left corner so it moves with the centered content — dots and boxes always stay in sync. The outer page margins stay plain.
-- All layout spacing uses multiples of 24px (`gap-6`, `p-6`, `gap-12`, `py-12`) to snap to the grid
-  - 1 grid unit = 24px — use between sibling components at the same level
-  - 2 grid units = 48px — use between distinct sections
-- All text in block rows uses `leading-6` (24px line height) so row heights are exact grid multiples. Purely inline gaps (number + unit, button clusters) are exempt.
+- Page background: `bg-stone-50` (`#fafaf9`)
+- Card background: `bg-white`
 
 ## Typography
 
-- Font: Geist Mono throughout — set globally on `body`, never overridden per-element
-- At 16px with `line-height: 1.5`, one text line = 24px = one grid unit
-- Labels: `text-[10px] tracking-widest uppercase` — small-caps feel
+- Font: Geist Mono exclusively — set globally on `body`, never overridden per-element
+- Title: `text-2xl font-semibold tracking-tight`
+- Subtitle: `text-[10px] uppercase tracking-widest`
+- Section labels: `text-[9px] tracking-[2px]`
+- Metric values: `text-3xl font-bold`
+- Units: `text-xs` with muted color
 - Body text: `text-xs` or `text-sm`
-- Headings: `text-3xl font-semibold tracking-tight`
-
-## ASCII boxes (the `AsciiBox` component)
-
-Every panel, card, and interactive element is drawn as an ASCII box:
-
-```
-+------------------+
-|                  |
-|   content here   |
-|                  |
-+------------------+
-```
-
-Implementation: CSS `border: 1px solid` for the sides, plus four `+` character spans absolutely positioned at each corner via `translate(-50%, -50%)`. The corner spans use `bg-[#f6f5f0]` to cover the CSS border junction so `+` reads as the actual corner.
-
-All boxes share the same border color (`border-zinc-400`) and background (`bg-[#f6f5f0]` — matching the page, so dots show around boxes but not behind them).
 
 ## Color palette
 
-Strictly monochrome. No color is used to encode meaning.
+- Primary text: `text-zinc-900`
+- Muted text: `text-zinc-500`
+- Subtle text: `text-zinc-400`
+- Borders: `border-zinc-200`
+- Track fill: `bg-zinc-100`
 
-- Text hierarchy: `text-zinc-900` → `text-zinc-700` → `text-zinc-400`
-- Borders: `border-zinc-400` (default), `border-zinc-200` (subtle internal dividers)
-- Status severity: communicated through bar fill darkness only
-  - Normal: `bg-zinc-300`
-  - Borderline: `bg-zinc-600`
-  - High: `bg-zinc-900`
-  - Low: `bg-zinc-400`
+### Status colors
 
-## Chart lines
+Desaturated at 30% opacity, used for range bar zones only:
 
-Four grayscale tones with distinct dash patterns so lines are distinguishable without color:
+| Zone       | Color                |
+| ---------- | -------------------- |
+| Normal     | green at 30% opacity |
+| Borderline | amber at 30% opacity |
+| High / Low | red at 30% opacity   |
+| Reference  | blue at 30% opacity  |
 
-| Series | Color     | Dash pattern |
-| ------ | --------- | ------------ |
-| 1st    | `#1a1a1a` | solid        |
-| 2nd    | `#555555` | `6 3`        |
-| 3rd    | `#888888` | `2 3`        |
-| 4th    | `#bbbbbb` | `10 4`       |
+## Spacing
 
-## Interactive elements
+- Base unit: 4px
+- Card padding / gap: 16px
+- Section gap: 32px
+- Page padding: 24px
+- Max width: 960px
 
-- Buttons: same `AsciiBox` corner pattern applied inline with `position: relative`
-- Tabs: ASCII box corners + border, same inline pattern as buttons. Active: `border-zinc-900 text-zinc-900`. Inactive: `border-zinc-200 text-zinc-400`, hover darkens border to `border-zinc-400`
-- Period selector: small borderless buttons inside a `border-zinc-200` wrapper
-- All hover states use border darkening, never background color change
+## Borders
+
+- Thin uniform `border-zinc-200`
+- No rounded corners
+- No shadows
+
+## Responsive
+
+- Breakpoint: `md:` (768px) — below this is mobile, above is desktop
+- Mobile padding: 16px horizontal (`px-4`), 24px vertical (`py-6`)
+- Desktop padding: 24px horizontal (`px-6`), 32px vertical (`py-8`)
+- Intro text: single column on mobile (`columns-1`), two on desktop (`md:columns-2`)
+- Metric cards: 2-column grid on mobile (`grid-cols-2`), 4-column on desktop (`md:grid-cols-4`)
+- Tables: `overflow-x-auto` wrapper for horizontal scroll on mobile
+- Admin forms: `flex-wrap` so fixed-width inputs wrap on narrow screens

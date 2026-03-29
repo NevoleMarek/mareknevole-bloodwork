@@ -1,42 +1,58 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-import type { Vocabulary, VocabularyEntry } from "@/types/bloodwork";
-
-function vocabPath() {
-  return join(process.cwd(), "data", "vocabulary.json");
-}
-
-function readVocabulary(): Vocabulary {
-  return JSON.parse(readFileSync(vocabPath(), "utf-8")) as Vocabulary;
-}
-
-function writeVocabulary(v: Vocabulary) {
-  writeFileSync(vocabPath(), JSON.stringify(v, null, 2));
-}
+import type { VocabularyEntry } from "@/types/bloodwork";
 
 export async function POST(req: Request) {
+  const { env } = await getCloudflareContext();
+  const db = env.DB;
   const { entry } = (await req.json()) as { entry: VocabularyEntry };
-  const vocab = readVocabulary();
-  vocab.entries.push(entry);
-  writeVocabulary(vocab);
+
+  await db
+    .prepare(
+      "INSERT INTO vocabulary (key, label, unit, reference_min, reference_max) VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(
+      entry.key,
+      entry.label,
+      entry.unit,
+      entry.referenceRange.min,
+      entry.referenceRange.max,
+    )
+    .run();
+
   return Response.json({ ok: true });
 }
 
 export async function PUT(req: Request) {
+  const { env } = await getCloudflareContext();
+  const db = env.DB;
   const { entry } = (await req.json()) as { entry: VocabularyEntry };
-  const vocab = readVocabulary();
-  const idx = vocab.entries.findIndex((e) => e.key === entry.key);
-  if (idx === -1) return Response.json({ error: "Not found" }, { status: 404 });
-  vocab.entries[idx] = entry;
-  writeVocabulary(vocab);
+
+  const result = await db
+    .prepare(
+      "UPDATE vocabulary SET label = ?, unit = ?, reference_min = ?, reference_max = ? WHERE key = ?",
+    )
+    .bind(
+      entry.label,
+      entry.unit,
+      entry.referenceRange.min,
+      entry.referenceRange.max,
+      entry.key,
+    )
+    .run();
+
+  if (result.meta.changes === 0)
+    return Response.json({ error: "Not found" }, { status: 404 });
+
   return Response.json({ ok: true });
 }
 
 export async function DELETE(req: Request) {
+  const { env } = await getCloudflareContext();
+  const db = env.DB;
   const { key } = (await req.json()) as { key: string };
-  const vocab = readVocabulary();
-  vocab.entries = vocab.entries.filter((e) => e.key !== key);
-  writeVocabulary(vocab);
+
+  await db.prepare("DELETE FROM vocabulary WHERE key = ?").bind(key).run();
+
   return Response.json({ ok: true });
 }
