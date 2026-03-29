@@ -1,19 +1,20 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-import type { BloodworkReading, Vocabulary } from "@/types/bloodwork";
+import { getReadingsWithMeasurements, getVocabulary } from "@/db/queries";
 
-function dataPath(filename: string) {
-  return join(process.cwd(), "data", filename);
-}
+export async function GET() {
+  const { env } = await getCloudflareContext();
+  const db = env.DB;
 
-export function GET() {
-  const vocabulary: Vocabulary = JSON.parse(
-    readFileSync(dataPath("vocabulary.json"), "utf-8"),
-  );
-  const readings: BloodworkReading[] = JSON.parse(
-    readFileSync(dataPath("readings.json"), "utf-8"),
-  );
+  const vocabulary = await getVocabulary(db);
+  const readings = await getReadingsWithMeasurements(db);
 
-  return Response.json({ vocabulary, readings });
+  return Response.json({
+    vocabulary: { entries: vocabulary },
+    readings: readings.map((r) => ({
+      date: r.date,
+      source: r.source,
+      measurements: r.measurements,
+    })),
+  });
 }

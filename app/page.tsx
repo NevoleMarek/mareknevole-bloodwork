@@ -1,41 +1,28 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { SupplementStack } from "@/components/dashboard/supplement-stack";
 import { TrendChart } from "@/components/dashboard/trend-chart";
-import type {
-  BloodworkReading,
-  Vocabulary,
-  Supplement,
-  SupplementChangelog,
-} from "@/types/bloodwork";
+import {
+  getActiveSupplements,
+  getReadingsWithMeasurements,
+  getSupplementChangelog,
+  getVocabulary,
+} from "@/db/queries";
+import type { Status } from "@/types/bloodwork";
 
-function dataPath(filename: string) {
-  return join(process.cwd(), "data", filename);
-}
+export const dynamic = "force-dynamic";
 
-function loadJson<T>(filename: string): T {
-  return JSON.parse(readFileSync(dataPath(filename), "utf-8")) as T;
-}
+export default async function Home() {
+  const { env } = await getCloudflareContext();
+  const db = env.DB;
 
-export default function Home() {
-  const { entries: vocabulary } = loadJson<Vocabulary>("vocabulary.json");
-  const readings = loadJson<BloodworkReading[]>("readings.json");
+  const vocabulary = await getVocabulary(db);
+  const readings = await getReadingsWithMeasurements(db);
+  const supplements = await getActiveSupplements(db);
+  const changelog = await getSupplementChangelog(db);
 
-  const supplementsFile = dataPath("supplements.json");
-  const { supplements: allSupplements, changelog } = existsSync(supplementsFile)
-    ? loadJson<{ supplements: Supplement[]; changelog: SupplementChangelog[] }>(
-        "supplements.json",
-      )
-    : {
-        supplements: [] as Supplement[],
-        changelog: [] as SupplementChangelog[],
-      };
-
-  const supplements = allSupplements.filter((s) => s.stoppedAt === null);
-
-  const supplementsLastUpdated = allSupplements.reduce((latest, s) => {
+  const supplementsLastUpdated = supplements.reduce((latest, s) => {
     return s.updatedAt > latest ? s.updatedAt : latest;
   }, "");
 
@@ -59,7 +46,7 @@ export default function Home() {
           unit: m.unit,
           min: entry.referenceRange.min,
           max: entry.referenceRange.max,
-          status: m.status,
+          status: m.status as Status,
         };
       })
     : [];
@@ -123,7 +110,14 @@ export default function Home() {
         <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
           Trends
         </h2>
-        <TrendChart readings={readings} vocabulary={vocabulary} />
+        <TrendChart
+          readings={readings.map((r) => ({
+            date: r.date,
+            source: r.source,
+            measurements: r.measurements,
+          }))}
+          vocabulary={vocabulary}
+        />
       </section>
     </main>
   );

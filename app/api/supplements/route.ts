@@ -1,77 +1,69 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-import type { Supplement, SupplementChangelog } from "@/types/bloodwork";
+import { getActiveSupplements, getSupplementChangelog } from "@/db/queries";
 
-type SupplementsData = {
-  supplements: Supplement[];
-  changelog: SupplementChangelog[];
-};
+export async function GET() {
+  const { env } = await getCloudflareContext();
+  const db = env.DB;
 
-function filePath() {
-  return join(process.cwd(), "data", "supplements.json");
-}
+  const supplements = await getActiveSupplements(db);
+  const changelog = await getSupplementChangelog(db);
 
-function readData(): SupplementsData {
-  try {
-    return JSON.parse(readFileSync(filePath(), "utf-8")) as SupplementsData;
-  } catch {
-    return { supplements: [], changelog: [] };
-  }
-}
-
-function writeData(data: SupplementsData) {
-  writeFileSync(filePath(), JSON.stringify(data, null, 2));
-}
-
-export function GET() {
-  const data = readData();
-  const active = data.supplements.filter((s) => !s.stoppedAt);
-  return Response.json({ supplements: active, changelog: data.changelog });
+  return Response.json({ supplements, changelog });
 }
 
 export async function POST(req: Request) {
+  const { env } = await getCloudflareContext();
+  const db = env.DB;
   const body = (await req.json()) as {
     name: string;
     dose: string;
     frequency: string;
     startedAt: string;
   };
-  const data = readData();
+
   const now = new Date().toISOString();
-  const supplement: Supplement = {
-    id: crypto.randomUUID(),
-    name: body.name,
-    dose: body.dose,
-    frequency: body.frequency,
-    startedAt: body.startedAt,
-    stoppedAt: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-  data.supplements.push(supplement);
-  data.changelog.unshift({
-    id: crypto.randomUUID(),
-    date: new Date().toISOString().split("T")[0],
-    description: `Added ${body.name} ${body.dose}`,
-    createdAt: now,
-  });
-  writeData(data);
+  const id = crypto.randomUUID();
+
+  await db
+    .prepare(
+      "INSERT INTO supplements (id, name, dose, frequency, started_at, stopped_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)",
+    )
+    .bind(id, body.name, body.dose, body.frequency, body.startedAt, now, now)
+    .run();
+
+  await db
+    .prepare(
+      "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
+    )
+    .bind(
+      crypto.randomUUID(),
+      now.split("T")[0],
+      `Added ${body.name} ${body.dose}`,
+      now,
+    )
+    .run();
+
   return Response.json({ ok: true });
 }
 
 export async function PUT(req: Request) {
+  const { env } = await getCloudflareContext();
+  const db = env.DB;
   const body = (await req.json()) as {
     id: string;
     name: string;
     dose: string;
     frequency: string;
   };
-  const data = readData();
-  const idx = data.supplements.findIndex((s) => s.id === body.id);
-  if (idx === -1) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const old = data.supplements[idx];
+  const old = await db
+    .prepare("SELECT * FROM supplements WHERE id = ?")
+    .bind(body.id)
+    .first<{ name: string; dose: string; frequency: string }>();
+
+  if (!old) return Response.json({ error: "Not found" }, { status: 404 });
+
   const now = new Date().toISOString();
   const changes: string[] = [];
   if (old.dose !== body.dose)
@@ -81,35 +73,58 @@ export async function PUT(req: Request) {
   if (old.name !== body.name)
     changes.push(`Renamed ${old.name} to ${body.name}`);
 
-  data.supplements[idx] = { ...old, ...body, updatedAt: now };
+  await db
+    .prepare(
+      "UPDATE supplements SET name = ?, dose = ?, frequency = ?, updated_at = ? WHERE id = ?",
+    )
+    .bind(body.name, body.dose, body.frequency, now, body.id)
+    .run();
 
   for (const desc of changes) {
-    data.changelog.unshift({
-      id: crypto.randomUUID(),
-      date: new Date().toISOString().split("T")[0],
-      description: desc,
-      createdAt: now,
-    });
+    await db
+      .prepare(
+        "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
+      )
+      .bind(crypto.randomUUID(), now.split("T")[0], desc, now)
+      .run();
   }
-  writeData(data);
+
   return Response.json({ ok: true });
 }
 
 export async function DELETE(req: Request) {
+  const { env } = await getCloudflareContext();
+  const db = env.DB;
   const { id } = (await req.json()) as { id: string };
-  const data = readData();
-  const idx = data.supplements.findIndex((s) => s.id === id);
-  if (idx === -1) return Response.json({ error: "Not found" }, { status: 404 });
+
+  const supplement = await db
+    .prepare("SELECT name FROM supplements WHERE id = ?")
+    .bind(id)
+    .first<{ name: string }>();
+
+  if (!supplement)
+    return Response.json({ error: "Not found" }, { status: 404 });
 
   const now = new Date().toISOString();
-  const supplement = data.supplements[idx];
-  data.supplements[idx] = { ...supplement, stoppedAt: now, updatedAt: now };
-  data.changelog.unshift({
-    id: crypto.randomUUID(),
-    date: new Date().toISOString().split("T")[0],
-    description: `Removed ${supplement.name}`,
-    createdAt: now,
-  });
-  writeData(data);
+
+  await db
+    .prepare(
+      "UPDATE supplements SET stopped_at = ?, updated_at = ? WHERE id = ?",
+    )
+    .bind(now, now, id)
+    .run();
+
+  await db
+    .prepare(
+      "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
+    )
+    .bind(
+      crypto.randomUUID(),
+      now.split("T")[0],
+      `Removed ${supplement.name}`,
+      now,
+    )
+    .run();
+
   return Response.json({ ok: true });
 }
