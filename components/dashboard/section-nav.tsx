@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const SECTIONS = [
   { id: "metrics", label: "Metrics" },
@@ -14,9 +14,16 @@ type SectionId = (typeof SECTIONS)[number]["id"];
 export function SectionNav() {
   const [stuck, setStuck] = useState(false);
   const [active, setActive] = useState<SectionId>("metrics");
+  const [navHeight, setNavHeight] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+
+  const measureNav = useCallback(() => {
+    if (navRef.current) setNavHeight(navRef.current.offsetHeight);
+  }, []);
 
   useEffect(() => {
+    measureNav();
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
 
@@ -26,7 +33,7 @@ export function SectionNav() {
     );
     observer.observe(wrapper);
     return () => observer.disconnect();
-  }, []);
+  }, [measureNav]);
 
   useEffect(() => {
     function onScroll() {
@@ -53,8 +60,13 @@ export function SectionNav() {
   }
 
   return (
-    <div ref={wrapperRef} className="mt-6">
+    <div
+      ref={wrapperRef}
+      className="mt-6"
+      style={{ height: stuck ? navHeight : "auto" }}
+    >
       <nav
+        ref={navRef}
         className={`flex items-center py-3 transition-[padding] duration-500 ${
           stuck
             ? "fixed top-0 right-0 left-0 z-50 border-b border-zinc-200 bg-stone-50 px-4 md:px-6"
