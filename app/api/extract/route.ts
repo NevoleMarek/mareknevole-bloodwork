@@ -3,12 +3,7 @@ import assert from "node:assert";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type {
-  BloodworkReading,
-  ExtractedReading,
-  MergeResult,
-  Vocabulary,
-} from "@/types/bloodwork";
+import type { BloodworkReading, Vocabulary } from "@/types/bloodwork";
 
 function getModel() {
   const vertexAI = new VertexAI({
@@ -64,7 +59,7 @@ export async function POST(request: Request) {
   const base64 = Buffer.from(bytes).toString("base64");
 
   const extractText = await callGemini(extractPrompt, base64);
-  const extracted = parseJson<ExtractedReading>(extractText);
+  const extracted = parseJson<unknown>(extractText);
 
   // Agent 2: merge with vocabulary
   const vocabulary: Vocabulary = JSON.parse(
@@ -80,7 +75,8 @@ export async function POST(request: Request) {
     .replace("{{EXTRACTED_READING}}", JSON.stringify(extracted, null, 2));
 
   const mergeText = await callGemini(mergePrompt);
-  const mergeResult = parseJson<MergeResult>(mergeText);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mergeResult = parseJson<any>(mergeText);
 
   // Persist new vocabulary entries
   if (mergeResult.newVocabularyEntries.length > 0) {

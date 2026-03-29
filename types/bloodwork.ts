@@ -22,28 +22,6 @@ export type BloodworkReading = {
   measurements: Measurement[];
 };
 
-// Agent 1 output: raw extraction from PDF
-export type ExtractedMeasurement = {
-  label: string;
-  value: number;
-  unit: string;
-  referenceRangeMin: number | null;
-  referenceRangeMax: number | null;
-  status: Status;
-};
-
-export type ExtractedReading = {
-  date: string;
-  measurements: ExtractedMeasurement[];
-};
-
-// Agent 2 output: vocabulary merge result
-export type MergeResult = {
-  newVocabularyEntries: VocabularyEntry[];
-  normalizedMeasurements: Measurement[];
-  date: string;
-};
-
 export type Supplement = {
   id: string;
   name: string;
