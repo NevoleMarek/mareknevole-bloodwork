@@ -79,7 +79,12 @@ export default function AdminDataPage() {
         </div>
         <ReadingsTable
           readings={data.readings}
-          onDelete={async () => {
+          onDelete={async (date) => {
+            await fetch("/api/readings", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ date }),
+            });
             await refresh();
           }}
         />

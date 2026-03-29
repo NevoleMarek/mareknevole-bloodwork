@@ -4,6 +4,24 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import type { SaveReadingRequest, SaveReadingResponse } from "@/types/wizard";
 
+export async function DELETE(request: Request) {
+  const { env } = await getCloudflareContext();
+  const db = env.DB;
+  const { date } = (await request.json()) as { date: string };
+
+  const reading = await db
+    .prepare("SELECT id FROM readings WHERE date = ?")
+    .bind(date)
+    .first<{ id: string }>();
+
+  if (!reading) return Response.json({ error: "Not found" }, { status: 404 });
+
+  // CASCADE handles measurements
+  await db.prepare("DELETE FROM readings WHERE id = ?").bind(reading.id).run();
+
+  return Response.json({ ok: true });
+}
+
 export async function POST(request: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
