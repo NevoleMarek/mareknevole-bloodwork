@@ -91,7 +91,7 @@ export default async function Home() {
         <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
           Metrics · {latestDate}
         </h2>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {metrics.map((m) => (
             <MetricCard
               key={m.label}
