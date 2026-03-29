@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const navItems = [
+  { href: "/admin/upload", label: "Upload" },
   { href: "/admin/data", label: "Data" },
   { href: "/admin/vocabulary", label: "Vocabulary" },
   { href: "/admin/supplements", label: "Supplements" },
