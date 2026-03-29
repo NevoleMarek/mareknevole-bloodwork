@@ -33,6 +33,7 @@ a {
 }
 
 button,
+nav a,
 label[class*="cursor-pointer"] {
   cursor: pointer;
   transition:
@@ -41,6 +42,7 @@ label[class*="cursor-pointer"] {
 }
 
 button:active:not(:disabled),
+nav a:active,
 label[class*="cursor-pointer"]:active {
   transform: scale(0.97);
   opacity: 0.8;
