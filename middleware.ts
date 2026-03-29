@@ -26,5 +26,6 @@ export const config = {
     "/api/readings/:path*",
     "/api/vocabulary/:path*",
     "/api/supplements/:path*",
+    "/api/changelog/:path*",
   ],
 };
