@@ -17,6 +17,7 @@
 | -------------------- | ------ | ------------------------------- |
 | `/`                  | Public | Dashboard with metrics & trends |
 | `/admin`             | Auth   | Login page                      |
+| `/admin/upload`      | Auth   | Upload wizard                   |
 | `/admin/data`        | Auth   | Readings management             |
 | `/admin/vocabulary`  | Auth   | Vocabulary editor               |
 | `/admin/supplements` | Auth   | Supplement stack editor         |
@@ -27,15 +28,17 @@ Password-based authentication via middleware + session cookie. Middleware protec
 
 ## API Routes
 
-| Method | Route              | Purpose                            |
-| ------ | ------------------ | ---------------------------------- |
-| GET    | `/api/data`        | Return vocabulary and all readings |
-| POST   | `/api/extract`     | PDF upload → Gemini extraction     |
-| POST   | `/api/auth`        | Login, returns session cookie      |
-| GET    | `/api/vocabulary`  | Return vocabulary                  |
-| PUT    | `/api/vocabulary`  | Update vocabulary entries          |
-| GET    | `/api/supplements` | Return supplement stack            |
-| PUT    | `/api/supplements` | Update supplement stack            |
+| Method | Route              | Purpose                                 |
+| ------ | ------------------ | --------------------------------------- |
+| GET    | `/api/data`        | Return vocabulary and all readings      |
+| POST   | `/api/extract`     | PDF upload → Gemini variable extraction |
+| POST   | `/api/map`         | Variables → Gemini vocabulary mapping   |
+| POST   | `/api/readings`    | Save reading + vocabulary to D1         |
+| POST   | `/api/auth`        | Login, returns session cookie           |
+| GET    | `/api/vocabulary`  | Return vocabulary                       |
+| PUT    | `/api/vocabulary`  | Update vocabulary entries               |
+| GET    | `/api/supplements` | Return supplement stack                 |
+| PUT    | `/api/supplements` | Update supplement stack                 |
 
 ## Component Architecture
 
@@ -45,7 +48,10 @@ Password-based authentication via middleware + session cookie. Middleware protec
   - `trend-chart` — sparkline trends over time
   - `supplement-stack` — current supplement list with dosages
 - `components/admin/` — admin data management
-  - `pdf-uploader` — PDF upload with extraction trigger
+  - `upload-wizard` — main wizard: state machine, two-panel layout
+  - `step-upload` — PDF drag-and-drop upload
+  - `step-review-extraction` — editable table of extracted variables
+  - `step-review-mapping` — mapping table with vocabulary dropdowns
   - `readings-table` — tabular view of all readings
   - `vocabulary-editor` — edit test names, units, and ranges
   - `supplement-editor` — edit supplements with changelog
@@ -54,13 +60,7 @@ Password-based authentication via middleware + session cookie. Middleware protec
 
 ## Data
 
-Currently JSON files in `data/`. D1 SQLite migration pending.
-
-- `data/vocabulary.json` — known test names, units, and reference ranges
-- `data/readings.json` — all ingested bloodwork readings
-- `data/supplements.json` — current supplement stack
-
-Target D1 tables: `vocabulary`, `readings`, `measurements`, `supplements`, `supplement_changelog`.
+D1 SQLite database with tables: `vocabulary`, `readings`, `measurements`, `supplements`, `supplement_changelog`.
 
 ## Project Structure
 
@@ -89,6 +89,5 @@ Copy `.env.local.example` to `.env.local` and fill in:
 
 ## Architectural Constraints
 
-- Keep data in JSON files until D1 migration is implemented.
 - Prefer simple synchronous UI components for straightforward testing.
 - When architecture or toolchain choices change, update this document in the same task.
