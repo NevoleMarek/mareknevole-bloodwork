@@ -52,13 +52,13 @@ export default async function Home() {
     : [];
 
   return (
-    <main className="mx-auto w-full max-w-[960px] px-6 py-8">
+    <main className="mx-auto w-full max-w-[960px] px-4 py-6 md:px-6 md:py-8">
       <header className="mb-8 border-b border-zinc-200 pb-8">
         <h1 className="text-4xl font-bold tracking-tight">BLOODWORK</h1>
         <p className="mt-1 text-[10px] tracking-widest text-zinc-400 uppercase">
           Marek Nevole
         </p>
-        <div className="mt-8 columns-2 gap-12 text-justify text-[13px] leading-[1.7] text-zinc-500">
+        <div className="mt-8 columns-1 gap-12 text-justify text-[13px] leading-[1.7] text-zinc-500 md:columns-2">
           <p>
             This dashboard exists because better decisions come from better
             data, and better data starts with putting everything in one place,
