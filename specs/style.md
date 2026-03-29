@@ -51,3 +51,13 @@ Desaturated at 30% opacity, used for range bar zones only:
 - Thin uniform `border-zinc-200`
 - No rounded corners
 - No shadows
+
+## Responsive
+
+- Breakpoint: `md:` (768px) — below this is mobile, above is desktop
+- Mobile padding: 16px horizontal (`px-4`), 24px vertical (`py-6`)
+- Desktop padding: 24px horizontal (`px-6`), 32px vertical (`py-8`)
+- Intro text: single column on mobile (`columns-1`), two on desktop (`md:columns-2`)
+- Metric cards: 2-column grid on mobile (`grid-cols-2`), 4-column on desktop (`md:grid-cols-4`)
+- Tables: `overflow-x-auto` wrapper for horizontal scroll on mobile
+- Admin forms: `flex-wrap` so fixed-width inputs wrap on narrow screens
