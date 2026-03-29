@@ -35,9 +35,4 @@ describe("SupplementTable", () => {
     expect(screen.getByText("5 g")).toBeInTheDocument();
     expect(screen.getByText("5000 IU")).toBeInTheDocument();
   });
-
-  it("shows count in header", () => {
-    render(<SupplementTable supplements={supplements} />);
-    expect(screen.getByText("2 active")).toBeInTheDocument();
-  });
 });

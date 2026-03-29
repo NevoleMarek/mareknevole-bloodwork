@@ -111,11 +111,18 @@ export default async function Home() {
         />
       </section>
 
-      <section
-        id="supplements"
-        className="mb-8 border border-zinc-200 bg-white p-4 md:p-6"
-      >
-        <SupplementTable supplements={supplements} />
+      <section id="supplements" className="mb-8">
+        <h2 className="mb-3 flex items-baseline gap-3">
+          <span className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
+            Supplement Stack
+          </span>
+          <span className="text-[10px] text-zinc-500">
+            {supplements.length} active
+          </span>
+        </h2>
+        <div className="border border-zinc-200 bg-white p-4 md:p-6">
+          <SupplementTable supplements={supplements} />
+        </div>
       </section>
 
       <section id="changelog" className="mb-8">

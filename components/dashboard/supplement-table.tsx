@@ -7,14 +7,6 @@ export function SupplementTable({
 }) {
   return (
     <div>
-      <div className="mb-3 flex items-baseline gap-3">
-        <span className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
-          Supplement Stack
-        </span>
-        <span className="text-[10px] text-zinc-500">
-          {supplements.length} active
-        </span>
-      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
