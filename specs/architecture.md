@@ -43,10 +43,12 @@ Password-based authentication via middleware + session cookie. Middleware protec
 ## Component Architecture
 
 - `components/dashboard/` — public dashboard components
+  - `section-nav` — sticky nav bar with scroll-spy and logo animation
   - `metric-card` — single metric with value, unit, status, and range bar
   - `range-bar` — bounded zone visualization with value marker
   - `trend-chart` — sparkline trends over time
-  - `supplement-stack` — current supplement list with dosages
+  - `supplement-table` — always-visible supplement list
+  - `changelog-list` — paginated changelog grouped by day
 - `components/admin/` — admin data management
   - `upload-wizard` — main wizard: state machine, two-panel layout
   - `step-upload` — PDF drag-and-drop upload
