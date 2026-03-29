@@ -1,11 +1,18 @@
 {
   "name": "bloodwork",
   "compatibility_date": "2025-12-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "bloodwork.mareknevole.com", "custom_domain": true }],
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "bloodwork-db",
-      "database_id": "placeholder-replace-after-creation",
+      "database_id": "59c89aab-650f-4814-9182-dc6691e74237",
     },
   ],
 }

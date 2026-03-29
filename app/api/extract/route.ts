@@ -10,12 +10,13 @@ import type {
   Vocabulary,
 } from "@/types/bloodwork";
 
-const vertexAI = new VertexAI({
-  project: process.env.GOOGLE_CLOUD_PROJECT!,
-  location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
-});
-
-const model = vertexAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+function getModel() {
+  const vertexAI = new VertexAI({
+    project: process.env.GOOGLE_CLOUD_PROJECT!,
+    location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
+  });
+  return vertexAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+}
 
 function dataPath(filename: string) {
   return join(process.cwd(), "data", filename);
@@ -33,6 +34,7 @@ async function callGemini(prompt: string, pdfBase64?: string): Promise<string> {
       ]
     : [{ text: prompt }];
 
+  const model = getModel();
   const result = await model.generateContent({
     contents: [{ role: "user", parts }],
   });
