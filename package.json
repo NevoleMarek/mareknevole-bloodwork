@@ -17,7 +17,8 @@
     "check:full": "bun run check && bun run build",
     "db:migrate": "wrangler d1 execute bloodwork-db --local --file=db/schema.sql",
     "db:seed": "bun run db/migrate.ts",
-    "deploy": "bun run check && bunx opennextjs-cloudflare build && bunx opennextjs-cloudflare deploy"
+    "deploy": "bun run check && bunx opennextjs-cloudflare build && bunx opennextjs-cloudflare deploy",
+    "deploy:secrets": "cat .env.prod | grep -v '^#' | grep '=' | while IFS='=' read -r key value; do [ -n \"$value\" ] && echo \"$value\" | bunx wrangler secret put \"$key\"; done"
   },
   "dependencies": {
     "@google-cloud/vertexai": "^1.10.2",
