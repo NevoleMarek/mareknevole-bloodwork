@@ -56,14 +56,17 @@ export function SupplementStack({
             Changelog
           </div>
           <div className="space-y-1 text-[10px] text-zinc-500">
-            {changelog.map((entry) => (
-              <div key={entry.id} className="flex gap-3">
-                <span className="whitespace-nowrap text-zinc-400">
-                  {entry.date}
-                </span>
-                <span>{entry.description}</span>
-              </div>
-            ))}
+            {changelog.map((entry, i) => {
+              const showDate = i === 0 || changelog[i - 1].date !== entry.date;
+              return (
+                <div key={entry.id} className="flex gap-3">
+                  <span className="w-[70px] shrink-0 whitespace-nowrap text-zinc-400">
+                    {showDate ? entry.date : ""}
+                  </span>
+                  <span>{entry.description}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

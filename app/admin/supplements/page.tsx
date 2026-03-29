@@ -81,81 +81,77 @@ export default function AdminSupplementsPage() {
           <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
             Changelog
           </h2>
-          <div className="space-y-3 text-[10px]">
-            {groupedChangelog.map((group) => (
-              <div key={group.date}>
-                <div className="mb-1 text-[9px] tracking-[1px] text-zinc-400">
-                  {group.date}
-                </div>
-                <div className="space-y-1">
-                  {group.entries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="group flex items-center gap-2 text-zinc-500"
+          <div className="space-y-1 text-[10px]">
+            {groupedChangelog.map((group) =>
+              group.entries.map((entry, i) => (
+                <div
+                  key={entry.id}
+                  className="group flex items-center gap-3 text-zinc-500"
+                >
+                  <span className="w-[70px] shrink-0 whitespace-nowrap text-zinc-400">
+                    {i === 0 ? group.date : ""}
+                  </span>
+                  {editing.kind === "editing" && editing.id === entry.id ? (
+                    <form
+                      className="flex flex-1 gap-2"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleSaveEdit(entry.id, editing.description);
+                      }}
                     >
-                      {editing.kind === "editing" && editing.id === entry.id ? (
-                        <form
-                          className="flex flex-1 gap-2"
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            handleSaveEdit(entry.id, editing.description);
-                          }}
-                        >
-                          <input
-                            value={editing.description}
-                            onChange={(e) =>
-                              setEditing({
-                                ...editing,
-                                description: e.target.value,
-                              })
-                            }
-                            className="flex-1 border border-zinc-200 px-1.5 py-0.5 text-[10px] outline-none"
-                            autoFocus
-                          />
-                          <button
-                            type="submit"
-                            className="text-[9px] text-zinc-500 hover:text-zinc-900"
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditing({ kind: "none" })}
-                            className="text-[9px] text-zinc-400"
-                          >
-                            Cancel
-                          </button>
-                        </form>
-                      ) : (
-                        <>
-                          <span className="flex-1">{entry.description}</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setEditing({
-                                kind: "editing",
-                                id: entry.id,
-                                description: entry.description,
-                              })
-                            }
-                            className="text-[9px] text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-zinc-600"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(entry.id)}
-                            className="text-[9px] text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-400"
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  ))}
+                      <input
+                        value={editing.description}
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            description: e.target.value,
+                          })
+                        }
+                        className="flex-1 border border-zinc-200 px-1.5 py-0.5 text-[10px] outline-none"
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        className="text-[9px] text-zinc-500 hover:text-zinc-900"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditing({ kind: "none" })}
+                        className="text-[9px] text-zinc-400"
+                      >
+                        Cancel
+                      </button>
+                    </form>
+                  ) : (
+                    <>
+                      <span className="flex-1">{entry.description}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditing({
+                            kind: "editing",
+                            id: entry.id,
+                            description: entry.description,
+                          })
+                        }
+                        className="text-[9px] text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-zinc-600"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(entry.id)}
+                        className="text-[9px] text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-400"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
-              </div>
-            ))}
+              )),
+            )}
           </div>
         </section>
       )}

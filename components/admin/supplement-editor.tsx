@@ -11,11 +11,13 @@ export function SupplementEditor({
   onRefresh: () => void;
 }) {
   const [adding, setAdding] = useState(false);
+  const today = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState({
     name: "",
     dose: "",
     frequency: "daily",
     startedAt: "",
+    changelogDate: today,
   });
 
   async function handleAdd() {
@@ -25,15 +27,23 @@ export function SupplementEditor({
       body: JSON.stringify(form),
     });
     setAdding(false);
-    setForm({ name: "", dose: "", frequency: "daily", startedAt: "" });
+    setForm({
+      name: "",
+      dose: "",
+      frequency: "daily",
+      startedAt: "",
+      changelogDate: today,
+    });
     onRefresh();
   }
 
   async function handleRemove(id: string) {
+    const changelogDate = prompt("Changelog date (YYYY-MM-DD):", today);
+    if (!changelogDate) return;
     await fetch("/api/supplements", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, changelogDate }),
     });
     onRefresh();
   }
@@ -98,6 +108,15 @@ export function SupplementEditor({
             value={form.startedAt}
             onChange={(e) => setForm({ ...form, startedAt: e.target.value })}
             className="w-32 border border-zinc-200 px-2 py-1 outline-none"
+          />
+          <input
+            type="date"
+            value={form.changelogDate}
+            onChange={(e) =>
+              setForm({ ...form, changelogDate: e.target.value })
+            }
+            className="border border-zinc-200 px-2 py-1 outline-none"
+            title="Changelog date"
           />
           <button
             type="button"

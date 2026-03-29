@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     dose: string;
     frequency: string;
     startedAt: string;
+    changelogDate: string;
   };
 
   const now = new Date().toISOString();
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
     )
     .bind(
       crypto.randomUUID(),
-      now.split("T")[0],
+      body.changelogDate,
       `Added ${body.name} ${body.dose}`,
       now,
     )
@@ -55,6 +56,7 @@ export async function PUT(req: Request) {
     name: string;
     dose: string;
     frequency: string;
+    changelogDate: string;
   };
 
   const old = await db
@@ -85,7 +87,7 @@ export async function PUT(req: Request) {
       .prepare(
         "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
       )
-      .bind(crypto.randomUUID(), now.split("T")[0], desc, now)
+      .bind(crypto.randomUUID(), body.changelogDate, desc, now)
       .run();
   }
 
@@ -95,7 +97,10 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
-  const { id } = (await req.json()) as { id: string };
+  const { id, changelogDate } = (await req.json()) as {
+    id: string;
+    changelogDate: string;
+  };
 
   const supplement = await db
     .prepare("SELECT name FROM supplements WHERE id = ?")
@@ -118,12 +123,7 @@ export async function DELETE(req: Request) {
     .prepare(
       "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
     )
-    .bind(
-      crypto.randomUUID(),
-      now.split("T")[0],
-      `Removed ${supplement.name}`,
-      now,
-    )
+    .bind(crypto.randomUUID(), changelogDate, `Removed ${supplement.name}`, now)
     .run();
 
   return Response.json({ ok: true });
