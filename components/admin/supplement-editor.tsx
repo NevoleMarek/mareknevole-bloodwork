@@ -72,7 +72,7 @@ export function SupplementEditor({
       </table>
 
       {adding && (
-        <div className="mb-4 flex gap-2 border border-zinc-200 p-3 text-[11px]">
+        <div className="mb-4 flex flex-wrap gap-2 border border-zinc-200 p-3 text-[11px]">
           <input
             placeholder="name"
             value={form.name}

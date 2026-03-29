@@ -109,7 +109,7 @@ export function VocabularyEditor({
       </table>
 
       {editing.kind !== "none" && (
-        <div className="mb-4 flex gap-2 border border-zinc-200 p-3 text-[11px]">
+        <div className="mb-4 flex flex-wrap gap-2 border border-zinc-200 p-3 text-[11px]">
           <input
             placeholder="key"
             value={form.key}
