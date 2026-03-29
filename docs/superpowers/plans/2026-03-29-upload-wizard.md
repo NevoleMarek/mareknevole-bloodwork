@@ -16,45 +16,46 @@
 
 ### New files
 
-| File | Responsibility |
-|---|---|
-| `types/wizard.ts` | Wizard-specific types: `ExtractedVariable`, `MappedVariable`, `WizardState`, API request/response types |
-| `prompts/extract-variables.txt` | Simplified Gemini prompt for PDF variable extraction (date + label/value/unit only) |
-| `prompts/map-variables.txt` | Gemini prompt for vocabulary fuzzy-matching and unit conversion |
-| `app/api/extract/route.ts` | Rewrite: PDF → Gemini extraction → JSON response (no persistence) |
-| `app/api/map/route.ts` | New: variables + vocabulary → Gemini mapping → JSON response |
-| `app/api/readings/route.ts` | New: save reading + new vocabulary to D1 atomically |
-| `app/admin/upload/page.tsx` | Wizard page component with state machine |
-| `components/admin/upload-wizard.tsx` | Main wizard component: state machine, two-panel layout |
-| `components/admin/step-upload.tsx` | Upload step: drag-and-drop PDF upload |
-| `components/admin/step-review-extraction.tsx` | Step 1: editable table of extracted variables |
-| `components/admin/step-review-mapping.tsx` | Step 2: mapping table with vocabulary dropdowns |
-| `lib/status.ts` | `deriveStatus()` pure function for value → status derivation |
-| `lib/status.test.ts` | Tests for status derivation |
-| `lib/gemini.ts` | Shared Gemini caller extracted from current extract route |
+| File                                          | Responsibility                                                                                          |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `types/wizard.ts`                             | Wizard-specific types: `ExtractedVariable`, `MappedVariable`, `WizardState`, API request/response types |
+| `prompts/extract-variables.txt`               | Simplified Gemini prompt for PDF variable extraction (date + label/value/unit only)                     |
+| `prompts/map-variables.txt`                   | Gemini prompt for vocabulary fuzzy-matching and unit conversion                                         |
+| `app/api/extract/route.ts`                    | Rewrite: PDF → Gemini extraction → JSON response (no persistence)                                       |
+| `app/api/map/route.ts`                        | New: variables + vocabulary → Gemini mapping → JSON response                                            |
+| `app/api/readings/route.ts`                   | New: save reading + new vocabulary to D1 atomically                                                     |
+| `app/admin/upload/page.tsx`                   | Wizard page component with state machine                                                                |
+| `components/admin/upload-wizard.tsx`          | Main wizard component: state machine, two-panel layout                                                  |
+| `components/admin/step-upload.tsx`            | Upload step: drag-and-drop PDF upload                                                                   |
+| `components/admin/step-review-extraction.tsx` | Step 1: editable table of extracted variables                                                           |
+| `components/admin/step-review-mapping.tsx`    | Step 2: mapping table with vocabulary dropdowns                                                         |
+| `lib/status.ts`                               | `deriveStatus()` pure function for value → status derivation                                            |
+| `lib/status.test.ts`                          | Tests for status derivation                                                                             |
+| `lib/gemini.ts`                               | Shared Gemini caller extracted from current extract route                                               |
 
 ### Modified files
 
-| File | Change |
-|---|---|
-| `middleware.ts` | Add `/api/map/:path*` and `/api/readings/:path*` to matcher |
-| `app/admin/layout.tsx` | Add "Upload" nav item pointing to `/admin/upload` |
-| `types/bloodwork.ts` | Remove old `ExtractedMeasurement`, `ExtractedReading`, `MergeResult` types |
-| `specs/architecture.md` | Update route table and API routes |
+| File                    | Change                                                                     |
+| ----------------------- | -------------------------------------------------------------------------- |
+| `middleware.ts`         | Add `/api/map/:path*` and `/api/readings/:path*` to matcher                |
+| `app/admin/layout.tsx`  | Add "Upload" nav item pointing to `/admin/upload`                          |
+| `types/bloodwork.ts`    | Remove old `ExtractedMeasurement`, `ExtractedReading`, `MergeResult` types |
+| `specs/architecture.md` | Update route table and API routes                                          |
 
 ### Deleted files
 
-| File | Reason |
-|---|---|
-| `components/admin/pdf-uploader.tsx` | Replaced by wizard components |
-| `prompts/extract.txt` | Replaced by `prompts/extract-variables.txt` |
-| `prompts/vocabulary-merge.txt` | Replaced by `prompts/map-variables.txt` |
+| File                                | Reason                                      |
+| ----------------------------------- | ------------------------------------------- |
+| `components/admin/pdf-uploader.tsx` | Replaced by wizard components               |
+| `prompts/extract.txt`               | Replaced by `prompts/extract-variables.txt` |
+| `prompts/vocabulary-merge.txt`      | Replaced by `prompts/map-variables.txt`     |
 
 ---
 
 ## Task 1: Types and status derivation
 
 **Files:**
+
 - Create: `types/wizard.ts`
 - Create: `lib/status.ts`
 - Create: `lib/status.test.ts`
@@ -233,6 +234,7 @@ git commit -m "feat: add wizard types and status derivation"
 ## Task 2: Gemini helper and extract prompt
 
 **Files:**
+
 - Create: `lib/gemini.ts`
 - Create: `prompts/extract-variables.txt`
 
@@ -240,7 +242,7 @@ git commit -m "feat: add wizard types and status derivation"
 
 Create `lib/gemini.ts` — extracted from the current `app/api/extract/route.ts`:
 
-```typescript
+````typescript
 import { type Part, VertexAI } from "@google-cloud/vertexai";
 import assert from "node:assert";
 
@@ -282,7 +284,7 @@ export function parseGeminiJson<T>(text: string): T {
     .trim();
   return JSON.parse(cleaned) as T;
 }
-```
+````
 
 - [ ] **Step 2: Write extract prompt**
 
@@ -331,6 +333,7 @@ git commit -m "feat: extract shared Gemini helper and new extract prompt"
 ## Task 3: Map prompt
 
 **Files:**
+
 - Create: `prompts/map-variables.txt`
 
 - [ ] **Step 1: Write map prompt**
@@ -402,6 +405,7 @@ git commit -m "feat: add vocabulary mapping prompt"
 ## Task 4: API route — POST /api/extract
 
 **Files:**
+
 - Modify: `app/api/extract/route.ts` (full rewrite)
 
 - [ ] **Step 1: Rewrite extract route**
@@ -455,6 +459,7 @@ git commit -m "feat: rewrite extract route for wizard (no persistence)"
 ## Task 5: API route — POST /api/map
 
 **Files:**
+
 - Create: `app/api/map/route.ts`
 
 - [ ] **Step 1: Write map route**
@@ -507,6 +512,7 @@ git commit -m "feat: add map API route for vocabulary matching"
 ## Task 6: API route — POST /api/readings
 
 **Files:**
+
 - Create: `app/api/readings/route.ts`
 
 - [ ] **Step 1: Write readings route**
@@ -595,6 +601,7 @@ git commit -m "feat: add readings API route for atomic D1 save"
 ## Task 7: Update middleware
 
 **Files:**
+
 - Modify: `middleware.ts`
 
 - [ ] **Step 1: Add new routes to middleware matcher**
@@ -631,6 +638,7 @@ git commit -m "feat: protect map and readings API routes with auth"
 ## Task 8: Upload step component
 
 **Files:**
+
 - Create: `components/admin/step-upload.tsx`
 
 - [ ] **Step 1: Write upload step**
@@ -697,6 +705,7 @@ git commit -m "feat: add upload step component"
 ## Task 9: Review extraction step component
 
 **Files:**
+
 - Create: `components/admin/step-review-extraction.tsx`
 
 - [ ] **Step 1: Write review extraction step**
@@ -764,7 +773,7 @@ export function StepReviewExtraction({
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-zinc-200 text-left">
-            <th className="pb-2 pr-2 text-[9px] font-semibold tracking-[1px] text-zinc-500 uppercase">
+            <th className="pr-2 pb-2 text-[9px] font-semibold tracking-[1px] text-zinc-500 uppercase">
               Label
             </th>
             <th className="px-2 pb-2 text-[9px] font-semibold tracking-[1px] text-zinc-500 uppercase">
@@ -856,6 +865,7 @@ git commit -m "feat: add extraction review step component"
 ## Task 10: Review mapping step component
 
 **Files:**
+
 - Create: `components/admin/step-review-mapping.tsx`
 
 - [ ] **Step 1: Write review mapping step**
@@ -889,7 +899,11 @@ export function StepReviewMapping({
     const updated = mappings.map((m, i) => {
       if (i !== index) return m;
       if (newKey === "__new__") {
-        return { ...m, vocabularyKey: m.label.toLowerCase().replace(/\s+/g, "_"), isNew: true };
+        return {
+          ...m,
+          vocabularyKey: m.label.toLowerCase().replace(/\s+/g, "_"),
+          isNew: true,
+        };
       }
       const entry = vocabulary.find((v) => v.key === newKey);
       if (!entry) return m;
@@ -911,7 +925,7 @@ export function StepReviewMapping({
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-zinc-200 text-left">
-            <th className="pb-2 pr-2 text-[9px] font-semibold tracking-[1px] text-zinc-500 uppercase">
+            <th className="pr-2 pb-2 text-[9px] font-semibold tracking-[1px] text-zinc-500 uppercase">
               Extracted
             </th>
             <th className="px-2 pb-2 text-[9px] font-semibold tracking-[1px] text-zinc-500 uppercase">
@@ -1003,6 +1017,7 @@ git commit -m "feat: add mapping review step component"
 ## Task 11: Main wizard component
 
 **Files:**
+
 - Create: `components/admin/upload-wizard.tsx`
 
 - [ ] **Step 1: Write the wizard component**
@@ -1037,7 +1052,9 @@ function StepIndicator({ active }: { active: 0 | 1 }) {
       {STEP_LABELS.map((label, i) => (
         <span
           key={label}
-          className={i === active ? "font-semibold text-zinc-900" : "text-zinc-400"}
+          className={
+            i === active ? "font-semibold text-zinc-900" : "text-zinc-400"
+          }
         >
           {i + 1}. {label}
         </span>
@@ -1056,7 +1073,10 @@ export function UploadWizard() {
     if (didFetchVocab.current) return;
     didFetchVocab.current = true;
     fetch("/api/data")
-      .then((r) => r.json() as Promise<{ vocabulary: { entries: VocabularyEntry[] } }>)
+      .then(
+        (r) =>
+          r.json() as Promise<{ vocabulary: { entries: VocabularyEntry[] } }>,
+      )
       .then((data) => setVocabulary(data.vocabulary.entries));
   }, []);
 
@@ -1069,7 +1089,10 @@ export function UploadWizard() {
     formData.append("pdf", file);
 
     try {
-      const res = await fetch("/api/extract", { method: "POST", body: formData });
+      const res = await fetch("/api/extract", {
+        method: "POST",
+        body: formData,
+      });
       if (!res.ok) throw new Error("Extraction failed");
       const data = (await res.json()) as ExtractResponse;
       setState({
@@ -1174,19 +1197,22 @@ export function UploadWizard() {
   const pdfUrl =
     state.step !== "upload" && state.step !== "done" && state.step !== "error"
       ? state.pdfUrl
-      : state.step === "error" &&
-          "pdfUrl" in state.returnTo
+      : state.step === "error" && "pdfUrl" in state.returnTo
         ? (state.returnTo as { pdfUrl: string }).pdfUrl
         : null;
 
   return (
     <div className="flex gap-0">
       {/* Left panel */}
-      <div className={`flex-1 ${pdfUrl ? "md:border-r md:border-zinc-200 md:pr-6" : ""}`}>
+      <div
+        className={`flex-1 ${pdfUrl ? "md:border-r md:border-zinc-200 md:pr-6" : ""}`}
+      >
         {state.step === "upload" && <StepUpload onUpload={handleUpload} />}
 
         {state.step === "extracting" && (
-          <p className="text-xs text-zinc-500">Extracting variables from PDF...</p>
+          <p className="text-xs text-zinc-500">
+            Extracting variables from PDF...
+          </p>
         )}
 
         {state.step === "review-extraction" && (
@@ -1195,13 +1221,13 @@ export function UploadWizard() {
             <StepReviewExtraction
               date={state.date}
               variables={state.variables}
-              onDateChange={(date) =>
-                setState({ ...state, date })
-              }
+              onDateChange={(date) => setState({ ...state, date })}
               onVariablesChange={(variables) =>
                 setState({ ...state, variables })
               }
-              onNext={() => handleMap(state.date, state.variables, state.pdfUrl)}
+              onNext={() =>
+                handleMap(state.date, state.variables, state.pdfUrl)
+              }
             />
           </>
         )}
@@ -1209,7 +1235,9 @@ export function UploadWizard() {
         {state.step === "mapping" && (
           <>
             <StepIndicator active={1} />
-            <p className="text-xs text-zinc-500">Mapping variables to vocabulary...</p>
+            <p className="text-xs text-zinc-500">
+              Mapping variables to vocabulary...
+            </p>
           </>
         )}
 
@@ -1219,9 +1247,7 @@ export function UploadWizard() {
             <StepReviewMapping
               mappings={state.mappings}
               vocabulary={vocabulary}
-              onMappingsChange={(mappings) =>
-                setState({ ...state, mappings })
-              }
+              onMappingsChange={(mappings) => setState({ ...state, mappings })}
               onBack={() =>
                 setState({
                   step: "review-extraction",
@@ -1234,7 +1260,9 @@ export function UploadWizard() {
                   })),
                 })
               }
-              onSave={() => handleSave(state.date, state.mappings, state.pdfUrl)}
+              onSave={() =>
+                handleSave(state.date, state.mappings, state.pdfUrl)
+              }
               saving={false}
             />
           </>
@@ -1249,7 +1277,9 @@ export function UploadWizard() {
 
         {state.step === "done" && (
           <div className="text-center">
-            <p className="mb-4 text-xs text-zinc-500">Reading saved successfully.</p>
+            <p className="mb-4 text-xs text-zinc-500">
+              Reading saved successfully.
+            </p>
             <button
               type="button"
               onClick={() => setState({ step: "upload" })}
@@ -1309,6 +1339,7 @@ git commit -m "feat: add main upload wizard component with state machine"
 ## Task 12: Wizard page and navigation
 
 **Files:**
+
 - Create: `app/admin/upload/page.tsx`
 - Modify: `app/admin/layout.tsx`
 
@@ -1361,6 +1392,7 @@ git commit -m "feat: add upload wizard page and nav item"
 ## Task 13: Clean up old code
 
 **Files:**
+
 - Delete: `components/admin/pdf-uploader.tsx`
 - Delete: `prompts/extract.txt`
 - Delete: `prompts/vocabulary-merge.txt`
@@ -1369,6 +1401,7 @@ git commit -m "feat: add upload wizard page and nav item"
 - [ ] **Step 1: Remove PdfUploader from data page**
 
 In `app/admin/data/page.tsx`:
+
 - Remove the `import { PdfUploader }` line
 - Remove the entire `<section>` block containing `<PdfUploader onSuccess={refresh} />`
 
@@ -1397,6 +1430,7 @@ git commit -m "refactor: remove old PDF upload flow and prompts"
 ## Task 14: Update specs
 
 **Files:**
+
 - Modify: `specs/architecture.md`
 
 - [ ] **Step 1: Update architecture spec**

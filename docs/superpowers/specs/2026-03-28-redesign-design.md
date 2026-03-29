@@ -10,24 +10,24 @@ Typography-driven design built on Geist Mono. No dot grid, no ASCII box corners 
 
 **Surfaces & text (zinc scale):**
 
-| Token | Value | Usage |
-|---|---|---|
-| `bg` | `#fafaf9` (stone-50) | Page background |
-| `card` | `#ffffff` | Card surfaces |
-| `text` | `#18181b` (zinc-900) | Primary text, metric values |
-| `muted` | `#71717a` (zinc-500) | Secondary text, units |
+| Token    | Value                | Usage                          |
+| -------- | -------------------- | ------------------------------ |
+| `bg`     | `#fafaf9` (stone-50) | Page background                |
+| `card`   | `#ffffff`            | Card surfaces                  |
+| `text`   | `#18181b` (zinc-900) | Primary text, metric values    |
+| `muted`  | `#71717a` (zinc-500) | Secondary text, units          |
 | `subtle` | `#a1a1aa` (zinc-400) | Labels, dates, section headers |
-| `border` | `#e4e4e7` (zinc-200) | Card borders, dividers |
-| `track` | `#f4f4f5` (zinc-100) | Range bar background |
+| `border` | `#e4e4e7` (zinc-200) | Card borders, dividers         |
+| `track`  | `#f4f4f5` (zinc-100) | Range bar background           |
 
 **Status colors (desaturated):**
 
-| Status | Color | Usage |
-|---|---|---|
-| Normal | `green-400` at 30% opacity | Range bar zone fill |
+| Status     | Color                      | Usage               |
+| ---------- | -------------------------- | ------------------- |
+| Normal     | `green-400` at 30% opacity | Range bar zone fill |
 | Borderline | `amber-400` at 30% opacity | Range bar zone fill |
-| High | `red-400` at 30% opacity | Range bar zone fill |
-| Low | `blue-400` at 30% opacity | Range bar zone fill |
+| High       | `red-400` at 30% opacity   | Range bar zone fill |
+| Low        | `blue-400` at 30% opacity  | Range bar zone fill |
 
 Status is communicated only through the range bar tint. No border accents, no badge colors, no colored text.
 
@@ -71,22 +71,23 @@ Collapsed by default. Shows summary: "{n} active · updated {date}".
 
 Expanded shows two parts:
 
-*Current stack table:*
+_Current stack table:_
 
-| Column | Content |
-|---|---|
-| Supplement | Name |
-| Dose | Amount + unit |
-| Frequency | Daily / 2x daily / etc. |
-| Since | Month + year started |
+| Column     | Content                 |
+| ---------- | ----------------------- |
+| Supplement | Name                    |
+| Dose       | Amount + unit           |
+| Frequency  | Daily / 2x daily / etc. |
+| Since      | Month + year started    |
 
-*Changelog:* Reverse-chronological list of changes. Each entry: date + description (e.g., "Added Ashwagandha 600 mg", "Removed Zinc", "Changed Creatine from 3 g to 5 g"). Auto-derived from stack mutations in the admin.
+_Changelog:_ Reverse-chronological list of changes. Each entry: date + description (e.g., "Added Ashwagandha 600 mg", "Removed Zinc", "Changed Creatine from 3 g to 5 g"). Auto-derived from stack mutations in the admin.
 
 **3. Metrics section**
 
 Section label: "METRICS · {latest reading date}"
 
 4-column grid of metric cards. Each card contains:
+
 - Label: uppercase, tracked, muted
 - Value: large bold number
 - Unit: small muted text
@@ -98,6 +99,7 @@ Section label: "METRICS · {latest reading date}"
 Section label: "TRENDS"
 
 Single white card containing:
+
 - Legend: clickable metric names with line style indicators (solid + dashed). Up to 2 visible at a time.
 - Period selector: 6M / 1Y / ALL toggle buttons
 - Line chart: solid black line for primary metric, dashed gray for secondary. Minimal axis labels. Dots on data points.
@@ -162,6 +164,7 @@ Moving from JSON files to Cloudflare D1 (SQLite).
 ### Tables
 
 **vocabulary**
+
 - `key` TEXT PRIMARY KEY — unique identifier (e.g., "glucose")
 - `label` TEXT — display name (e.g., "Glucose")
 - `unit` TEXT — measurement unit (e.g., "mg/dL")
@@ -169,11 +172,13 @@ Moving from JSON files to Cloudflare D1 (SQLite).
 - `reference_max` REAL — upper bound of normal range
 
 **readings**
+
 - `id` TEXT PRIMARY KEY
 - `date` TEXT — ISO date
 - `source` TEXT — filename of uploaded PDF
 
 **measurements**
+
 - `id` TEXT PRIMARY KEY
 - `reading_id` TEXT REFERENCES readings(id)
 - `vocabulary_key` TEXT REFERENCES vocabulary(key)
@@ -182,6 +187,7 @@ Moving from JSON files to Cloudflare D1 (SQLite).
 - `status` TEXT — "normal" | "borderline" | "high" | "low"
 
 **supplements**
+
 - `id` TEXT PRIMARY KEY
 - `name` TEXT
 - `dose` TEXT — amount + unit (e.g., "5000 IU")
@@ -192,6 +198,7 @@ Moving from JSON files to Cloudflare D1 (SQLite).
 - `updated_at` TEXT
 
 **supplement_changelog**
+
 - `id` TEXT PRIMARY KEY
 - `date` TEXT — ISO date
 - `description` TEXT — human-readable change description
@@ -212,19 +219,19 @@ One-time script to read `data/readings.json`, `data/vocabulary.json` and seed th
 
 ### API Routes
 
-| Method | Route | Purpose |
-|---|---|---|
-| GET | `/api/data` | Returns vocabulary + latest reading + measurements |
-| GET | `/api/supplements` | Returns active supplements + changelog |
-| POST | `/api/extract` | Upload PDF, run extraction pipeline |
-| PUT | `/api/vocabulary` | Update a vocabulary entry |
-| POST | `/api/vocabulary` | Create a vocabulary entry |
-| DELETE | `/api/vocabulary` | Delete a vocabulary entry |
-| PUT | `/api/readings/:id` | Update a reading |
-| DELETE | `/api/readings/:id` | Delete a reading |
-| POST | `/api/supplements` | Add a supplement |
-| PUT | `/api/supplements/:id` | Update a supplement |
-| DELETE | `/api/supplements/:id` | Remove a supplement (sets stopped_at) |
+| Method | Route                  | Purpose                                            |
+| ------ | ---------------------- | -------------------------------------------------- |
+| GET    | `/api/data`            | Returns vocabulary + latest reading + measurements |
+| GET    | `/api/supplements`     | Returns active supplements + changelog             |
+| POST   | `/api/extract`         | Upload PDF, run extraction pipeline                |
+| PUT    | `/api/vocabulary`      | Update a vocabulary entry                          |
+| POST   | `/api/vocabulary`      | Create a vocabulary entry                          |
+| DELETE | `/api/vocabulary`      | Delete a vocabulary entry                          |
+| PUT    | `/api/readings/:id`    | Update a reading                                   |
+| DELETE | `/api/readings/:id`    | Delete a reading                                   |
+| POST   | `/api/supplements`     | Add a supplement                                   |
+| PUT    | `/api/supplements/:id` | Update a supplement                                |
+| DELETE | `/api/supplements/:id` | Remove a supplement (sets stopped_at)              |
 
 ### Deploy Flow
 

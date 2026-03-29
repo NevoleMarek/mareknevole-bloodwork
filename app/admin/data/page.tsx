@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { PdfUploader } from "@/components/admin/pdf-uploader";
 import { ReadingsTable } from "@/components/admin/readings-table";
 import type { BloodworkReading, VocabularyEntry } from "@/types/bloodwork";
 
@@ -65,13 +64,6 @@ export default function AdminDataPage() {
 
   return (
     <div className="space-y-8">
-      <section>
-        <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
-          Upload PDF
-        </h2>
-        <PdfUploader onSuccess={refresh} />
-      </section>
-
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-[9px] tracking-[2px] text-zinc-400 uppercase">

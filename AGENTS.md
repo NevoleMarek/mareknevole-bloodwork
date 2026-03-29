@@ -37,7 +37,7 @@ Make the added code in my branch beautiful by following these rules:
 
 ## Visual style
 
-Before writing any UI code, read `specs/style.md`. It defines the dot-grid background, ASCII box borders, monospace typography, and monochrome palette that all components must follow.
+Before writing any UI code, read `specs/style.md`. It defines the typography-driven design, monospace font, and zinc palette that all components must follow.
 
 - Update `specs/style.md` whenever the visual language, spacing system, or component aesthetic changes.
 
@@ -52,6 +52,15 @@ Before writing any UI code, read `specs/style.md`. It defines the dot-grid backg
 - Use the fast validation loop during iteration: `bun run check`.
 - Run the full validation suite before considering broader work complete: `bun run check:full`.
 - If you change toolchain or verification config, confirm the related scripts still pass.
+
+## Deployment
+
+Deployed to Cloudflare Workers at `bloodwork.mareknevole.com` with D1 database.
+
+- **Deploy:** `bun run deploy` (runs check, builds with OpenNext, deploys via wrangler)
+- **Secrets:** `bunx wrangler secret put <KEY>` (e.g. `ADMIN_PASSWORD`)
+- **D1 schema changes:** `bunx wrangler d1 execute bloodwork-db --remote --file=db/schema.sql`
+- **Config:** `wrangler.jsonc` has D1 binding, custom domain, and `nodejs_compat` flag
 
 ## Commit workflow
 

@@ -22,12 +22,31 @@ One route (`/admin/upload`) with a single component managing state as a discrimi
 type WizardState =
   | { step: "upload" }
   | { step: "extracting"; pdfUrl: string }
-  | { step: "review-extraction"; pdfUrl: string; date: string; variables: ExtractedVariable[] }
-  | { step: "mapping"; pdfUrl: string; date: string; variables: ExtractedVariable[] }
-  | { step: "review-mapping"; pdfUrl: string; date: string; mappings: MappedVariable[] }
+  | {
+      step: "review-extraction";
+      pdfUrl: string;
+      date: string;
+      variables: ExtractedVariable[];
+    }
+  | {
+      step: "mapping";
+      pdfUrl: string;
+      date: string;
+      variables: ExtractedVariable[];
+    }
+  | {
+      step: "review-mapping";
+      pdfUrl: string;
+      date: string;
+      mappings: MappedVariable[];
+    }
   | { step: "saving"; pdfUrl: string; date: string; mappings: MappedVariable[] }
   | { step: "done" }
-  | { step: "error"; message: string; returnTo: Exclude<WizardState, { step: "error" }> }
+  | {
+      step: "error";
+      message: string;
+      returnTo: Exclude<WizardState, { step: "error" }>;
+    };
 ```
 
 Transitions are strictly forward: upload → extracting → review-extraction → mapping → review-mapping → saving → done. The only backward transition is "Back" from review-mapping to review-extraction. The `error` state carries `returnTo` so the user can retry from where they were.
@@ -35,18 +54,18 @@ Transitions are strictly forward: upload → extracting → review-extraction �
 ## Types
 
 ```typescript
-type ExtractedVariable = { label: string; value: number; unit: string }
+type ExtractedVariable = { label: string; value: number; unit: string };
 
 type MappedVariable = {
-  label: string           // original from PDF
-  originalValue: number
-  originalUnit: string
-  vocabularyKey: string   // existing or new key
-  convertedValue: number  // after unit conversion
-  convertedUnit: string   // target unit from vocabulary
-  isNew: boolean          // true = new vocabulary entry
-  referenceRange?: { min: number; max: number } // for new entries only
-}
+  label: string; // original from PDF
+  originalValue: number;
+  originalUnit: string;
+  vocabularyKey: string; // existing or new key
+  convertedValue: number; // after unit conversion
+  convertedUnit: string; // target unit from vocabulary
+  isNew: boolean; // true = new vocabulary entry
+  referenceRange?: { min: number; max: number }; // for new entries only
+};
 ```
 
 ## API Endpoints
@@ -60,6 +79,7 @@ Receives PDF as FormData. Sends to Gemini (2.5 Flash) with a simplified prompt t
 **Input:** FormData with `pdf` field
 
 **Output:**
+
 ```json
 {
   "date": "2025-06-15",
@@ -75,18 +95,23 @@ Receives PDF as FormData. Sends to Gemini (2.5 Flash) with a simplified prompt t
 Receives user-edited variables and current vocabulary. Sends to Gemini for fuzzy matching and unit conversion.
 
 **Input:**
+
 ```json
 {
-  "variables": [
-    { "label": "Glucose", "value": 5.5, "unit": "mmol/L" }
-  ],
+  "variables": [{ "label": "Glucose", "value": 5.5, "unit": "mmol/L" }],
   "vocabulary": [
-    { "key": "glucose", "label": "Glucose", "unit": "mg/dL", "referenceRange": { "min": 70, "max": 100 } }
+    {
+      "key": "glucose",
+      "label": "Glucose",
+      "unit": "mg/dL",
+      "referenceRange": { "min": 70, "max": 100 }
+    }
   ]
 }
 ```
 
 **Output:**
+
 ```json
 {
   "mappings": [
@@ -120,20 +145,32 @@ The AI handles both fuzzy matching (e.g., "Hba1c" → "HbA1c") and unit conversi
 Pure D1 write. No AI calls.
 
 **Input:**
+
 ```json
 {
   "date": "2025-06-15",
   "source": "blood-test-2025-06-15.pdf",
   "measurements": [
-    { "vocabularyKey": "glucose", "value": 99.1, "unit": "mg/dL", "status": "normal" }
+    {
+      "vocabularyKey": "glucose",
+      "value": 99.1,
+      "unit": "mg/dL",
+      "status": "normal"
+    }
   ],
   "newVocabulary": [
-    { "key": "crp", "label": "CRP", "unit": "mg/L", "referenceRange": { "min": 0, "max": 3 } }
+    {
+      "key": "crp",
+      "label": "CRP",
+      "unit": "mg/L",
+      "referenceRange": { "min": 0, "max": 3 }
+    }
   ]
 }
 ```
 
 **Output:**
+
 ```json
 { "readingId": "uuid" }
 ```
@@ -159,6 +196,7 @@ Simplified from current: only extracts date, label, value, unit. No reference ra
 ### Map prompt
 
 Receives extracted variables (user-edited) and full vocabulary as JSON. Returns mappings with:
+
 - Fuzzy label matching to existing vocabulary keys
 - Unit conversion with converted values
 - New entry proposals for unmatched variables (snake_case key, reference range)
