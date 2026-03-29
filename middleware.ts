@@ -22,6 +22,8 @@ export const config = {
   matcher: [
     "/admin/:path+",
     "/api/extract/:path*",
+    "/api/map/:path*",
+    "/api/readings/:path*",
     "/api/vocabulary/:path*",
     "/api/supplements/:path*",
   ],
