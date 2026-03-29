@@ -30,19 +30,27 @@ export default function AdminLayout({
     <main className="mx-auto w-full max-w-[960px] px-4 py-6 md:px-6 md:py-8">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-2">
         <nav className="flex gap-4 text-[10px] tracking-[2px] uppercase">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={
-                pathname === item.href
-                  ? "text-zinc-900"
-                  : "text-zinc-400 hover:text-zinc-600"
-              }
-            >
-              {item.label}
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`relative py-1 transition-colors duration-200 ${
+                  isActive
+                    ? "text-zinc-900"
+                    : "text-zinc-400 hover:text-zinc-900"
+                }`}
+              >
+                {item.label}
+                <span
+                  className={`absolute right-0 -bottom-0.5 left-0 h-px origin-left bg-zinc-900 transition-transform duration-200 ${
+                    isActive ? "scale-x-100" : "scale-x-0"
+                  }`}
+                />
+              </Link>
+            );
+          })}
         </nav>
         <button
           type="button"
