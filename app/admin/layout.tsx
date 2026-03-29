@@ -26,8 +26,8 @@ export default function AdminLayout({
   }
 
   return (
-    <main className="mx-auto w-full max-w-[960px] px-6 py-8">
-      <div className="mb-8 flex items-center justify-between">
+    <main className="mx-auto w-full max-w-[960px] px-4 py-6 md:px-6 md:py-8">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-2">
         <nav className="flex gap-4 text-[10px] tracking-[2px] uppercase">
           {navItems.map((item) => (
             <Link
