@@ -40,36 +40,38 @@ export function SupplementEditor({
 
   return (
     <div>
-      <table className="mb-4 w-full text-[11px]">
-        <thead>
-          <tr className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
-            <td className="pb-2">Supplement</td>
-            <td className="pb-2">Dose</td>
-            <td className="pb-2">Frequency</td>
-            <td className="pb-2">Since</td>
-            <td className="pb-2"></td>
-          </tr>
-        </thead>
-        <tbody className="text-zinc-900">
-          {supplements.map((s) => (
-            <tr key={s.id} className="border-t border-zinc-100">
-              <td className="py-1.5">{s.name}</td>
-              <td className="py-1.5 text-zinc-500">{s.dose}</td>
-              <td className="py-1.5 text-zinc-500">{s.frequency}</td>
-              <td className="py-1.5 text-zinc-400">{s.startedAt}</td>
-              <td className="py-1.5 text-right">
-                <button
-                  type="button"
-                  onClick={() => handleRemove(s.id)}
-                  className="text-zinc-400 hover:text-red-400"
-                >
-                  Remove
-                </button>
-              </td>
+      <div className="overflow-x-auto">
+        <table className="mb-4 w-full text-[11px]">
+          <thead>
+            <tr className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
+              <td className="pb-2">Supplement</td>
+              <td className="pb-2">Dose</td>
+              <td className="pb-2">Frequency</td>
+              <td className="pb-2">Since</td>
+              <td className="pb-2"></td>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="text-zinc-900">
+            {supplements.map((s) => (
+              <tr key={s.id} className="border-t border-zinc-100">
+                <td className="py-1.5">{s.name}</td>
+                <td className="py-1.5 text-zinc-500">{s.dose}</td>
+                <td className="py-1.5 text-zinc-500">{s.frequency}</td>
+                <td className="py-1.5 text-zinc-400">{s.startedAt}</td>
+                <td className="py-1.5 text-right">
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(s.id)}
+                    className="text-zinc-400 hover:text-red-400"
+                  >
+                    Remove
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {adding && (
         <div className="mb-4 flex flex-wrap gap-2 border border-zinc-200 p-3 text-[11px]">

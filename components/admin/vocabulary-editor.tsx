@@ -68,45 +68,47 @@ export function VocabularyEditor({
 
   return (
     <div>
-      <table className="mb-4 w-full text-[11px]">
-        <thead>
-          <tr className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
-            <td className="pb-2">Key</td>
-            <td className="pb-2">Label</td>
-            <td className="pb-2">Unit</td>
-            <td className="pb-2">Range</td>
-            <td className="pb-2"></td>
-          </tr>
-        </thead>
-        <tbody className="text-zinc-900">
-          {entries.map((e) => (
-            <tr key={e.key} className="border-t border-zinc-100">
-              <td className="py-1.5 text-zinc-500">{e.key}</td>
-              <td className="py-1.5">{e.label}</td>
-              <td className="py-1.5 text-zinc-500">{e.unit}</td>
-              <td className="py-1.5 text-zinc-500">
-                {e.referenceRange.min}–{e.referenceRange.max}
-              </td>
-              <td className="space-x-2 py-1.5 text-right">
-                <button
-                  type="button"
-                  onClick={() => startEdit(e)}
-                  className="text-zinc-400 hover:text-zinc-600"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(e.key)}
-                  className="text-zinc-400 hover:text-red-400"
-                >
-                  Delete
-                </button>
-              </td>
+      <div className="overflow-x-auto">
+        <table className="mb-4 w-full text-[11px]">
+          <thead>
+            <tr className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
+              <td className="pb-2">Key</td>
+              <td className="pb-2">Label</td>
+              <td className="pb-2">Unit</td>
+              <td className="pb-2">Range</td>
+              <td className="pb-2"></td>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="text-zinc-900">
+            {entries.map((e) => (
+              <tr key={e.key} className="border-t border-zinc-100">
+                <td className="py-1.5 text-zinc-500">{e.key}</td>
+                <td className="py-1.5">{e.label}</td>
+                <td className="py-1.5 text-zinc-500">{e.unit}</td>
+                <td className="py-1.5 text-zinc-500">
+                  {e.referenceRange.min}–{e.referenceRange.max}
+                </td>
+                <td className="space-x-2 py-1.5 text-right">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(e)}
+                    className="text-zinc-400 hover:text-zinc-600"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(e.key)}
+                    className="text-zinc-400 hover:text-red-400"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {editing.kind !== "none" && (
         <div className="mb-4 flex flex-wrap gap-2 border border-zinc-200 p-3 text-[11px]">
