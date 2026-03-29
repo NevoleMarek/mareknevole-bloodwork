@@ -31,3 +31,17 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+button,
+label[class*="cursor-pointer"] {
+  cursor: pointer;
+  transition:
+    transform 75ms ease-out,
+    opacity 75ms ease-out;
+}
+
+button:active:not(:disabled),
+label[class*="cursor-pointer"]:active {
+  transform: scale(0.97);
+  opacity: 0.8;
+}
