@@ -16,7 +16,7 @@ export function SupplementTable({
         </span>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-[11px]">
+        <table className="w-full text-xs">
           <thead>
             <tr className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
               <td className="pb-2">Supplement</td>
@@ -28,10 +28,10 @@ export function SupplementTable({
           <tbody className="text-zinc-900">
             {supplements.map((s) => (
               <tr key={s.id} className="border-t border-zinc-100">
-                <td className="py-1.5">{s.name}</td>
-                <td className="py-1.5 text-zinc-500">{s.dose}</td>
-                <td className="py-1.5 text-zinc-500">{s.frequency}</td>
-                <td className="py-1.5 text-zinc-400">{s.startedAt}</td>
+                <td className="py-2">{s.name}</td>
+                <td className="py-2 text-zinc-600">{s.dose}</td>
+                <td className="py-2 text-zinc-600">{s.frequency}</td>
+                <td className="py-2 text-zinc-500">{s.startedAt}</td>
               </tr>
             ))}
           </tbody>
