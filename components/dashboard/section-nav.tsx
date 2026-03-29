@@ -15,7 +15,7 @@ export function SectionNav() {
   const [stuck, setStuck] = useState(false);
   const [active, setActive] = useState<SectionId>("metrics");
   const [navHeight, setNavHeight] = useState(0);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
 
   const measureNav = useCallback(() => {
@@ -24,14 +24,14 @@ export function SectionNav() {
 
   useEffect(() => {
     measureNav();
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => setStuck(!entry.isIntersecting),
       { threshold: 0 },
     );
-    observer.observe(wrapper);
+    observer.observe(sentinel);
     return () => observer.disconnect();
   }, [measureNav]);
 
@@ -60,11 +60,8 @@ export function SectionNav() {
   }
 
   return (
-    <div
-      ref={wrapperRef}
-      className="mt-6"
-      style={{ height: stuck ? navHeight : "auto" }}
-    >
+    <div className="mt-6" style={{ minHeight: stuck ? navHeight : undefined }}>
+      <div ref={sentinelRef} className="h-0" />
       <nav
         ref={navRef}
         className={`flex items-center py-3 transition-[padding] duration-500 ${
