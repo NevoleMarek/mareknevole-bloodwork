@@ -16,7 +16,8 @@
     "check": "bun run format && bun run lint:fix && bun run typecheck & TC=$!; bun run test; TEST=$?; wait $TC; TC=$?; exit $((TEST || TC))",
     "check:full": "bun run check && bun run build",
     "db:migrate": "wrangler d1 execute bloodwork-db --local --file=db/schema.sql",
-    "db:seed": "bun run db/migrate.ts"
+    "db:seed": "bun run db/migrate.ts",
+    "deploy": "bun run check && bunx opennextjs-cloudflare build && bunx opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@google-cloud/vertexai": "^1.10.2",
