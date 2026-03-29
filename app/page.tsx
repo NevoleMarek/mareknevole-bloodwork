@@ -111,7 +111,10 @@ export default async function Home() {
         />
       </section>
 
-      <section id="supplements" className="mb-8">
+      <section
+        id="supplements"
+        className="mb-8 border border-zinc-200 bg-white p-4 md:p-6"
+      >
         <SupplementTable supplements={supplements} />
       </section>
 
