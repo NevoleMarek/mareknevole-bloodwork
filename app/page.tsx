@@ -1,7 +1,9 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
+import { ChangelogList } from "@/components/dashboard/changelog-list";
 import { MetricCard } from "@/components/dashboard/metric-card";
-import { SupplementStack } from "@/components/dashboard/supplement-stack";
+import { SectionNav } from "@/components/dashboard/section-nav";
+import { SupplementTable } from "@/components/dashboard/supplement-table";
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import {
   getActiveSupplements,
@@ -21,10 +23,6 @@ export default async function Home() {
   const readings = await getReadingsWithMeasurements(db);
   const supplements = await getActiveSupplements(db);
   const changelog = await getSupplementChangelog(db);
-
-  const supplementsLastUpdated = supplements.reduce((latest, s) => {
-    return s.updatedAt > latest ? s.updatedAt : latest;
-  }, "");
 
   const latest = readings.at(-1);
   const latestDate = latest
@@ -77,17 +75,10 @@ export default async function Home() {
             discipline to the thing that matters most.
           </p>
         </div>
+        <SectionNav />
       </header>
 
-      <section className="mb-8">
-        <SupplementStack
-          supplements={supplements}
-          changelog={changelog}
-          lastUpdated={supplementsLastUpdated}
-        />
-      </section>
-
-      <section className="mb-8">
+      <section id="metrics" className="mb-8">
         <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
           Metrics · {latestDate}
         </h2>
@@ -106,7 +97,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section>
+      <section id="trends" className="mb-8">
         <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
           Trends
         </h2>
@@ -118,6 +109,17 @@ export default async function Home() {
           }))}
           vocabulary={vocabulary}
         />
+      </section>
+
+      <section id="supplements" className="mb-8">
+        <SupplementTable supplements={supplements} />
+      </section>
+
+      <section id="changelog" className="mb-8">
+        <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
+          Changelog
+        </h2>
+        <ChangelogList changelog={changelog} />
       </section>
     </main>
   );
