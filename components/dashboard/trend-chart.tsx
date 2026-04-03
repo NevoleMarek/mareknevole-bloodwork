@@ -97,8 +97,8 @@ export function TrendChart({
 
   return (
     <div className="border border-zinc-200 bg-white p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex gap-4 text-[10px]">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px]">
           {allKeys.map((key) => {
             const entry = vocabMap.get(key);
             if (!entry) return null;
@@ -123,7 +123,7 @@ export function TrendChart({
             );
           })}
         </div>
-        <div className="flex border border-zinc-200 text-[9px]">
+        <div className="flex shrink-0 self-start border border-zinc-200 text-[9px]">
           {(["6M", "1Y", "ALL"] as const).map((p) => (
             <button
               key={p}

@@ -72,7 +72,7 @@ export function SectionNav() {
       >
         <div className={`mx-auto flex w-full max-w-[960px] items-center`}>
           <div
-            className="overflow-hidden transition-all duration-500"
+            className="hidden overflow-hidden transition-all duration-500 md:block"
             style={{
               width: stuck ? 120 : 0,
               opacity: stuck ? 1 : 0,
@@ -87,7 +87,7 @@ export function SectionNav() {
               Marek Nevole
             </div>
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-3 md:gap-4">
             {SECTIONS.map(({ id, label }) => (
               <button
                 key={id}
