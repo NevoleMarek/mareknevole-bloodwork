@@ -6,6 +6,7 @@ import type {
   SupplementChangelog,
   VocabularyEntry,
 } from "@/types/bloodwork";
+import type { HealthMetric } from "@/types/health";
 
 // -- Row types (snake_case, matching D1 columns) --
 
@@ -48,6 +49,13 @@ type SupplementChangelogRow = {
   date: string;
   description: string;
   created_at: string;
+};
+
+type HealthMetricRow = {
+  date: string;
+  metric: string;
+  value: number;
+  unit: string;
 };
 
 // -- Row mappers --
@@ -156,4 +164,15 @@ export async function getSupplementChangelog(
     .prepare("SELECT * FROM supplement_changelog ORDER BY date DESC")
     .all<SupplementChangelogRow>();
   return results.map(mapSupplementChangelogRow);
+}
+
+export async function getHealthMetrics(
+  db: D1Database,
+): Promise<HealthMetric[]> {
+  const { results } = await db
+    .prepare(
+      "SELECT date, metric, value, unit FROM health_metrics ORDER BY date",
+    )
+    .all<HealthMetricRow>();
+  return results as HealthMetric[];
 }
