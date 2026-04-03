@@ -5,6 +5,7 @@ declare global {
     DB: D1Database;
     ASSETS: Fetcher;
     ADMIN_PASSWORD: string;
+    HEALTH_API_TOKEN: string;
   }
 }
 

@@ -24,6 +24,15 @@ function validate(body: HealthMetricsRequest): string | null {
 
 export async function POST(request: Request) {
   const { env } = await getCloudflareContext();
+
+  const auth = request.headers.get("authorization");
+  const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
+  const session = request.headers.get("cookie")?.includes("bloodwork-session");
+  if (!token && !session)
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (token && token !== env.HEALTH_API_TOKEN)
+    return Response.json({ error: "Invalid token" }, { status: 401 });
+
   const db = env.DB;
   const body = (await request.json()) as HealthMetricsRequest;
 
