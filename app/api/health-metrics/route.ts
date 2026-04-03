@@ -5,21 +5,27 @@ import type { HealthMetricsRequest } from "@/types/health";
 
 const VALID_KEYS = new Set<string>(HEALTH_METRIC_KEYS);
 
-function validate(body: HealthMetricsRequest): string | null {
-  if (typeof body.date !== "string" || body.date.length === 0)
-    return "Missing date";
-  if (isNaN(Date.parse(body.date))) return "Invalid date";
-  if (!Array.isArray(body.metrics) || body.metrics.length === 0)
-    return "Missing metrics";
+type ValidMetric = { metric: string; value: number; unit: string };
 
+function parse(body: HealthMetricsRequest): {
+  error: string | null;
+  metrics: ValidMetric[];
+} {
+  if (typeof body.date !== "string" || body.date.length === 0)
+    return { error: "Missing date", metrics: [] };
+  if (isNaN(Date.parse(body.date)))
+    return { error: "Invalid date", metrics: [] };
+  if (!Array.isArray(body.metrics))
+    return { error: "Missing metrics", metrics: [] };
+
+  const valid: ValidMetric[] = [];
   for (const m of body.metrics) {
-    if (!VALID_KEYS.has(m.metric)) return `Unknown metric: ${m.metric}`;
-    if (typeof m.value !== "number" || !isFinite(m.value))
-      return `Invalid value for ${m.metric}`;
-    if (typeof m.unit !== "string" || m.unit.length === 0)
-      return `Missing unit for ${m.metric}`;
+    if (!VALID_KEYS.has(m.metric)) continue;
+    if (typeof m.value !== "number" || !isFinite(m.value)) continue;
+    if (typeof m.unit !== "string" || m.unit.length === 0) continue;
+    valid.push(m);
   }
-  return null;
+  return { error: null, metrics: valid };
 }
 
 export async function POST(request: Request) {
@@ -36,10 +42,11 @@ export async function POST(request: Request) {
   const db = env.DB;
   const body = (await request.json()) as HealthMetricsRequest;
 
-  const error = validate(body);
+  const { error, metrics } = parse(body);
   if (error) return Response.json({ error }, { status: 400 });
+  if (metrics.length === 0) return Response.json({ saved: 0, skipped: "all" });
 
-  const statements = body.metrics.map((m) =>
+  const statements = metrics.map((m) =>
     db
       .prepare(
         "INSERT OR REPLACE INTO health_metrics (date, metric, value, unit) VALUES (?, ?, ?, ?)",
@@ -49,5 +56,5 @@ export async function POST(request: Request) {
 
   await db.batch(statements);
 
-  return Response.json({ saved: body.metrics.length });
+  return Response.json({ saved: metrics.length });
 }
