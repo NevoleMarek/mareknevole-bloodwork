@@ -28,17 +28,18 @@ Password-based authentication via middleware + session cookie. Middleware protec
 
 ## API Routes
 
-| Method | Route              | Purpose                                 |
-| ------ | ------------------ | --------------------------------------- |
-| GET    | `/api/data`        | Return vocabulary and all readings      |
-| POST   | `/api/extract`     | PDF upload → Gemini variable extraction |
-| POST   | `/api/map`         | Variables → Gemini vocabulary mapping   |
-| POST   | `/api/readings`    | Save reading + vocabulary to D1         |
-| POST   | `/api/auth`        | Login, returns session cookie           |
-| GET    | `/api/vocabulary`  | Return vocabulary                       |
-| PUT    | `/api/vocabulary`  | Update vocabulary entries               |
-| GET    | `/api/supplements` | Return supplement stack                 |
-| PUT    | `/api/supplements` | Update supplement stack                 |
+| Method | Route                 | Purpose                                               |
+| ------ | --------------------- | ----------------------------------------------------- |
+| GET    | `/api/data`           | Return vocabulary and all readings                    |
+| POST   | `/api/extract`        | PDF upload → Gemini variable extraction               |
+| POST   | `/api/map`            | Variables → Gemini vocabulary mapping                 |
+| POST   | `/api/readings`       | Save reading + vocabulary to D1                       |
+| POST   | `/api/auth`           | Login, returns session cookie                         |
+| GET    | `/api/vocabulary`     | Return vocabulary                                     |
+| PUT    | `/api/vocabulary`     | Update vocabulary entries                             |
+| GET    | `/api/supplements`    | Return supplement stack                               |
+| PUT    | `/api/supplements`    | Update supplement stack                               |
+| POST   | `/api/health-metrics` | Upsert daily health metrics (bearer token or session) |
 
 ## Component Architecture
 
@@ -49,6 +50,9 @@ Password-based authentication via middleware + session cookie. Middleware protec
   - `trend-chart` — sparkline trends over time
   - `supplement-table` — always-visible supplement list
   - `changelog-list` — paginated changelog grouped by day
+  - `health-grid` — health metrics grid with period selector
+  - `health-chart` — individual metric time-series with trend line
+  - `blood-pressure-chart` — combined systolic/diastolic chart
 - `components/admin/` — admin data management
   - `upload-wizard` — main wizard: state machine, two-panel layout
   - `step-upload` — PDF drag-and-drop upload
@@ -62,7 +66,7 @@ Password-based authentication via middleware + session cookie. Middleware protec
 
 ## Data
 
-D1 SQLite database with tables: `vocabulary`, `readings`, `measurements`, `supplements`, `supplement_changelog`.
+D1 SQLite database with tables: `vocabulary`, `readings`, `measurements`, `supplements`, `supplement_changelog`, `health_metrics`.
 
 ## Project Structure
 
@@ -82,6 +86,7 @@ Copy `.env.local.example` to `.env.local` and fill in:
 - `GOOGLE_CLOUD_PROJECT` — GCP project ID (required)
 - `GOOGLE_CLOUD_LOCATION` — Vertex AI region (optional, defaults to `us-central1`)
 - `ADMIN_PASSWORD` — password for admin login
+- `HEALTH_API_TOKEN` — bearer token for iOS Shortcut health metrics sync
 
 ## Verification Workflow
 
