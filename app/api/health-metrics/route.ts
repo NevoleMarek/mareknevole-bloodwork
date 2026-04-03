@@ -1,5 +1,3 @@
-import assert from "node:assert";
-
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { HEALTH_METRIC_KEYS } from "@/types/health";
@@ -7,29 +5,30 @@ import type { HealthMetricsRequest } from "@/types/health";
 
 const VALID_KEYS = new Set<string>(HEALTH_METRIC_KEYS);
 
+function validate(body: HealthMetricsRequest): string | null {
+  if (typeof body.date !== "string" || body.date.length === 0)
+    return "Missing date";
+  if (isNaN(Date.parse(body.date))) return "Invalid date";
+  if (!Array.isArray(body.metrics) || body.metrics.length === 0)
+    return "Missing metrics";
+
+  for (const m of body.metrics) {
+    if (!VALID_KEYS.has(m.metric)) return `Unknown metric: ${m.metric}`;
+    if (typeof m.value !== "number" || !isFinite(m.value))
+      return `Invalid value for ${m.metric}`;
+    if (typeof m.unit !== "string" || m.unit.length === 0)
+      return `Missing unit for ${m.metric}`;
+  }
+  return null;
+}
+
 export async function POST(request: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
   const body = (await request.json()) as HealthMetricsRequest;
 
-  assert(typeof body.date === "string" && body.date.length > 0, "Missing date");
-  assert(!isNaN(Date.parse(body.date)), "Invalid date");
-  assert(
-    Array.isArray(body.metrics) && body.metrics.length > 0,
-    "Missing metrics",
-  );
-
-  for (const m of body.metrics) {
-    assert(VALID_KEYS.has(m.metric), `Unknown metric: ${m.metric}`);
-    assert(
-      typeof m.value === "number" && isFinite(m.value),
-      `Invalid value for ${m.metric}`,
-    );
-    assert(
-      typeof m.unit === "string" && m.unit.length > 0,
-      `Missing unit for ${m.metric}`,
-    );
-  }
+  const error = validate(body);
+  if (error) return Response.json({ error }, { status: 400 });
 
   const statements = body.metrics.map((m) =>
     db

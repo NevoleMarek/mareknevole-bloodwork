@@ -1,12 +1,15 @@
 /// <reference types="@cloudflare/workers-types" />
 
+import assert from "node:assert";
+
 import type {
   Measurement,
   Supplement,
   SupplementChangelog,
   VocabularyEntry,
 } from "@/types/bloodwork";
-import type { HealthMetric } from "@/types/health";
+import { HEALTH_METRIC_KEYS } from "@/types/health";
+import type { HealthMetric, HealthMetricKey } from "@/types/health";
 
 // -- Row types (snake_case, matching D1 columns) --
 
@@ -174,5 +177,12 @@ export async function getHealthMetrics(
       "SELECT date, metric, value, unit FROM health_metrics ORDER BY date",
     )
     .all<HealthMetricRow>();
-  return results as HealthMetric[];
+  const validKeys = new Set<string>(HEALTH_METRIC_KEYS);
+  return results.map((row) => {
+    assert(
+      validKeys.has(row.metric),
+      `Unknown health metric in DB: ${row.metric}`,
+    );
+    return { ...row, metric: row.metric as HealthMetricKey };
+  });
 }
