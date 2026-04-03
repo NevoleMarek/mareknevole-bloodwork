@@ -1,6 +1,10 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-import { getReadingsWithMeasurements, getVocabulary } from "@/db/queries";
+import {
+  getHealthMetrics,
+  getReadingsWithMeasurements,
+  getVocabulary,
+} from "@/db/queries";
 
 export async function GET() {
   const { env } = await getCloudflareContext();
@@ -8,6 +12,7 @@ export async function GET() {
 
   const vocabulary = await getVocabulary(db);
   const readings = await getReadingsWithMeasurements(db);
+  const healthMetrics = await getHealthMetrics(db);
 
   return Response.json({
     vocabulary: { entries: vocabulary },
@@ -16,5 +21,6 @@ export async function GET() {
       source: r.source,
       measurements: r.measurements,
     })),
+    healthMetrics,
   });
 }
