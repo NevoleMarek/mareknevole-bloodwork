@@ -38,3 +38,11 @@ CREATE TABLE IF NOT EXISTS supplement_changelog (
   description TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS health_metrics (
+  date TEXT NOT NULL,
+  metric TEXT NOT NULL,
+  value REAL NOT NULL,
+  unit TEXT NOT NULL,
+  PRIMARY KEY (date, metric)
+);
