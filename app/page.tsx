@@ -1,12 +1,14 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { ChangelogList } from "@/components/dashboard/changelog-list";
+import { HealthGrid } from "@/components/dashboard/health-grid";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { SectionNav } from "@/components/dashboard/section-nav";
 import { SupplementTable } from "@/components/dashboard/supplement-table";
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import {
   getActiveSupplements,
+  getHealthMetrics,
   getReadingsWithMeasurements,
   getSupplementChangelog,
   getVocabulary,
@@ -23,6 +25,7 @@ export default async function Home() {
   const readings = await getReadingsWithMeasurements(db);
   const supplements = await getActiveSupplements(db);
   const changelog = await getSupplementChangelog(db);
+  const healthMetrics = await getHealthMetrics(db);
 
   const latest = readings.at(-1);
   const latestDate = latest
@@ -109,6 +112,13 @@ export default async function Home() {
           }))}
           vocabulary={vocabulary}
         />
+      </section>
+
+      <section id="health" className="mb-8">
+        <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
+          Health
+        </h2>
+        <HealthGrid metrics={healthMetrics} />
       </section>
 
       <section id="supplements" className="mb-8">
