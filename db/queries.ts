@@ -1,15 +1,12 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import assert from "node:assert";
-
 import type {
   Measurement,
   Supplement,
   SupplementChangelog,
   VocabularyEntry,
 } from "@/types/bloodwork";
-import { HEALTH_METRIC_KEYS } from "@/types/health";
-import type { HealthMetric, HealthMetricKey } from "@/types/health";
+import type { HealthMetric, HealthMetricConfig } from "@/types/health";
 
 // -- Row types (snake_case, matching D1 columns) --
 
@@ -61,6 +58,14 @@ type HealthMetricRow = {
   unit: string;
 };
 
+type HealthMetricConfigRow = {
+  metric: string;
+  label: string;
+  unit: string;
+  aggregation: string;
+  visible: number;
+};
+
 // -- Row mappers --
 
 export function mapVocabularyRow(row: VocabularyRow): VocabularyEntry {
@@ -106,6 +111,18 @@ export function mapSupplementChangelogRow(
     date: row.date,
     description: row.description,
     createdAt: row.created_at,
+  };
+}
+
+export function mapHealthMetricConfigRow(
+  row: HealthMetricConfigRow,
+): HealthMetricConfig {
+  return {
+    metric: row.metric,
+    label: row.label,
+    unit: row.unit,
+    aggregation: row.aggregation as HealthMetricConfig["aggregation"],
+    visible: row.visible === 1,
   };
 }
 
@@ -169,20 +186,38 @@ export async function getSupplementChangelog(
   return results.map(mapSupplementChangelogRow);
 }
 
-export async function getHealthMetrics(
+export async function getVisibleHealthMetrics(
   db: D1Database,
-): Promise<HealthMetric[]> {
+): Promise<{ metrics: HealthMetric[]; configs: HealthMetricConfig[] }> {
+  const [metricResults, configResults] = await Promise.all([
+    db
+      .prepare(
+        `SELECT hm.date, hm.metric, hm.value, hm.unit
+         FROM health_metrics hm
+         JOIN health_metric_config hmc ON hm.metric = hmc.metric
+         WHERE hmc.visible = 1
+         ORDER BY hm.date`,
+      )
+      .all<HealthMetricRow>(),
+    db
+      .prepare(
+        "SELECT metric, label, unit, aggregation, visible FROM health_metric_config WHERE visible = 1 ORDER BY label",
+      )
+      .all<HealthMetricConfigRow>(),
+  ]);
+  return {
+    metrics: metricResults.results,
+    configs: configResults.results.map(mapHealthMetricConfigRow),
+  };
+}
+
+export async function getHealthMetricConfigs(
+  db: D1Database,
+): Promise<HealthMetricConfig[]> {
   const { results } = await db
     .prepare(
-      "SELECT date, metric, value, unit FROM health_metrics ORDER BY date",
+      "SELECT metric, label, unit, aggregation, visible FROM health_metric_config ORDER BY label",
     )
-    .all<HealthMetricRow>();
-  const validKeys = new Set<string>(HEALTH_METRIC_KEYS);
-  return results.map((row) => {
-    assert(
-      validKeys.has(row.metric),
-      `Unknown health metric in DB: ${row.metric}`,
-    );
-    return { ...row, metric: row.metric as HealthMetricKey };
-  });
+    .all<HealthMetricConfigRow>();
+  return results.map(mapHealthMetricConfigRow);
 }

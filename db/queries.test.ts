@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  mapHealthMetricConfigRow,
   mapMeasurementRow,
   mapReadingRow,
   mapSupplementChangelogRow,
@@ -86,6 +87,40 @@ describe("row mappers", () => {
       date: "2025-06-01",
       description: "Added Creatine 5 g",
       createdAt: "2025-06-01T00:00:00Z",
+    });
+  });
+
+  it("maps health metric config row", () => {
+    const row = {
+      metric: "heart_rate",
+      label: "Heart Rate",
+      unit: "bpm",
+      aggregation: "avg",
+      visible: 1,
+    };
+    expect(mapHealthMetricConfigRow(row)).toEqual({
+      metric: "heart_rate",
+      label: "Heart Rate",
+      unit: "bpm",
+      aggregation: "avg",
+      visible: true,
+    });
+  });
+
+  it("maps config row with visible=0 to false", () => {
+    const row = {
+      metric: "steps",
+      label: "Steps",
+      unit: "count",
+      aggregation: "sum",
+      visible: 0,
+    };
+    expect(mapHealthMetricConfigRow(row)).toEqual({
+      metric: "steps",
+      label: "Steps",
+      unit: "count",
+      aggregation: "sum",
+      visible: false,
     });
   });
 });
