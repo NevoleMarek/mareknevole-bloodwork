@@ -1,14 +1,11 @@
-import { type Part, VertexAI } from "@google-cloud/vertexai";
+import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
 import assert from "node:assert";
 
 function getModel() {
-  const project = process.env.GOOGLE_CLOUD_PROJECT;
-  assert(project, "GOOGLE_CLOUD_PROJECT is required");
-  const vertexAI = new VertexAI({
-    project,
-    location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
-  });
-  return vertexAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const apiKey = process.env.GEMINI_API_KEY;
+  assert(apiKey, "GEMINI_API_KEY is required");
+  const genAI = new GoogleGenerativeAI(apiKey);
+  return genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 }
 
 export async function callGemini(
