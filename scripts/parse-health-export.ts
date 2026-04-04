@@ -5,6 +5,7 @@ import { createInterface } from "node:readline";
 
 export type RawRecord = {
   type: string;
+  sourceName: string;
   startDate: string;
   endDate: string;
   value: string;
@@ -12,6 +13,7 @@ export type RawRecord = {
 };
 
 type DayBucket = { sum: number; count: number };
+type SourceDayBuckets = Map<string, Map<string, DayBucket>>; // source -> date -> bucket
 
 // -- Aggregation config --
 
@@ -70,17 +72,29 @@ function parseDurationHours(startDate: string, endDate: string): number {
 
 type MetricMeta = Map<string, { type: string; unit: string; key: string }>;
 
-function accumulateRecord(
-  r: RawRecord,
-  buckets: Map<string, Map<string, DayBucket>>,
-  metricMeta: MetricMeta,
-) {
+type AccState = {
+  /** Buckets for avg/duration metrics (no source dedup needed) */
+  buckets: Map<string, Map<string, DayBucket>>;
+  /** Per-source buckets for sum metrics (pick primary source later) */
+  sumBuckets: Map<string, SourceDayBuckets>;
+  metricMeta: MetricMeta;
+};
+
+function createAccState(): AccState {
+  return {
+    buckets: new Map(),
+    sumBuckets: new Map(),
+    metricMeta: new Map(),
+  };
+}
+
+function accumulateRecord(r: RawRecord, state: AccState) {
   const key = deriveMetricKey(r.type);
   const date = parseDate(r.startDate);
   const aggregation = AGGREGATION_MAP[r.type] ?? "avg";
 
-  if (!metricMeta.has(key)) {
-    metricMeta.set(key, { type: r.type, unit: r.unit, key });
+  if (!state.metricMeta.has(key)) {
+    state.metricMeta.set(key, { type: r.type, unit: r.unit, key });
   }
 
   let value: number;
@@ -92,18 +106,41 @@ function accumulateRecord(
     if (!isFinite(value)) return;
   }
 
-  if (!buckets.has(key)) buckets.set(key, new Map());
-  const dayMap = buckets.get(key)!;
-  const bucket = dayMap.get(date) ?? { sum: 0, count: 0 };
-  bucket.sum += value;
-  bucket.count += 1;
-  dayMap.set(date, bucket);
+  if (aggregation === "sum") {
+    // Track per-source so we can pick the primary source later
+    if (!state.sumBuckets.has(key)) state.sumBuckets.set(key, new Map());
+    const bySource = state.sumBuckets.get(key)!;
+    if (!bySource.has(r.sourceName)) bySource.set(r.sourceName, new Map());
+    const dayMap = bySource.get(r.sourceName)!;
+    const bucket = dayMap.get(date) ?? { sum: 0, count: 0 };
+    bucket.sum += value;
+    bucket.count += 1;
+    dayMap.set(date, bucket);
+  } else {
+    if (!state.buckets.has(key)) state.buckets.set(key, new Map());
+    const dayMap = state.buckets.get(key)!;
+    const bucket = dayMap.get(date) ?? { sum: 0, count: 0 };
+    bucket.sum += value;
+    bucket.count += 1;
+    dayMap.set(date, bucket);
+  }
 }
 
-function finalizeBuckets(
-  buckets: Map<string, Map<string, DayBucket>>,
-  metricMeta: MetricMeta,
-) {
+function pickPrimarySource(bySource: SourceDayBuckets): Map<string, DayBucket> {
+  let best = "";
+  let bestCount = 0;
+  for (const [source, dayMap] of bySource) {
+    let total = 0;
+    for (const bucket of dayMap.values()) total += bucket.count;
+    if (total > bestCount) {
+      best = source;
+      bestCount = total;
+    }
+  }
+  return bySource.get(best) ?? new Map();
+}
+
+function finalizeState(state: AccState) {
   const metrics: {
     date: string;
     metric: string;
@@ -117,8 +154,13 @@ function finalizeBuckets(
     aggregation: string;
   }[] = [];
 
-  for (const [key, dayMap] of buckets) {
-    const meta = metricMeta.get(key)!;
+  // Resolve sum metrics: pick primary source per type
+  for (const [key, bySource] of state.sumBuckets) {
+    state.buckets.set(key, pickPrimarySource(bySource));
+  }
+
+  for (const [key, dayMap] of state.buckets) {
+    const meta = state.metricMeta.get(key)!;
     const aggregation = AGGREGATION_MAP[meta.type] ?? "avg";
     const unit = aggregation === "duration" ? "hr" : meta.unit;
 
@@ -145,10 +187,9 @@ function finalizeBuckets(
 }
 
 export function aggregateRecords(records: RawRecord[]) {
-  const buckets = new Map<string, Map<string, DayBucket>>();
-  const metricMeta: MetricMeta = new Map();
-  for (const r of records) accumulateRecord(r, buckets, metricMeta);
-  return finalizeBuckets(buckets, metricMeta);
+  const state = createAccState();
+  for (const r of records) accumulateRecord(r, state);
+  return finalizeState(state);
 }
 
 // -- XML line parsing --
@@ -162,12 +203,13 @@ function extractAttr(line: string, name: string): string | null {
 export function parseRecordLine(line: string): RawRecord | null {
   if (!line.includes("<Record ")) return null;
   const type = extractAttr(line, "type");
+  const sourceName = extractAttr(line, "sourceName") ?? "";
   const startDate = extractAttr(line, "startDate");
   const endDate = extractAttr(line, "endDate");
   const value = extractAttr(line, "value") ?? "";
   const unit = extractAttr(line, "unit") ?? "";
   if (!type || !startDate || !endDate) return null;
-  return { type, startDate, endDate, value, unit };
+  return { type, sourceName, startDate, endDate, value, unit };
 }
 
 // -- CLI --
@@ -187,11 +229,7 @@ async function main() {
 
   console.error(`Parsing ${inputPath}...`);
 
-  const buckets = new Map<string, Map<string, DayBucket>>();
-  const metricMeta = new Map<
-    string,
-    { type: string; unit: string; key: string }
-  >();
+  const state = createAccState();
   let recordCount = 0;
 
   const rl = createInterface({ input: createReadStream(inputPath) });
@@ -199,12 +237,12 @@ async function main() {
     const r = parseRecordLine(line);
     if (!r) continue;
     recordCount++;
-    accumulateRecord(r, buckets, metricMeta);
+    accumulateRecord(r, state);
   }
 
   console.error(`Found ${recordCount} records`);
 
-  const result = finalizeBuckets(buckets, metricMeta);
+  const result = finalizeState(state);
 
   console.error(
     `Output: ${result.metrics.length} daily values, ${result.configs.length} metric types`,

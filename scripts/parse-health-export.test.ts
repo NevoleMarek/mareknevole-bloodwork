@@ -49,6 +49,7 @@ describe("aggregateRecords", () => {
   const records: RawRecord[] = [
     {
       type: "HKQuantityTypeIdentifierHeartRate",
+      sourceName: "Apple Watch",
       startDate: "2026-04-01 08:00:00 +0200",
       endDate: "2026-04-01 08:00:00 +0200",
       value: "60",
@@ -56,6 +57,7 @@ describe("aggregateRecords", () => {
     },
     {
       type: "HKQuantityTypeIdentifierHeartRate",
+      sourceName: "Apple Watch",
       startDate: "2026-04-01 12:00:00 +0200",
       endDate: "2026-04-01 12:00:00 +0200",
       value: "80",
@@ -63,6 +65,7 @@ describe("aggregateRecords", () => {
     },
     {
       type: "HKQuantityTypeIdentifierStepCount",
+      sourceName: "iPhone",
       startDate: "2026-04-01 08:00:00 +0200",
       endDate: "2026-04-01 08:05:00 +0200",
       value: "500",
@@ -70,6 +73,7 @@ describe("aggregateRecords", () => {
     },
     {
       type: "HKQuantityTypeIdentifierStepCount",
+      sourceName: "iPhone",
       startDate: "2026-04-01 12:00:00 +0200",
       endDate: "2026-04-01 12:05:00 +0200",
       value: "300",
@@ -105,5 +109,49 @@ describe("aggregateRecords", () => {
       unit: "count/min",
       aggregation: "avg",
     });
+  });
+
+  it("deduplicates sum metrics by picking the primary source", () => {
+    const duped: RawRecord[] = [
+      // iPhone has 3 records — primary source
+      {
+        type: "HKQuantityTypeIdentifierStepCount",
+        sourceName: "iPhone",
+        startDate: "2026-04-01 08:00:00 +0200",
+        endDate: "2026-04-01 08:05:00 +0200",
+        value: "200",
+        unit: "count",
+      },
+      {
+        type: "HKQuantityTypeIdentifierStepCount",
+        sourceName: "iPhone",
+        startDate: "2026-04-01 09:00:00 +0200",
+        endDate: "2026-04-01 09:05:00 +0200",
+        value: "300",
+        unit: "count",
+      },
+      {
+        type: "HKQuantityTypeIdentifierStepCount",
+        sourceName: "iPhone",
+        startDate: "2026-04-01 10:00:00 +0200",
+        endDate: "2026-04-01 10:05:00 +0200",
+        value: "100",
+        unit: "count",
+      },
+      // Apple Watch has 1 record — secondary, should be ignored
+      {
+        type: "HKQuantityTypeIdentifierStepCount",
+        sourceName: "Apple Watch",
+        startDate: "2026-04-01 08:00:00 +0200",
+        endDate: "2026-04-01 10:05:00 +0200",
+        value: "550",
+        unit: "count",
+      },
+    ];
+    const result = aggregateRecords(duped);
+    const steps = result.metrics.find((m) => m.metric === "step_count");
+    expect(steps).toBeDefined();
+    // Should be 200+300+100=600 (iPhone only), not 600+550=1150
+    expect(steps!.value).toBe(600);
   });
 });
