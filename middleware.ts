@@ -27,5 +27,7 @@ export const config = {
     "/api/vocabulary/:path*",
     "/api/supplements/:path*",
     "/api/changelog/:path*",
+    "/api/health-import/:path*",
+    "/api/health-config/:path*",
   ],
 };
