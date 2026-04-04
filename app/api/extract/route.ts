@@ -18,7 +18,12 @@ export async function POST(request: Request) {
   const bytes = await file.arrayBuffer();
   const base64 = Buffer.from(bytes).toString("base64");
 
-  const text = await callGemini(apiKey, extractVariablesPrompt, base64);
+  const text = await callGemini(
+    apiKey,
+    "gemini-3-flash-preview",
+    extractVariablesPrompt,
+    base64,
+  );
   const result = parseGeminiJson<ExtractResponse>(text);
 
   assert(result.date, "No date extracted");

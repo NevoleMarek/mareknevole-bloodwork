@@ -3,11 +3,12 @@ import assert from "node:assert";
 
 export async function callGemini(
   apiKey: string,
+  model: string,
   prompt: string,
   pdfBase64?: string,
 ): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const genModel = genAI.getGenerativeModel({ model });
 
   const parts: Part[] = pdfBase64
     ? [
@@ -16,7 +17,7 @@ export async function callGemini(
       ]
     : [{ text: prompt }];
 
-  const result = await model.generateContent({
+  const result = await genModel.generateContent({
     contents: [{ role: "user", parts }],
   });
 

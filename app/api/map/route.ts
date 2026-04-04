@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     JSON.stringify(body.variables, null, 2),
   );
 
-  const text = await callGemini(apiKey, prompt);
+  const text = await callGemini(apiKey, "gemini-3-flash-preview", prompt);
   const result = parseGeminiJson<MapResponse>(text);
 
   assert(result.mappings.length > 0, "No mappings returned");
