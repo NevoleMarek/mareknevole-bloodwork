@@ -8,6 +8,7 @@ const navItems = [
   { href: "/admin/data", label: "Data" },
   { href: "/admin/vocabulary", label: "Vocabulary" },
   { href: "/admin/supplements", label: "Supplements" },
+  { href: "/admin/health", label: "Health" },
 ] as const;
 
 export default function AdminLayout({
