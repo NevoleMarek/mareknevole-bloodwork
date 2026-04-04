@@ -8,9 +8,9 @@ import { SupplementTable } from "@/components/dashboard/supplement-table";
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import {
   getActiveSupplements,
-  getHealthMetrics,
   getReadingsWithMeasurements,
   getSupplementChangelog,
+  getVisibleHealthMetrics,
   getVocabulary,
 } from "@/db/queries";
 import type { Status } from "@/types/bloodwork";
@@ -25,7 +25,8 @@ export default async function Home() {
   const readings = await getReadingsWithMeasurements(db);
   const supplements = await getActiveSupplements(db);
   const changelog = await getSupplementChangelog(db);
-  const healthMetrics = await getHealthMetrics(db);
+  const { metrics: healthMetrics, configs: healthConfigs } =
+    await getVisibleHealthMetrics(db);
 
   const latest = readings.at(-1);
   const latestDate = latest
@@ -118,7 +119,7 @@ export default async function Home() {
         <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
           Health
         </h2>
-        <HealthGrid metrics={healthMetrics} />
+        <HealthGrid metrics={healthMetrics} configs={healthConfigs} />
       </section>
 
       <section id="supplements" className="mb-8">
