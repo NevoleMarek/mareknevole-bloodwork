@@ -13,7 +13,7 @@ export type RawRecord = {
 };
 
 type DayBucket = { sum: number; count: number };
-type SourceDayBuckets = Map<string, Map<string, DayBucket>>; // source -> date -> bucket
+type Interval = { start: number; end: number; value: number };
 
 // -- Aggregation config --
 
@@ -73,17 +73,17 @@ function parseDurationHours(startDate: string, endDate: string): number {
 type MetricMeta = Map<string, { type: string; unit: string; key: string }>;
 
 type AccState = {
-  /** Buckets for avg/duration metrics (no source dedup needed) */
+  /** Buckets for avg/duration metrics (no dedup needed) */
   buckets: Map<string, Map<string, DayBucket>>;
-  /** Per-source buckets for sum metrics (pick primary source later) */
-  sumBuckets: Map<string, SourceDayBuckets>;
+  /** Raw intervals for sum metrics, keyed by "metric:date" */
+  sumIntervals: Map<string, Interval[]>;
   metricMeta: MetricMeta;
 };
 
 function createAccState(): AccState {
   return {
     buckets: new Map(),
-    sumBuckets: new Map(),
+    sumIntervals: new Map(),
     metricMeta: new Map(),
   };
 }
@@ -107,15 +107,13 @@ function accumulateRecord(r: RawRecord, state: AccState) {
   }
 
   if (aggregation === "sum") {
-    // Track per-source so we can pick the primary source later
-    if (!state.sumBuckets.has(key)) state.sumBuckets.set(key, new Map());
-    const bySource = state.sumBuckets.get(key)!;
-    if (!bySource.has(r.sourceName)) bySource.set(r.sourceName, new Map());
-    const dayMap = bySource.get(r.sourceName)!;
-    const bucket = dayMap.get(date) ?? { sum: 0, count: 0 };
-    bucket.sum += value;
-    bucket.count += 1;
-    dayMap.set(date, bucket);
+    const slotKey = `${key}:${date}`;
+    if (!state.sumIntervals.has(slotKey)) state.sumIntervals.set(slotKey, []);
+    state.sumIntervals.get(slotKey)!.push({
+      start: new Date(r.startDate).getTime(),
+      end: new Date(r.endDate).getTime(),
+      value,
+    });
   } else {
     if (!state.buckets.has(key)) state.buckets.set(key, new Map());
     const dayMap = state.buckets.get(key)!;
@@ -126,18 +124,43 @@ function accumulateRecord(r: RawRecord, state: AccState) {
   }
 }
 
-function pickPrimarySource(bySource: SourceDayBuckets): Map<string, DayBucket> {
-  let best = "";
-  let bestCount = 0;
-  for (const [source, dayMap] of bySource) {
-    let total = 0;
-    for (const bucket of dayMap.values()) total += bucket.count;
-    if (total > bestCount) {
-      best = source;
-      bestCount = total;
+/**
+ * Deduplicate overlapping intervals for sum metrics.
+ * Sort by start time, then walk through: when intervals overlap,
+ * keep the one with the higher value rate (value/duration) and
+ * discard the covered portion. Non-overlapping intervals sum normally.
+ */
+export function deduplicateIntervals(intervals: Interval[]): number {
+  if (intervals.length === 0) return 0;
+
+  // Sort by start, then by end descending (longer intervals first)
+  const sorted = [...intervals].sort(
+    (a, b) => a.start - b.start || b.end - a.end,
+  );
+
+  let total = 0;
+  let coveredUntil = -Infinity;
+
+  for (const iv of sorted) {
+    if (iv.end <= coveredUntil) {
+      // Fully covered by a previous interval — skip
+      continue;
     }
+    if (iv.start >= coveredUntil) {
+      // No overlap — take full value
+      total += iv.value;
+    } else {
+      // Partial overlap — take proportional value for uncovered portion
+      const duration = iv.end - iv.start;
+      if (duration > 0) {
+        const uncovered = iv.end - coveredUntil;
+        total += iv.value * (uncovered / duration);
+      }
+    }
+    coveredUntil = iv.end;
   }
-  return bySource.get(best) ?? new Map();
+
+  return total;
 }
 
 function finalizeState(state: AccState) {
@@ -154,9 +177,16 @@ function finalizeState(state: AccState) {
     aggregation: string;
   }[] = [];
 
-  // Resolve sum metrics: pick primary source per type
-  for (const [key, bySource] of state.sumBuckets) {
-    state.buckets.set(key, pickPrimarySource(bySource));
+  // Resolve sum metrics via interval deduplication
+  const sumDayMaps = new Map<string, Map<string, DayBucket>>();
+  for (const [slotKey, intervals] of state.sumIntervals) {
+    const [key, date] = slotKey.split(":");
+    if (!sumDayMaps.has(key)) sumDayMaps.set(key, new Map());
+    const deduped = deduplicateIntervals(intervals);
+    sumDayMaps.get(key)!.set(date, { sum: deduped, count: 1 });
+  }
+  for (const [key, dayMap] of sumDayMaps) {
+    state.buckets.set(key, dayMap);
   }
 
   for (const [key, dayMap] of state.buckets) {

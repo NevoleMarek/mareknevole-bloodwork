@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   aggregateRecords,
+  deduplicateIntervals,
   deriveLabel,
   deriveMetricKey,
   type RawRecord,
@@ -111,47 +112,74 @@ describe("aggregateRecords", () => {
     });
   });
 
-  it("deduplicates sum metrics by picking the primary source", () => {
+  it("deduplicates overlapping step records from multiple sources", () => {
     const duped: RawRecord[] = [
-      // iPhone has 3 records — primary source
+      // iPhone: 8:00-8:30, 200 steps
       {
         type: "HKQuantityTypeIdentifierStepCount",
         sourceName: "iPhone",
         startDate: "2026-04-01 08:00:00 +0200",
-        endDate: "2026-04-01 08:05:00 +0200",
+        endDate: "2026-04-01 08:30:00 +0200",
         value: "200",
         unit: "count",
       },
-      {
-        type: "HKQuantityTypeIdentifierStepCount",
-        sourceName: "iPhone",
-        startDate: "2026-04-01 09:00:00 +0200",
-        endDate: "2026-04-01 09:05:00 +0200",
-        value: "300",
-        unit: "count",
-      },
-      {
-        type: "HKQuantityTypeIdentifierStepCount",
-        sourceName: "iPhone",
-        startDate: "2026-04-01 10:00:00 +0200",
-        endDate: "2026-04-01 10:05:00 +0200",
-        value: "100",
-        unit: "count",
-      },
-      // Apple Watch has 1 record — secondary, should be ignored
+      // Watch: 8:00-8:30, 180 steps (overlaps iPhone completely)
       {
         type: "HKQuantityTypeIdentifierStepCount",
         sourceName: "Apple Watch",
         startDate: "2026-04-01 08:00:00 +0200",
-        endDate: "2026-04-01 10:05:00 +0200",
-        value: "550",
+        endDate: "2026-04-01 08:30:00 +0200",
+        value: "180",
+        unit: "count",
+      },
+      // iPhone only: 12:00-12:30, 300 steps (no overlap)
+      {
+        type: "HKQuantityTypeIdentifierStepCount",
+        sourceName: "iPhone",
+        startDate: "2026-04-01 12:00:00 +0200",
+        endDate: "2026-04-01 12:30:00 +0200",
+        value: "300",
         unit: "count",
       },
     ];
     const result = aggregateRecords(duped);
     const steps = result.metrics.find((m) => m.metric === "step_count");
     expect(steps).toBeDefined();
-    // Should be 200+300+100=600 (iPhone only), not 600+550=1150
-    expect(steps!.value).toBe(600);
+    // 200 (first interval, covers 8:00-8:30) + 300 (no overlap) = 500
+    // The 180 from Watch is fully covered, so skipped
+    expect(steps!.value).toBe(500);
+  });
+});
+
+describe("deduplicateIntervals", () => {
+  it("sums non-overlapping intervals", () => {
+    const result = deduplicateIntervals([
+      { start: 0, end: 10, value: 100 },
+      { start: 20, end: 30, value: 200 },
+    ]);
+    expect(result).toBe(300);
+  });
+
+  it("discards fully covered intervals", () => {
+    const result = deduplicateIntervals([
+      { start: 0, end: 30, value: 300 },
+      { start: 5, end: 20, value: 150 }, // fully inside
+    ]);
+    expect(result).toBe(300);
+  });
+
+  it("takes proportional value for partial overlaps", () => {
+    // First: 0-20, value 200 (rate: 10/unit)
+    // Second: 10-30, value 200 (rate: 10/unit) — only 10-30 uncovered is 20-30
+    const result = deduplicateIntervals([
+      { start: 0, end: 20, value: 200 },
+      { start: 10, end: 30, value: 200 },
+    ]);
+    // 200 + 200*(10/20) = 200 + 100 = 300
+    expect(result).toBe(300);
+  });
+
+  it("returns 0 for empty input", () => {
+    expect(deduplicateIntervals([])).toBe(0);
   });
 });
