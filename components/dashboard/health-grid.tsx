@@ -6,21 +6,24 @@ import { BloodPressureChart } from "@/components/dashboard/blood-pressure-chart"
 import { HealthChart } from "@/components/dashboard/health-chart";
 import type { HealthMetric, HealthMetricConfig } from "@/types/health";
 
-type Period = "1M" | "6M" | "1Y";
+type Period = "1M" | "6M" | "1Y" | "ALL";
 
-const PERIODS: Period[] = ["1M", "6M", "1Y"];
+const PERIODS: Period[] = ["1M", "6M", "1Y", "ALL"];
 
-const PERIOD_MONTHS: Record<Period, number> = {
+const PERIOD_MONTHS: Record<Period, number | null> = {
   "1M": 1,
   "6M": 6,
   "1Y": 12,
+  ALL: null,
 };
 
 function filterByPeriod(data: HealthMetric[], period: Period): HealthMetric[] {
+  const months = PERIOD_MONTHS[period];
+  if (months === null) return data;
   const now = new Date();
   const cutoff = new Date(
     now.getFullYear(),
-    now.getMonth() - PERIOD_MONTHS[period],
+    now.getMonth() - months,
     now.getDate(),
   );
   return data.filter((d) => new Date(d.date) >= cutoff);

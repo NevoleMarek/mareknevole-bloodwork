@@ -74,6 +74,7 @@ describe("HealthGrid", () => {
     expect(screen.getByText("1M")).toBeInTheDocument();
     expect(screen.getByText("6M")).toBeInTheDocument();
     expect(screen.getByText("1Y")).toBeInTheDocument();
+    expect(screen.getByText("ALL")).toBeInTheDocument();
   });
 
   it("renders metric labels from config", () => {
