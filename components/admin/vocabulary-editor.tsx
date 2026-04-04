@@ -46,6 +46,8 @@ export function VocabularyEditor({
       label: form.label,
       unit: form.unit,
       referenceRange: { min: Number(form.min), max: Number(form.max) },
+      description:
+        editing.kind === "editing" ? editing.entry.description : null,
     };
     const method = editing.kind === "adding" ? "POST" : "PUT";
     await fetch("/api/vocabulary", {

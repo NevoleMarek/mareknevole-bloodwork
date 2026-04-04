@@ -17,12 +17,14 @@ describe("row mappers", () => {
       unit: "mg/dL",
       reference_min: 70,
       reference_max: 100,
+      description: null,
     };
     expect(mapVocabularyRow(row)).toEqual({
       key: "glucose",
       label: "Glucose",
       unit: "mg/dL",
       referenceRange: { min: 70, max: 100 },
+      description: null,
     });
   });
 

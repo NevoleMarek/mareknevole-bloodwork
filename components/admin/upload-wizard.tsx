@@ -123,6 +123,7 @@ export function UploadWizard() {
           label: m.label,
           unit: m.convertedUnit,
           referenceRange: m.referenceRange ?? { min: 0, max: 0 },
+          description: null,
         }));
 
       // Build measurements with derived status

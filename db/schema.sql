@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS vocabulary (
   label TEXT NOT NULL,
   unit TEXT NOT NULL,
   reference_min REAL NOT NULL,
-  reference_max REAL NOT NULL
+  reference_max REAL NOT NULL,
+  description TEXT
 );
 
 CREATE TABLE IF NOT EXISTS readings (

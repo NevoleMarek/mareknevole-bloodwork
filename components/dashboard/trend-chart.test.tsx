@@ -11,12 +11,14 @@ const vocabulary: VocabularyEntry[] = [
     label: "Glucose",
     unit: "mg/dL",
     referenceRange: { min: 70, max: 100 },
+    description: null,
   },
   {
     key: "ldl",
     label: "LDL",
     unit: "mg/dL",
     referenceRange: { min: 0, max: 130 },
+    description: null,
   },
 ];
 

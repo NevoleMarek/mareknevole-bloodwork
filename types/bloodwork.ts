@@ -3,6 +3,7 @@ export type VocabularyEntry = {
   label: string;
   unit: string;
   referenceRange: { min: number; max: number };
+  description: string | null;
 };
 
 export type Vocabulary = { entries: VocabularyEntry[] };

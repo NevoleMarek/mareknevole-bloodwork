@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     statements.push(
       db
         .prepare(
-          "INSERT INTO vocabulary (key, label, unit, reference_min, reference_max) VALUES (?, ?, ?, ?, ?)",
+          "INSERT INTO vocabulary (key, label, unit, reference_min, reference_max, description) VALUES (?, ?, ?, ?, ?, ?)",
         )
         .bind(
           entry.key,
@@ -45,6 +45,7 @@ export async function POST(request: Request) {
           entry.unit,
           entry.referenceRange.min,
           entry.referenceRange.max,
+          entry.description,
         ),
     );
   }
