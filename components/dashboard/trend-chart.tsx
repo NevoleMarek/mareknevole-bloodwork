@@ -12,25 +12,12 @@ import {
 
 import type { BloodworkReading, VocabularyEntry } from "@/types/bloodwork";
 
-type Period = "6M" | "1Y" | "ALL";
-
 const LINE_STYLES = [
   { stroke: "#18181b", strokeDasharray: undefined },
   { stroke: "#555555", strokeDasharray: "6 3" },
   { stroke: "#888888", strokeDasharray: "2 3" },
   { stroke: "#bbbbbb", strokeDasharray: "10 4" },
 ] as const;
-
-function filterByPeriod(
-  readings: BloodworkReading[],
-  period: Period,
-): BloodworkReading[] {
-  if (period === "ALL") return readings;
-  const now = new Date();
-  const months = period === "6M" ? 6 : 12;
-  const cutoff = new Date(now.getFullYear(), now.getMonth() - months, 1);
-  return readings.filter((r) => new Date(r.date) >= cutoff);
-}
 
 function topMetricKeys(readings: BloodworkReading[], count: number): string[] {
   const counts: Record<string, number> = {};
@@ -52,17 +39,11 @@ export function TrendChart({
   readings: BloodworkReading[];
   vocabulary: VocabularyEntry[];
 }) {
-  const [period, setPeriod] = useState<Period>("1Y");
   const defaultKeys = useMemo(() => topMetricKeys(readings, 2), [readings]);
   const [visibleKeys, setVisibleKeys] = useState<string[]>(defaultKeys);
 
-  const filtered = useMemo(
-    () => filterByPeriod(readings, period),
-    [readings, period],
-  );
-
   const chartData = useMemo(() => {
-    return filtered.map((r) => {
+    return readings.map((r) => {
       const point: Record<string, string | number> = {
         date: new Date(r.date).toLocaleDateString("en-US", {
           month: "short",
@@ -74,7 +55,7 @@ export function TrendChart({
       }
       return point;
     });
-  }, [filtered]);
+  }, [readings]);
 
   const vocabMap = useMemo(() => {
     const map = new Map<string, VocabularyEntry>();
@@ -122,20 +103,6 @@ export function TrendChart({
               </button>
             );
           })}
-        </div>
-        <div className="flex shrink-0 self-start border border-zinc-200 text-[9px]">
-          {(["6M", "1Y", "ALL"] as const).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPeriod(p)}
-              className={`px-2.5 py-1 ${
-                period === p ? "bg-zinc-900 text-white" : "text-zinc-400"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
         </div>
       </div>
       <ResponsiveContainer width="100%" height={160}>

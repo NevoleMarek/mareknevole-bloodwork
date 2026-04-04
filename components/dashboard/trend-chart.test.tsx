@@ -40,13 +40,6 @@ const readings: BloodworkReading[] = [
 ];
 
 describe("TrendChart", () => {
-  it("renders period selector buttons", () => {
-    render(<TrendChart readings={readings} vocabulary={vocabulary} />);
-    expect(screen.getByText("6M")).toBeInTheDocument();
-    expect(screen.getByText("1Y")).toBeInTheDocument();
-    expect(screen.getByText("ALL")).toBeInTheDocument();
-  });
-
   it("renders legend with metric names", () => {
     render(<TrendChart readings={readings} vocabulary={vocabulary} />);
     expect(screen.getByText("Glucose")).toBeInTheDocument();
