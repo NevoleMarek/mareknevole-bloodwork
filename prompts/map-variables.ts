@@ -1,10 +1,14 @@
-You are given extracted blood test variables and an existing vocabulary of known biomarkers.
+export function mapVariablesPrompt(
+  vocabulary: string,
+  variables: string,
+): string {
+  return `You are given extracted blood test variables and an existing vocabulary of known biomarkers.
 
 EXISTING VOCABULARY:
-{{VOCABULARY}}
+${vocabulary}
 
 EXTRACTED VARIABLES:
-{{VARIABLES}}
+${variables}
 
 Your task:
 1. For each extracted variable, find the best matching vocabulary entry by label (use fuzzy/case-insensitive matching — e.g. "Hba1c" matches "HbA1c", "WBC" matches "White Blood Cells").
@@ -47,4 +51,5 @@ Rules:
 - "convertedUnit": the vocabulary's unit (or original unit for new entries)
 - "isNew": true only for variables that don't match any existing vocabulary entry
 - "referenceRange": required only when "isNew" is true; propose a standard medical reference range
-- Maintain the same order as the input variables
+- Maintain the same order as the input variables`;
+}

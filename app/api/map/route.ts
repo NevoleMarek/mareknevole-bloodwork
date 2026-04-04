@@ -1,23 +1,25 @@
 import assert from "node:assert";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { callGemini, parseGeminiJson } from "@/lib/gemini";
+import { mapVariablesPrompt } from "@/prompts/map-variables";
 import type { MapRequest, MapResponse } from "@/types/wizard";
 
 export async function POST(request: Request) {
+  const { env } = await getCloudflareContext();
+  const apiKey = env.GEMINI_API_KEY as string;
+  assert(apiKey, "GEMINI_API_KEY is required");
+
   const body = (await request.json()) as MapRequest;
   assert(body.variables.length > 0, "No variables provided");
 
-  const template = readFileSync(
-    join(process.cwd(), "prompts", "map-variables.txt"),
-    "utf-8",
+  const prompt = mapVariablesPrompt(
+    JSON.stringify(body.vocabulary, null, 2),
+    JSON.stringify(body.variables, null, 2),
   );
-  const prompt = template
-    .replace("{{VOCABULARY}}", JSON.stringify(body.vocabulary, null, 2))
-    .replace("{{VARIABLES}}", JSON.stringify(body.variables, null, 2));
 
-  const text = await callGemini(prompt);
+  const text = await callGemini(apiKey, prompt);
   const result = parseGeminiJson<MapResponse>(text);
 
   assert(result.mappings.length > 0, "No mappings returned");

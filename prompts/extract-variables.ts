@@ -1,4 +1,4 @@
-Extract all blood test results from this medical PDF report.
+export const extractVariablesPrompt = `Extract all blood test results from this medical PDF report.
 
 Return ONLY a raw JSON object — no markdown, no explanation, no code fences.
 
@@ -20,4 +20,4 @@ Rules:
 - "label": exact test name as it appears in the report
 - "value": numeric value only
 - "unit": unit string as written in the report
-- Include every individual test result; do not omit any
+- Include every individual test result; do not omit any`;

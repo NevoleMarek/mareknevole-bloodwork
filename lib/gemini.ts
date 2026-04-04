@@ -1,17 +1,14 @@
 import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
 import assert from "node:assert";
 
-function getModel() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  assert(apiKey, "GEMINI_API_KEY is required");
-  const genAI = new GoogleGenerativeAI(apiKey);
-  return genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-}
-
 export async function callGemini(
+  apiKey: string,
   prompt: string,
   pdfBase64?: string,
 ): Promise<string> {
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
   const parts: Part[] = pdfBase64
     ? [
         { text: prompt },
@@ -19,7 +16,6 @@ export async function callGemini(
       ]
     : [{ text: prompt }];
 
-  const model = getModel();
   const result = await model.generateContent({
     contents: [{ role: "user", parts }],
   });
