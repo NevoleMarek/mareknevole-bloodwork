@@ -8,7 +8,7 @@ The JSON must match this exact structure:
   "date": "YYYY-MM-DD",
   "variables": [
     {
-      "label": "Test Name As Written",
+      "label": "Test Name In English",
       "value": 98.0,
       "unit": "mg/dL"
     }
@@ -17,7 +17,7 @@ The JSON must match this exact structure:
 
 Rules:
 - "date": the specimen collection date from the report in YYYY-MM-DD format; if not found, use today's date
-- "label": exact test name as it appears in the report
+- "label": translate the test name to its well-known English medical abbreviation or term (e.g. "Glukóza" → "Glucose", "Bílé krvinky" → "WBC", "Červené krvinky" → "RBC", "Trombocyty" → "Platelets", "Hematokrit" → "Hematocrit"). Use standard medical abbreviations when they exist (WBC, RBC, HbA1c, TSH, ALT, AST, GGT, CRP, HDL, LDL, etc.)
 - "value": numeric value only
 - "unit": unit string as written in the report
 - Include every individual test result; do not omit any`;
