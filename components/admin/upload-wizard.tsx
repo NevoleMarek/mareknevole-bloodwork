@@ -8,6 +8,8 @@ import type {
   ExtractedVariable,
   MapResponse,
   MappedVariable,
+  ResearchResponse,
+  ResearchedEntry,
   SaveReadingRequest,
   WizardState,
 } from "@/types/wizard";
@@ -16,13 +18,21 @@ import { deriveStatus } from "@/lib/status";
 import { StepUpload } from "@/components/admin/step-upload";
 import { StepReviewExtraction } from "@/components/admin/step-review-extraction";
 import { StepReviewMapping } from "@/components/admin/step-review-mapping";
+import { StepReviewResearch } from "@/components/admin/step-review-research";
 
-const STEP_LABELS = ["Extract", "Map"] as const;
-
-function StepIndicator({ active }: { active: 0 | 1 }) {
+function StepIndicator({
+  active,
+  hasNewEntries,
+}: {
+  active: number;
+  hasNewEntries: boolean;
+}) {
+  const labels = hasNewEntries
+    ? ["Extract", "Map", "Research"]
+    : ["Extract", "Map"];
   return (
     <div className="mb-6 flex gap-4 text-[9px] tracking-[2px] uppercase">
-      {STEP_LABELS.map((label, i) => (
+      {labels.map((label, i) => (
         <span
           key={label}
           className={
@@ -113,18 +123,31 @@ export function UploadWizard() {
   );
 
   const handleSave = useCallback(
-    async (date: string, mappings: MappedVariable[], pdfUrl: string) => {
+    async (
+      date: string,
+      mappings: MappedVariable[],
+      researched: ResearchedEntry[],
+      pdfUrl: string,
+    ) => {
       setState({ step: "saving", pdfUrl, date, mappings });
+
+      const researchByKey = new Map(
+        researched.map((r) => [r.vocabularyKey, r]),
+      );
 
       const newVocabulary: VocabularyEntry[] = mappings
         .filter((m) => m.isNew)
-        .map((m) => ({
-          key: m.vocabularyKey,
-          label: m.label,
-          unit: m.convertedUnit,
-          referenceRange: m.referenceRange ?? { min: 0, max: 0 },
-          description: null,
-        }));
+        .map((m) => {
+          const research = researchByKey.get(m.vocabularyKey);
+          return {
+            key: m.vocabularyKey,
+            label: m.label,
+            unit: m.convertedUnit,
+            referenceRange: research?.referenceRange ??
+              m.referenceRange ?? { min: 0, max: 0 },
+            description: research?.description ?? null,
+          };
+        });
 
       // Build measurements with derived status
       const allVocab = [...vocabulary, ...newVocabulary];
@@ -167,6 +190,50 @@ export function UploadWizard() {
     [vocabulary, fileName],
   );
 
+  const handleResearch = useCallback(
+    async (date: string, mappings: MappedVariable[], pdfUrl: string) => {
+      const newEntries = mappings
+        .filter((m) => m.isNew)
+        .map((m) => ({
+          vocabularyKey: m.vocabularyKey,
+          label: m.label,
+          unit: m.convertedUnit,
+          referenceRange: m.referenceRange ?? { min: 0, max: 0 },
+        }));
+
+      if (newEntries.length === 0) {
+        handleSave(date, mappings, [], pdfUrl);
+        return;
+      }
+
+      setState({ step: "researching", pdfUrl, date, mappings });
+
+      try {
+        const res = await fetch("/api/research", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ newEntries }),
+        });
+        if (!res.ok) throw new Error("Research failed");
+        const data = (await res.json()) as ResearchResponse;
+        setState({
+          step: "review-research",
+          pdfUrl,
+          date,
+          mappings,
+          researched: data.entries,
+        });
+      } catch (e) {
+        setState({
+          step: "error",
+          message: e instanceof Error ? e.message : "Research failed",
+          returnTo: { step: "review-mapping", pdfUrl, date, mappings },
+        });
+      }
+    },
+    [handleSave],
+  );
+
   // Determine if we should show PDF preview
   const pdfUrl =
     state.step !== "upload" && state.step !== "done" && state.step !== "error"
@@ -174,6 +241,14 @@ export function UploadWizard() {
       : state.step === "error" && "pdfUrl" in state.returnTo
         ? (state.returnTo as { pdfUrl: string }).pdfUrl
         : null;
+
+  const hasNewEntries =
+    (state.step === "review-mapping" ||
+      state.step === "researching" ||
+      state.step === "review-research" ||
+      state.step === "saving") &&
+    "mappings" in state &&
+    state.mappings.some((m) => m.isNew);
 
   return (
     <div className="flex gap-0">
@@ -191,7 +266,7 @@ export function UploadWizard() {
 
         {state.step === "review-extraction" && (
           <>
-            <StepIndicator active={0} />
+            <StepIndicator active={0} hasNewEntries={false} />
             <StepReviewExtraction
               date={state.date}
               variables={state.variables}
@@ -208,7 +283,7 @@ export function UploadWizard() {
 
         {state.step === "mapping" && (
           <>
-            <StepIndicator active={1} />
+            <StepIndicator active={1} hasNewEntries={hasNewEntries} />
             <p className="text-xs text-zinc-500">
               Mapping variables to vocabulary...
             </p>
@@ -217,7 +292,7 @@ export function UploadWizard() {
 
         {state.step === "review-mapping" && (
           <>
-            <StepIndicator active={1} />
+            <StepIndicator active={1} hasNewEntries={hasNewEntries} />
             <StepReviewMapping
               mappings={state.mappings}
               vocabulary={vocabulary}
@@ -235,7 +310,45 @@ export function UploadWizard() {
                 })
               }
               onSave={() =>
-                handleSave(state.date, state.mappings, state.pdfUrl)
+                handleResearch(state.date, state.mappings, state.pdfUrl)
+              }
+              saving={false}
+            />
+          </>
+        )}
+
+        {state.step === "researching" && (
+          <>
+            <StepIndicator active={2} hasNewEntries={true} />
+            <p className="text-xs text-zinc-500">
+              Researching new biomarkers...
+            </p>
+          </>
+        )}
+
+        {state.step === "review-research" && (
+          <>
+            <StepIndicator active={2} hasNewEntries={true} />
+            <StepReviewResearch
+              researched={state.researched}
+              onResearchedChange={(researched) =>
+                setState({ ...state, researched })
+              }
+              onBack={() =>
+                setState({
+                  step: "review-mapping",
+                  pdfUrl: state.pdfUrl,
+                  date: state.date,
+                  mappings: state.mappings,
+                })
+              }
+              onSave={() =>
+                handleSave(
+                  state.date,
+                  state.mappings,
+                  state.researched,
+                  state.pdfUrl,
+                )
               }
               saving={false}
             />
@@ -244,7 +357,10 @@ export function UploadWizard() {
 
         {state.step === "saving" && (
           <>
-            <StepIndicator active={1} />
+            <StepIndicator
+              active={hasNewEntries ? 2 : 1}
+              hasNewEntries={hasNewEntries}
+            />
             <p className="text-xs text-zinc-500">Saving reading...</p>
           </>
         )}
