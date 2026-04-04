@@ -46,3 +46,11 @@ CREATE TABLE IF NOT EXISTS health_metrics (
   unit TEXT NOT NULL,
   PRIMARY KEY (date, metric)
 );
+
+CREATE TABLE IF NOT EXISTS health_metric_config (
+  metric TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  unit TEXT NOT NULL,
+  aggregation TEXT NOT NULL,
+  visible INTEGER NOT NULL DEFAULT 0
+);
