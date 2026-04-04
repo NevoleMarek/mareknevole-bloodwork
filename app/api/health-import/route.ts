@@ -30,5 +30,11 @@ export async function POST(request: Request) {
 
   await db.batch([...configStmts, ...metricStmts]);
 
-  return Response.json({ saved: body.metrics.length });
+  const days = new Set(body.metrics.map((m) => m.date)).size;
+
+  return Response.json({
+    saved: body.metrics.length,
+    metrics: body.configs.length,
+    days,
+  });
 }

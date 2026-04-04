@@ -17,13 +17,18 @@ export function HealthImport({ onImported }: { onImported: () => void }) {
         headers: { "Content-Type": "application/json" },
         body,
       });
-      const data = (await res.json()) as { error?: string; saved?: number };
+      const data = (await res.json()) as {
+        error?: string;
+        saved?: number;
+        metrics?: number;
+        days?: number;
+      };
       if (!res.ok) {
         setMessage(`Error: ${data.error}`);
         setStatus("idle");
         return;
       }
-      setMessage(`Imported ${data.saved} metric rows`);
+      setMessage(`Imported ${data.metrics} metrics, ${data.days} days`);
       setStatus("done");
       onImported();
       setTimeout(() => {

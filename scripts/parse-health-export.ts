@@ -68,39 +68,42 @@ function parseDurationHours(startDate: string, endDate: string): number {
 
 // -- Aggregation --
 
-export function aggregateRecords(records: RawRecord[]) {
-  const buckets = new Map<string, Map<string, DayBucket>>();
-  const metricMeta = new Map<
-    string,
-    { type: string; unit: string; key: string }
-  >();
+type MetricMeta = Map<string, { type: string; unit: string; key: string }>;
 
-  for (const r of records) {
-    const key = deriveMetricKey(r.type);
-    const date = parseDate(r.startDate);
-    const aggregation = AGGREGATION_MAP[r.type] ?? "avg";
+function accumulateRecord(
+  r: RawRecord,
+  buckets: Map<string, Map<string, DayBucket>>,
+  metricMeta: MetricMeta,
+) {
+  const key = deriveMetricKey(r.type);
+  const date = parseDate(r.startDate);
+  const aggregation = AGGREGATION_MAP[r.type] ?? "avg";
 
-    if (!metricMeta.has(key)) {
-      metricMeta.set(key, { type: r.type, unit: r.unit, key });
-    }
-
-    let value: number;
-    if (aggregation === "duration") {
-      if (!ASLEEP_VALUES.has(r.value)) continue;
-      value = parseDurationHours(r.startDate, r.endDate);
-    } else {
-      value = parseFloat(r.value);
-      if (!isFinite(value)) continue;
-    }
-
-    if (!buckets.has(key)) buckets.set(key, new Map());
-    const dayMap = buckets.get(key)!;
-    const bucket = dayMap.get(date) ?? { sum: 0, count: 0 };
-    bucket.sum += value;
-    bucket.count += 1;
-    dayMap.set(date, bucket);
+  if (!metricMeta.has(key)) {
+    metricMeta.set(key, { type: r.type, unit: r.unit, key });
   }
 
+  let value: number;
+  if (aggregation === "duration") {
+    if (!ASLEEP_VALUES.has(r.value)) return;
+    value = parseDurationHours(r.startDate, r.endDate);
+  } else {
+    value = parseFloat(r.value);
+    if (!isFinite(value)) return;
+  }
+
+  if (!buckets.has(key)) buckets.set(key, new Map());
+  const dayMap = buckets.get(key)!;
+  const bucket = dayMap.get(date) ?? { sum: 0, count: 0 };
+  bucket.sum += value;
+  bucket.count += 1;
+  dayMap.set(date, bucket);
+}
+
+function finalizeBuckets(
+  buckets: Map<string, Map<string, DayBucket>>,
+  metricMeta: MetricMeta,
+) {
   const metrics: {
     date: string;
     metric: string;
@@ -141,6 +144,13 @@ export function aggregateRecords(records: RawRecord[]) {
   return { metrics, configs };
 }
 
+export function aggregateRecords(records: RawRecord[]) {
+  const buckets = new Map<string, Map<string, DayBucket>>();
+  const metricMeta: MetricMeta = new Map();
+  for (const r of records) accumulateRecord(r, buckets, metricMeta);
+  return finalizeBuckets(buckets, metricMeta);
+}
+
 // -- XML line parsing --
 
 function extractAttr(line: string, name: string): string | null {
@@ -177,17 +187,24 @@ async function main() {
 
   console.error(`Parsing ${inputPath}...`);
 
-  const records: RawRecord[] = [];
-  const rl = createInterface({ input: createReadStream(inputPath) });
+  const buckets = new Map<string, Map<string, DayBucket>>();
+  const metricMeta = new Map<
+    string,
+    { type: string; unit: string; key: string }
+  >();
+  let recordCount = 0;
 
+  const rl = createInterface({ input: createReadStream(inputPath) });
   for await (const line of rl) {
-    const record = parseRecordLine(line);
-    if (record) records.push(record);
+    const r = parseRecordLine(line);
+    if (!r) continue;
+    recordCount++;
+    accumulateRecord(r, buckets, metricMeta);
   }
 
-  console.error(`Found ${records.length} records`);
+  console.error(`Found ${recordCount} records`);
 
-  const result = aggregateRecords(records);
+  const result = finalizeBuckets(buckets, metricMeta);
 
   console.error(
     `Output: ${result.metrics.length} daily values, ${result.configs.length} metric types`,
@@ -198,10 +215,7 @@ async function main() {
 }
 
 // Run when executed directly via bun/node
-const isMain =
-  typeof process !== "undefined" &&
-  process.argv[1] &&
-  import.meta.url.endsWith(process.argv[1].replace(/.*\//, ""));
-if (isMain) {
+const scriptPath = new URL(import.meta.url).pathname;
+if (process.argv[1] === scriptPath) {
   main();
 }
