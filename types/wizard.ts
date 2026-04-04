@@ -33,6 +33,27 @@ export type MapResponse = {
   mappings: MappedVariable[];
 };
 
+export type ResearchEntry = {
+  vocabularyKey: string;
+  label: string;
+  unit: string;
+  referenceRange: { min: number; max: number };
+};
+
+export type ResearchedEntry = {
+  vocabularyKey: string;
+  description: string;
+  referenceRange: { min: number; max: number };
+};
+
+export type ResearchRequest = {
+  newEntries: ResearchEntry[];
+};
+
+export type ResearchResponse = {
+  entries: ResearchedEntry[];
+};
+
 export type SaveReadingRequest = {
   date: string;
   source: string;
@@ -71,6 +92,19 @@ export type WizardState =
       pdfUrl: string;
       date: string;
       mappings: MappedVariable[];
+    }
+  | {
+      step: "researching";
+      pdfUrl: string;
+      date: string;
+      mappings: MappedVariable[];
+    }
+  | {
+      step: "review-research";
+      pdfUrl: string;
+      date: string;
+      mappings: MappedVariable[];
+      researched: ResearchedEntry[];
     }
   | {
       step: "saving";
