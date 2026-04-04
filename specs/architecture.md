@@ -21,6 +21,7 @@
 | `/admin/data`        | Auth   | Readings management             |
 | `/admin/vocabulary`  | Auth   | Vocabulary editor               |
 | `/admin/supplements` | Auth   | Supplement stack editor         |
+| `/admin/health`      | Auth   | Health import & visibility      |
 
 ## Auth
 
@@ -28,18 +29,20 @@ Password-based authentication via middleware + session cookie. Middleware protec
 
 ## API Routes
 
-| Method | Route                 | Purpose                                               |
-| ------ | --------------------- | ----------------------------------------------------- |
-| GET    | `/api/data`           | Return vocabulary and all readings                    |
-| POST   | `/api/extract`        | PDF upload → Gemini variable extraction               |
-| POST   | `/api/map`            | Variables → Gemini vocabulary mapping                 |
-| POST   | `/api/readings`       | Save reading + vocabulary to D1                       |
-| POST   | `/api/auth`           | Login, returns session cookie                         |
-| GET    | `/api/vocabulary`     | Return vocabulary                                     |
-| PUT    | `/api/vocabulary`     | Update vocabulary entries                             |
-| GET    | `/api/supplements`    | Return supplement stack                               |
-| PUT    | `/api/supplements`    | Update supplement stack                               |
-| POST   | `/api/health-metrics` | Upsert daily health metrics (bearer token or session) |
+| Method | Route                | Purpose                                      |
+| ------ | -------------------- | -------------------------------------------- |
+| GET    | `/api/data`          | Return vocabulary and all readings           |
+| POST   | `/api/extract`       | PDF upload → Gemini variable extraction      |
+| POST   | `/api/map`           | Variables → Gemini vocabulary mapping        |
+| POST   | `/api/readings`      | Save reading + vocabulary to D1              |
+| POST   | `/api/auth`          | Login, returns session cookie                |
+| GET    | `/api/vocabulary`    | Return vocabulary                            |
+| PUT    | `/api/vocabulary`    | Update vocabulary entries                    |
+| GET    | `/api/supplements`   | Return supplement stack                      |
+| PUT    | `/api/supplements`   | Update supplement stack                      |
+| POST   | `/api/health-import` | Upload parsed health metrics JSON (session)  |
+| GET    | `/api/health-config` | Fetch all health metric configs (session)    |
+| PATCH  | `/api/health-config` | Toggle metric dashboard visibility (session) |
 
 ## Component Architecture
 
@@ -61,12 +64,15 @@ Password-based authentication via middleware + session cookie. Middleware protec
   - `readings-table` — tabular view of all readings
   - `vocabulary-editor` — edit test names, units, and ranges
   - `supplement-editor` — edit supplements with changelog
+  - `health-admin` — client wrapper for health import + visibility
+  - `health-import` — drag-and-drop JSON import
+  - `health-visibility` — metric visibility toggle chips
 - `components/ui/` — shared primitives
   - `accordion` — collapsible section
 
 ## Data
 
-D1 SQLite database with tables: `vocabulary`, `readings`, `measurements`, `supplements`, `supplement_changelog`, `health_metrics`.
+D1 SQLite database with tables: `vocabulary`, `readings`, `measurements`, `supplements`, `supplement_changelog`, `health_metrics`, `health_metric_config`.
 
 ## Project Structure
 
@@ -74,6 +80,7 @@ D1 SQLite database with tables: `vocabulary`, `readings`, `measurements`, `suppl
 - `components/` — reusable UI components (dashboard, admin, ui)
 - `data/` — JSON data files
 - `types/bloodwork.ts` — shared TypeScript types
+- `scripts/parse-health-export.ts` — CLI: parse Apple Health XML → JSON
 - `prompts/` — Gemini prompt templates
 - `specs/` — living product and architecture documentation
 - `middleware.ts` — auth middleware for admin routes
@@ -86,7 +93,6 @@ Copy `.env.local.example` to `.env.local` and fill in:
 - `GOOGLE_CLOUD_PROJECT` — GCP project ID (required)
 - `GOOGLE_CLOUD_LOCATION` — Vertex AI region (optional, defaults to `us-central1`)
 - `ADMIN_PASSWORD` — password for admin login
-- `HEALTH_API_TOKEN` — bearer token for iOS Shortcut health metrics sync
 
 ## Verification Workflow
 
