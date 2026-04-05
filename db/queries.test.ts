@@ -30,6 +30,26 @@ describe("row mappers", () => {
     });
   });
 
+  it("maps vocabulary row with featured=1 to true", () => {
+    const row = {
+      key: "glucose",
+      label: "Glucose",
+      unit: "mg/dL",
+      reference_min: 70,
+      reference_max: 100,
+      description: null,
+      featured: 1,
+    };
+    expect(mapVocabularyRow(row)).toEqual({
+      key: "glucose",
+      label: "Glucose",
+      unit: "mg/dL",
+      referenceRange: { min: 70, max: 100 },
+      description: null,
+      featured: true,
+    });
+  });
+
   it("maps reading row", () => {
     const row = { id: "r1", date: "2025-06-15", source: "test.pdf" };
     expect(mapReadingRow(row)).toEqual({
