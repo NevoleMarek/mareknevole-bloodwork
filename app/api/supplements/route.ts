@@ -59,30 +59,33 @@ export async function PUT(req: Request) {
     name: string;
     dose: string;
     frequency: string;
+    startedAt: string;
     changelogDate: string;
   };
 
   const old = await db
     .prepare("SELECT * FROM supplements WHERE id = ?")
     .bind(body.id)
-    .first<{ name: string; dose: string; frequency: string }>();
+    .first<{ name: string; dose: string; frequency: string; started_at: string }>();
 
   if (!old) return Response.json({ error: "Not found" }, { status: 404 });
 
   const now = new Date().toISOString();
   const changes: string[] = [];
   if (old.dose !== body.dose)
-    changes.push(`Changed ${old.name} from ${old.dose} to ${body.dose}`);
+    changes.push(`Changed ${old.name} dose from ${old.dose} to ${body.dose}`);
   if (old.frequency !== body.frequency)
     changes.push(`Changed ${old.name} frequency to ${body.frequency}`);
   if (old.name !== body.name)
     changes.push(`Renamed ${old.name} to ${body.name}`);
+  if (old.started_at !== body.startedAt)
+    changes.push(`Changed ${old.name} start date to ${body.startedAt}`);
 
   await db
     .prepare(
-      "UPDATE supplements SET name = ?, dose = ?, frequency = ?, updated_at = ? WHERE id = ?",
+      "UPDATE supplements SET name = ?, dose = ?, frequency = ?, started_at = ?, updated_at = ? WHERE id = ?",
     )
-    .bind(body.name, body.dose, body.frequency, now, body.id)
+    .bind(body.name, body.dose, body.frequency, body.startedAt, now, body.id)
     .run();
 
   for (const desc of changes) {
