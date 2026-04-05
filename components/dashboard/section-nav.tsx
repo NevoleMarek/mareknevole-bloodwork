@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const SECTIONS = [
   { id: "metrics", label: "Metrics" },
-  { id: "trends", label: "Trends" },
   { id: "health", label: "Health" },
   { id: "supplements", label: "Supplements" },
   { id: "changelog", label: "Changelog" },

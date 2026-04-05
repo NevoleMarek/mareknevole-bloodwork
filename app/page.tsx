@@ -2,10 +2,9 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { ChangelogList } from "@/components/dashboard/changelog-list";
 import { HealthGrid } from "@/components/dashboard/health-grid";
-import { MetricCard } from "@/components/dashboard/metric-card";
+import { MetricsSection } from "@/components/dashboard/metrics-section";
 import { SectionNav } from "@/components/dashboard/section-nav";
 import { SupplementTable } from "@/components/dashboard/supplement-table";
-import { TrendChart } from "@/components/dashboard/trend-chart";
 import {
   getActiveSupplements,
   getReadingsWithMeasurements,
@@ -37,12 +36,13 @@ export default async function Home() {
       })
     : "";
 
-  const metrics = latest
+  const allMetrics = latest
     ? latest.measurements.map((m) => {
         const entry = vocabulary.find((e) => e.key === m.vocabularyKey);
         if (!entry)
           throw new Error(`Unknown vocabulary key: ${m.vocabularyKey}`);
         return {
+          vocabularyKey: m.vocabularyKey,
           label: entry.label,
           value: m.value,
           unit: m.unit,
@@ -52,6 +52,15 @@ export default async function Home() {
         };
       })
     : [];
+
+  const featured = allMetrics.filter((m) => {
+    const entry = vocabulary.find((e) => e.key === m.vocabularyKey);
+    return entry?.featured;
+  });
+  const nonFeatured = allMetrics.filter((m) => {
+    const entry = vocabulary.find((e) => e.key === m.vocabularyKey);
+    return !entry?.featured;
+  });
 
   return (
     <main className="mx-auto w-full max-w-[960px] px-4 py-6 md:px-6 md:py-8">
@@ -86,26 +95,9 @@ export default async function Home() {
         <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
           Metrics · {latestDate}
         </h2>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {metrics.map((m) => (
-            <MetricCard
-              key={m.label}
-              label={m.label}
-              value={m.value}
-              unit={m.unit}
-              min={m.min}
-              max={m.max}
-              status={m.status}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section id="trends" className="mb-8">
-        <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
-          Trends
-        </h2>
-        <TrendChart
+        <MetricsSection
+          featured={featured}
+          nonFeatured={nonFeatured}
           readings={readings.map((r) => ({
             date: r.date,
             source: r.source,
