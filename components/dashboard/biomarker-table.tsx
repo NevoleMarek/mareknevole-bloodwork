@@ -54,8 +54,8 @@ export function BiomarkerTable({
                   className={`inline-block h-1.5 w-1.5 rounded-full ${statusColor[m.status]}`}
                 />
               </td>
-              <td className="py-2 text-[13px] font-semibold">{m.label}</td>
-              <td className="py-2 text-[13px] font-bold">{m.value}</td>
+              <td className="py-2 text-[13px]">{m.label}</td>
+              <td className="py-2 text-[13px]">{m.value}</td>
               <td className="py-2 text-[12px] text-zinc-500">
                 {m.min} – {m.max}
               </td>
