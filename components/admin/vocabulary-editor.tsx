@@ -40,6 +40,17 @@ export function VocabularyEditor({
     setEditing({ kind: "editing", entry });
   }
 
+  async function toggleFeatured(entry: VocabularyEntry) {
+    await fetch("/api/vocabulary", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        entry: { ...entry, featured: !entry.featured },
+      }),
+    });
+    onRefresh();
+  }
+
   async function handleSave() {
     const entry: VocabularyEntry = {
       key: form.key,
@@ -48,6 +59,7 @@ export function VocabularyEditor({
       referenceRange: { min: Number(form.min), max: Number(form.max) },
       description:
         editing.kind === "editing" ? editing.entry.description : null,
+      featured: editing.kind === "editing" ? editing.entry.featured : false,
     };
     const method = editing.kind === "adding" ? "POST" : "PUT";
     await fetch("/api/vocabulary", {
@@ -78,6 +90,7 @@ export function VocabularyEditor({
               <td className="pb-2">Label</td>
               <td className="pb-2">Unit</td>
               <td className="pb-2">Range</td>
+              <td className="pb-2">Featured</td>
               <td className="pb-2"></td>
             </tr>
           </thead>
@@ -89,6 +102,13 @@ export function VocabularyEditor({
                 <td className="py-1.5 text-zinc-500">{e.unit}</td>
                 <td className="py-1.5 text-zinc-500">
                   {e.referenceRange.min}–{e.referenceRange.max}
+                </td>
+                <td className="py-1.5">
+                  <input
+                    type="checkbox"
+                    checked={e.featured}
+                    onChange={() => toggleFeatured(e)}
+                  />
                 </td>
                 <td className="space-x-2 py-1.5 text-right">
                   <button

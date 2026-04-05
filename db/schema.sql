@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS vocabulary (
   unit TEXT NOT NULL,
   reference_min REAL NOT NULL,
   reference_max REAL NOT NULL,
-  description TEXT
+  description TEXT,
+  featured INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS readings (

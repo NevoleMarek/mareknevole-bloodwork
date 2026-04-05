@@ -12,6 +12,7 @@ const vocabulary: VocabularyEntry[] = [
     unit: "mg/dL",
     referenceRange: { min: 70, max: 100 },
     description: null,
+    featured: false,
   },
   {
     key: "ldl",
@@ -19,6 +20,7 @@ const vocabulary: VocabularyEntry[] = [
     unit: "mg/dL",
     referenceRange: { min: 0, max: 130 },
     description: null,
+    featured: false,
   },
 ];
 
