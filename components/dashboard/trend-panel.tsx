@@ -40,17 +40,6 @@ function latestValue(key: string, readings: BloodworkReading[]): number | null {
   return null;
 }
 
-function latestStatus(
-  key: string,
-  readings: BloodworkReading[],
-): string | null {
-  for (let i = readings.length - 1; i >= 0; i--) {
-    const m = readings[i].measurements.find((m) => m.vocabularyKey === key);
-    if (m) return m.status;
-  }
-  return null;
-}
-
 function BiomarkerTrend({
   entry,
   readings,
@@ -65,7 +54,6 @@ function BiomarkerTrend({
     [entry.key, readings],
   );
   const latest = latestValue(entry.key, readings);
-  const status = latestStatus(entry.key, readings);
   const { min, max } = entry.referenceRange;
 
   const allValues = chartData.map((d) => d.value);
@@ -89,7 +77,6 @@ function BiomarkerTrend({
             Latest: <strong>{latest}</strong>
           </span>
         )}
-        {status && <span className="text-zinc-500 capitalize">{status}</span>}
         <button
           type="button"
           onClick={onRemove}

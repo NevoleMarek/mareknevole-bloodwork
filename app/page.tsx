@@ -36,27 +36,29 @@ export default async function Home() {
       })
     : "";
 
-  const allMetrics = latest
-    ? latest.measurements
-        .filter((m) => {
-          const entry = vocabulary.find((e) => e.key === m.vocabularyKey);
-          return entry?.visible !== false;
-        })
-        .map((m) => {
-          const entry = vocabulary.find((e) => e.key === m.vocabularyKey);
-          if (!entry)
-            throw new Error(`Unknown vocabulary key: ${m.vocabularyKey}`);
-          return {
-            vocabularyKey: m.vocabularyKey,
-            label: entry.label,
-            value: m.value,
-            unit: m.unit,
-            min: entry.referenceRange.min,
-            max: entry.referenceRange.max,
-            status: m.status as Status,
-          };
-        })
-    : [];
+  // For each visible vocabulary entry, find its latest measurement across all readings
+  const allMetrics = vocabulary
+    .filter((e) => e.visible)
+    .flatMap((entry) => {
+      for (let i = readings.length - 1; i >= 0; i--) {
+        const m = readings[i].measurements.find(
+          (m) => m.vocabularyKey === entry.key,
+        );
+        if (m)
+          return [
+            {
+              vocabularyKey: m.vocabularyKey,
+              label: entry.label,
+              value: m.value,
+              unit: m.unit,
+              min: entry.referenceRange.min,
+              max: entry.referenceRange.max,
+              status: m.status as Status,
+            },
+          ];
+      }
+      return [];
+    });
 
   const featured = allMetrics.filter((m) => {
     const entry = vocabulary.find((e) => e.key === m.vocabularyKey);
