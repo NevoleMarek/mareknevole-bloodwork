@@ -49,17 +49,19 @@ export function BiomarkerTable({
                   : "hover:bg-zinc-100"
               }`}
             >
-              <td className="py-2 pl-4">
+              <td className="py-1.5 pl-4">
                 <span
                   className={`inline-block h-1.5 w-1.5 rounded-full ${statusColor[m.status]}`}
                 />
               </td>
-              <td className="py-2 text-[13px]">{m.label}</td>
-              <td className="py-2 text-[13px]">{m.value}</td>
-              <td className="py-2 text-[12px] text-zinc-500">
+              <td className="py-1.5 text-[13px]">{m.label}</td>
+              <td className="py-1.5 text-[13px]">{m.value}</td>
+              <td className="py-1.5 text-[12px] text-zinc-500">
                 {m.min} – {m.max}
               </td>
-              <td className="py-2 pr-4 text-[12px] text-zinc-500">{m.unit}</td>
+              <td className="py-1.5 pr-4 text-[12px] text-zinc-500">
+                {m.unit}
+              </td>
             </tr>
           ))}
         </tbody>
