@@ -1,5 +1,11 @@
 import type { Supplement } from "@/types/bloodwork";
 
+function formatMonth(yyyyMm: string): string {
+  const [year, month] = yyyyMm.split("-");
+  const date = new Date(Number(year), Number(month) - 1);
+  return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
 export function SupplementTable({
   supplements,
 }: {
@@ -23,7 +29,9 @@ export function SupplementTable({
                 <td className="py-2">{s.name}</td>
                 <td className="py-2 text-zinc-600">{s.dose}</td>
                 <td className="py-2 text-zinc-600">{s.frequency}</td>
-                <td className="py-2 text-zinc-500">{s.startedAt}</td>
+                <td className="py-2 text-zinc-500">
+                  {formatMonth(s.startedAt)}
+                </td>
               </tr>
             ))}
           </tbody>
