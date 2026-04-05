@@ -19,6 +19,7 @@ describe("row mappers", () => {
       reference_max: 100,
       description: null,
       featured: 0,
+      visible: 1,
     };
     expect(mapVocabularyRow(row)).toEqual({
       key: "glucose",
@@ -27,6 +28,7 @@ describe("row mappers", () => {
       referenceRange: { min: 70, max: 100 },
       description: null,
       featured: false,
+      visible: true,
     });
   });
 
@@ -39,6 +41,7 @@ describe("row mappers", () => {
       reference_max: 100,
       description: null,
       featured: 1,
+      visible: 1,
     };
     expect(mapVocabularyRow(row)).toEqual({
       key: "glucose",
@@ -47,6 +50,7 @@ describe("row mappers", () => {
       referenceRange: { min: 70, max: 100 },
       description: null,
       featured: true,
+      visible: true,
     });
   });
 

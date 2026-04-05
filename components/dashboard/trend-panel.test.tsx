@@ -13,6 +13,7 @@ const vocabulary: VocabularyEntry[] = [
     referenceRange: { min: 70, max: 100 },
     description: "Fasting glucose measures blood sugar.",
     featured: false,
+    visible: true,
   },
   {
     key: "ldl",
@@ -21,6 +22,7 @@ const vocabulary: VocabularyEntry[] = [
     referenceRange: { min: 0, max: 130 },
     description: "Low-density lipoprotein.",
     featured: false,
+    visible: true,
   },
 ];
 

@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS vocabulary (
   reference_min REAL NOT NULL,
   reference_max REAL NOT NULL,
   description TEXT,
-  featured INTEGER NOT NULL DEFAULT 0
+  featured INTEGER NOT NULL DEFAULT 0,
+  visible INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS readings (

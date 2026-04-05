@@ -5,6 +5,7 @@ export type VocabularyEntry = {
   referenceRange: { min: number; max: number };
   description: string | null;
   featured: boolean;
+  visible: boolean;
 };
 
 export type Vocabulary = { entries: VocabularyEntry[] };

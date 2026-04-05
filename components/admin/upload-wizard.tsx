@@ -147,6 +147,7 @@ export function UploadWizard() {
               m.referenceRange ?? { min: 0, max: 0 },
             description: research?.description ?? null,
             featured: false,
+            visible: true,
           };
         });
 

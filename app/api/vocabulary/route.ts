@@ -9,7 +9,7 @@ export async function POST(req: Request) {
 
   await db
     .prepare(
-      "INSERT INTO vocabulary (key, label, unit, reference_min, reference_max, description, featured) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO vocabulary (key, label, unit, reference_min, reference_max, description, featured, visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(
       entry.key,
@@ -19,6 +19,7 @@ export async function POST(req: Request) {
       entry.referenceRange.max,
       entry.description,
       entry.featured ? 1 : 0,
+      entry.visible ? 1 : 0,
     )
     .run();
 
@@ -32,7 +33,7 @@ export async function PUT(req: Request) {
 
   const result = await db
     .prepare(
-      "UPDATE vocabulary SET label = ?, unit = ?, reference_min = ?, reference_max = ?, description = ?, featured = ? WHERE key = ?",
+      "UPDATE vocabulary SET label = ?, unit = ?, reference_min = ?, reference_max = ?, description = ?, featured = ?, visible = ? WHERE key = ?",
     )
     .bind(
       entry.label,
@@ -41,6 +42,7 @@ export async function PUT(req: Request) {
       entry.referenceRange.max,
       entry.description,
       entry.featured ? 1 : 0,
+      entry.visible ? 1 : 0,
       entry.key,
     )
     .run();

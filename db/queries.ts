@@ -18,6 +18,7 @@ type VocabularyRow = {
   reference_max: number;
   description: string | null;
   featured: number;
+  visible: number;
 };
 
 type ReadingRow = {
@@ -78,6 +79,7 @@ export function mapVocabularyRow(row: VocabularyRow): VocabularyEntry {
     referenceRange: { min: row.reference_min, max: row.reference_max },
     description: row.description,
     featured: row.featured === 1,
+    visible: row.visible === 1,
   };
 }
 
@@ -137,7 +139,7 @@ export async function getVocabulary(
 ): Promise<VocabularyEntry[]> {
   const { results } = await db
     .prepare(
-      "SELECT key, label, unit, reference_min, reference_max, description, featured FROM vocabulary ORDER BY label",
+      "SELECT key, label, unit, reference_min, reference_max, description, featured, visible FROM vocabulary ORDER BY label",
     )
     .all<VocabularyRow>();
   return results.map(mapVocabularyRow);
