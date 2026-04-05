@@ -9,8 +9,9 @@
 - Display a clear visual overview of blood test results (values vs. reference ranges, trends over time).
 - Show the current supplement stack with dosages and a generated changelog.
 - Let the admin upload PDF bloodwork reports and extract structured data via Gemini.
+- Import Apple Health data (metrics like blood pressure, heart rate, body weight) and display trends.
 - Provide vocabulary and supplement management behind password authentication.
-- Deploy to Cloudflare Pages for public access.
+- Deploy to Cloudflare Workers for public access.
 
 ## Non-Goals
 

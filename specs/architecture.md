@@ -8,8 +8,8 @@
 - Styling: `Tailwind CSS`
 - Testing: `Vitest`, `jsdom`, and Testing Library
 - Code quality: `ESLint` and `Prettier`
-- AI: `@google-cloud/vertexai` — Gemini 2.5 Flash via Vertex AI
-- Deployment: Cloudflare Pages with `@opennextjs/cloudflare` adapter
+- AI: `@google/generative-ai` — Gemini via Google Generative AI SDK
+- Deployment: Cloudflare Workers with `@opennextjs/cloudflare` adapter
 
 ## Route Structure
 
@@ -31,15 +31,23 @@ Password-based authentication via middleware + session cookie. Middleware protec
 
 | Method | Route                | Purpose                                      |
 | ------ | -------------------- | -------------------------------------------- |
+| POST   | `/api/auth`          | Login, returns session cookie                |
+| DELETE | `/api/auth`          | Logout, clears session cookie                |
 | GET    | `/api/data`          | Return vocabulary and all readings           |
 | POST   | `/api/extract`       | PDF upload → Gemini variable extraction      |
 | POST   | `/api/map`           | Variables → Gemini vocabulary mapping        |
+| POST   | `/api/research`      | Variables → Gemini research for mapping      |
 | POST   | `/api/readings`      | Save reading + vocabulary to D1              |
-| POST   | `/api/auth`          | Login, returns session cookie                |
-| GET    | `/api/vocabulary`    | Return vocabulary                            |
+| DELETE | `/api/readings`      | Delete a reading                             |
 | PUT    | `/api/vocabulary`    | Update vocabulary entries                    |
-| GET    | `/api/supplements`   | Return supplement stack                      |
-| PUT    | `/api/supplements`   | Update supplement stack                      |
+| POST   | `/api/vocabulary`    | Add vocabulary entry                         |
+| DELETE | `/api/vocabulary`    | Delete vocabulary entry                      |
+| GET    | `/api/supplements`   | Return active supplements + changelog        |
+| POST   | `/api/supplements`   | Add supplement with changelog entry          |
+| PUT    | `/api/supplements`   | Update supplement fields with changelog      |
+| DELETE | `/api/supplements`   | Remove supplement with changelog entry       |
+| PUT    | `/api/changelog`     | Edit changelog entry description             |
+| DELETE | `/api/changelog`     | Delete changelog entry                       |
 | POST   | `/api/health-import` | Upload parsed health metrics JSON (session)  |
 | GET    | `/api/health-config` | Fetch all health metric configs (session)    |
 | PATCH  | `/api/health-config` | Toggle metric dashboard visibility (session) |
@@ -50,7 +58,7 @@ Password-based authentication via middleware + session cookie. Middleware protec
   - `section-nav` — sticky nav bar with scroll-spy and logo animation
   - `metric-card` — single metric with value, unit, status, and range bar
   - `range-bar` — bounded zone visualization with value marker
-  - `trend-chart` — sparkline trends over time
+  - `trend-panel` — sparkline trends over time
   - `supplement-table` — always-visible supplement list
   - `changelog-list` — paginated changelog grouped by day
   - `health-grid` — health metrics grid with period selector
@@ -61,6 +69,7 @@ Password-based authentication via middleware + session cookie. Middleware protec
   - `step-upload` — PDF drag-and-drop upload
   - `step-review-extraction` — editable table of extracted variables
   - `step-review-mapping` — mapping table with vocabulary dropdowns
+  - `step-review-research` — Gemini research results for variable identification
   - `readings-table` — tabular view of all readings
   - `vocabulary-editor` — edit test names, units, and ranges
   - `supplement-editor` — edit supplements with changelog
@@ -98,10 +107,9 @@ D1 SQLite database with tables: `vocabulary`, `readings`, `measurements`, `suppl
 
 ## Environment Variables
 
-Copy `.env.local.example` to `.env.local` and fill in:
+Cloudflare Workers secrets (set via `bunx wrangler secret put`):
 
-- `GOOGLE_CLOUD_PROJECT` — GCP project ID (required)
-- `GOOGLE_CLOUD_LOCATION` — Vertex AI region (optional, defaults to `us-central1`)
+- `GEMINI_API_KEY` — Google Generative AI API key
 - `ADMIN_PASSWORD` — password for admin login
 
 ## Verification Workflow
