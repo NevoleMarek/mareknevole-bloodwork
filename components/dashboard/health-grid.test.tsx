@@ -70,7 +70,7 @@ const configs: HealthMetricConfig[] = [
 
 describe("HealthGrid", () => {
   it("renders period selector buttons", () => {
-    render(<HealthGrid metrics={metrics} configs={configs} />);
+    render(<HealthGrid metrics={metrics} configs={configs} period="6M" />);
     expect(screen.getByText("1M")).toBeInTheDocument();
     expect(screen.getByText("6M")).toBeInTheDocument();
     expect(screen.getByText("1Y")).toBeInTheDocument();
@@ -78,7 +78,7 @@ describe("HealthGrid", () => {
   });
 
   it("renders metric labels from config", () => {
-    render(<HealthGrid metrics={metrics} configs={configs} />);
+    render(<HealthGrid metrics={metrics} configs={configs} period="6M" />);
     expect(screen.getByText("Weight")).toBeInTheDocument();
     expect(screen.getByText("Resting HR")).toBeInTheDocument();
     expect(screen.getByText("HRV")).toBeInTheDocument();

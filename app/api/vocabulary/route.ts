@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import type { VocabularyEntry } from "@/types/bloodwork";
@@ -22,6 +23,8 @@ export async function POST(req: Request) {
       entry.visible ? 1 : 0,
     )
     .run();
+
+  revalidatePath("/");
 
   return Response.json({ ok: true });
 }
@@ -50,6 +53,8 @@ export async function PUT(req: Request) {
   if (result.meta.changes === 0)
     return Response.json({ error: "Not found" }, { status: 404 });
 
+  revalidatePath("/");
+
   return Response.json({ ok: true });
 }
 
@@ -59,6 +64,8 @@ export async function DELETE(req: Request) {
   const { key } = (await req.json()) as { key: string };
 
   await db.prepare("DELETE FROM vocabulary WHERE key = ?").bind(key).run();
+
+  revalidatePath("/");
 
   return Response.json({ ok: true });
 }

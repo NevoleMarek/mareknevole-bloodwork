@@ -70,9 +70,19 @@ Password-based authentication via middleware + session cookie. Middleware protec
 - `components/ui/` — shared primitives
   - `accordion` — collapsible section
 
+## Caching
+
+The public dashboard (`/`) uses ISR with a 1-hour revalidation interval. Cache infrastructure:
+
+- **Incremental cache**: Cloudflare KV (`NEXT_INC_CACHE_KV` binding)
+- **Tag cache**: D1 `revalidations` table (`NEXT_TAG_CACHE_D1` binding, same database)
+- **On-demand revalidation**: All mutation API routes call `revalidatePath("/")` to invalidate the cache immediately after data changes
+
+Health metrics are filtered server-side by period (URL search param `?period=1M|6M|1Y|ALL`, default `6M`). Each period variant is cached independently.
+
 ## Data
 
-D1 SQLite database with tables: `vocabulary`, `readings`, `measurements`, `supplements`, `supplement_changelog`, `health_metrics`, `health_metric_config`.
+D1 SQLite database with tables: `vocabulary`, `readings`, `measurements`, `supplements`, `supplement_changelog`, `health_metrics`, `health_metric_config`, `revalidations`.
 
 ## Project Structure
 

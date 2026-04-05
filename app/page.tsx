@@ -12,20 +12,29 @@ import {
   getVisibleHealthMetrics,
   getVocabulary,
 } from "@/db/queries";
+import { getCutoffDate, isPeriod } from "@/lib/period";
 import type { Status } from "@/types/bloodwork";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
+
+  const params = await searchParams;
+  const period = isPeriod(params.period) ? params.period : "6M";
+  const cutoffDate = getCutoffDate(period);
 
   const vocabulary = await getVocabulary(db);
   const readings = await getReadingsWithMeasurements(db);
   const supplements = await getActiveSupplements(db);
   const changelog = await getSupplementChangelog(db);
   const { metrics: healthMetrics, configs: healthConfigs } =
-    await getVisibleHealthMetrics(db);
+    await getVisibleHealthMetrics(db, cutoffDate);
 
   const latest = readings.at(-1);
   const latestDate = latest
@@ -118,7 +127,11 @@ export default async function Home() {
         <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
           Health
         </h2>
-        <HealthGrid metrics={healthMetrics} configs={healthConfigs} />
+        <HealthGrid
+          metrics={healthMetrics}
+          configs={healthConfigs}
+          period={period}
+        />
       </section>
 
       <section id="supplements" className="mb-8">

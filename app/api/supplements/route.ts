@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { getActiveSupplements, getSupplementChangelog } from "@/db/queries";
@@ -45,6 +46,8 @@ export async function POST(req: Request) {
     )
     .run();
 
+  revalidatePath("/");
+
   return Response.json({ ok: true });
 }
 
@@ -91,6 +94,8 @@ export async function PUT(req: Request) {
       .run();
   }
 
+  revalidatePath("/");
+
   return Response.json({ ok: true });
 }
 
@@ -125,6 +130,8 @@ export async function DELETE(req: Request) {
     )
     .bind(crypto.randomUUID(), changelogDate, `Removed ${supplement.name}`, now)
     .run();
+
+  revalidatePath("/");
 
   return Response.json({ ok: true });
 }

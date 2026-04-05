@@ -8,9 +8,20 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS",
   },
+  "kv_namespaces": [
+    {
+      "binding": "NEXT_INC_CACHE_KV",
+      "id": "PLACEHOLDER_KV_ID",
+    },
+  ],
   "d1_databases": [
     {
       "binding": "DB",
+      "database_name": "bloodwork-db",
+      "database_id": "59c89aab-650f-4814-9182-dc6691e74237",
+    },
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
       "database_name": "bloodwork-db",
       "database_id": "59c89aab-650f-4814-9182-dc6691e74237",
     },

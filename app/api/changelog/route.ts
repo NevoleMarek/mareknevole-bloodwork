@@ -1,5 +1,6 @@
 import assert from "node:assert";
 
+import { revalidatePath } from "next/cache";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export async function PUT(request: Request) {
@@ -19,6 +20,8 @@ export async function PUT(request: Request) {
   if (result.meta.changes === 0)
     return Response.json({ error: "Not found" }, { status: 404 });
 
+  revalidatePath("/");
+
   return Response.json({ ok: true });
 }
 
@@ -31,6 +34,8 @@ export async function DELETE(request: Request) {
     .prepare("DELETE FROM supplement_changelog WHERE id = ?")
     .bind(id)
     .run();
+
+  revalidatePath("/");
 
   return Response.json({ ok: true });
 }

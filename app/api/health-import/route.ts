@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import type { HealthImportRequest } from "@/types/health";
@@ -29,6 +30,8 @@ export async function POST(request: Request) {
   );
 
   await db.batch([...configStmts, ...metricStmts]);
+
+  revalidatePath("/");
 
   const days = new Set(body.metrics.map((m) => m.date)).size;
 

@@ -12,7 +12,7 @@ export async function GET() {
 
   const vocabulary = await getVocabulary(db);
   const readings = await getReadingsWithMeasurements(db);
-  const { metrics: healthMetrics } = await getVisibleHealthMetrics(db);
+  const { metrics: healthMetrics } = await getVisibleHealthMetrics(db, null);
 
   return Response.json({
     vocabulary: { entries: vocabulary },

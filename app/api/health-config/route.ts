@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { getHealthMetricConfigs } from "@/db/queries";
@@ -21,6 +22,8 @@ export async function PATCH(request: Request) {
     .prepare("UPDATE health_metric_config SET visible = ? WHERE metric = ?")
     .bind(body.visible ? 1 : 0, body.metric)
     .run();
+
+  revalidatePath("/");
 
   return Response.json({ ok: true });
 }
