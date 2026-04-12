@@ -29,5 +29,7 @@ export const config = {
     "/api/changelog/:path*",
     "/api/health-import/:path*",
     "/api/health-config/:path*",
+    "/api/research/:path*",
+    "/api/data/:path*",
   ],
 };

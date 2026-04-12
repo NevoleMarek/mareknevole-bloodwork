@@ -1,13 +1,26 @@
 import { cookies } from "next/headers";
 
 const SESSION_COOKIE = "bloodwork-session";
+
+async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const hashA = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", encoder.encode(a)),
+  );
+  const hashB = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", encoder.encode(b)),
+  );
+  let mismatch = 0;
+  for (let i = 0; i < hashA.length; i++) mismatch |= hashA[i] ^ hashB[i];
+  return mismatch === 0;
+}
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export async function POST(req: Request) {
   const { password } = (await req.json()) as { password: string };
   const adminPassword = process.env.ADMIN_PASSWORD;
 
-  if (!adminPassword || password !== adminPassword) {
+  if (!adminPassword || !(await timingSafeEqual(password, adminPassword))) {
     return Response.json({ error: "Invalid password" }, { status: 401 });
   }
 
