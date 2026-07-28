@@ -107,7 +107,7 @@ export default function AdminSupplementsPage() {
                     </span>
                     {editing.kind === "editing" && editing.id === entry.id ? (
                       <form
-                        className="flex min-w-[14rem] flex-1 flex-wrap gap-2"
+                        className="admin-state-panel flex min-w-[14rem] flex-1 flex-wrap gap-2"
                         onSubmit={(e) => {
                           e.preventDefault();
                           handleSaveEdit(entry.id, editing.description);

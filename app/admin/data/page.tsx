@@ -28,13 +28,22 @@ async function loadData(): Promise<DataState> {
 
 export default function AdminDataPage() {
   const [data, setData] = useState<DataState>({ kind: "loading" });
+  const [copied, setCopied] = useState(false);
   const didFetch = useRef(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (didFetch.current) return;
     didFetch.current = true;
     loadData().then(setData);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    },
+    [],
+  );
 
   const refresh = useCallback(async () => {
     setData(await loadData());
@@ -48,7 +57,7 @@ export default function AdminDataPage() {
     );
   }
 
-  function handleExportMarkdown() {
+  async function handleExportMarkdown() {
     if (data.kind !== "ready") return;
     const lines: string[] = [];
     for (const r of data.readings) {
@@ -63,7 +72,10 @@ export default function AdminDataPage() {
       }
       lines.push("");
     }
-    navigator.clipboard.writeText(lines.join("\n"));
+    await navigator.clipboard.writeText(lines.join("\n"));
+    setCopied(true);
+    if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setCopied(false), 1400);
   }
 
   return (
@@ -81,10 +93,20 @@ export default function AdminDataPage() {
           <button
             type="button"
             onClick={handleExportMarkdown}
-            className="button-secondary"
+            aria-label="Copy as Markdown"
+            data-copied={copied}
+            className="button-secondary copy-markdown-button"
           >
-            Copy as Markdown
+            <span aria-hidden="true" className="copy-label-stack">
+              <span className="copy-label copy-label-default">
+                Copy as Markdown
+              </span>
+              <span className="copy-label copy-label-confirmed">Copied</span>
+            </span>
           </button>
+          <span role="status" aria-live="polite" className="sr-only">
+            {copied ? "Markdown copied to clipboard." : ""}
+          </span>
         </div>
         <ReadingsTable
           readings={data.readings}

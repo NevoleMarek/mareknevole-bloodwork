@@ -261,154 +261,158 @@ export function UploadWizard() {
     <div className={`grid gap-6 ${pdfUrl ? "md:grid-cols-2" : ""}`}>
       {/* Left panel */}
       <div className="min-w-0">
-        {state.step === "upload" && <StepUpload onUpload={handleUpload} />}
+        <div key={state.step} className="admin-state-shell">
+          {state.step === "upload" && <StepUpload onUpload={handleUpload} />}
 
-        {state.step === "extracting" && (
-          <p role="status" className="text-sm text-zinc-600">
-            Extracting variables from PDF…
-          </p>
-        )}
-
-        {state.step === "review-extraction" && (
-          <>
-            <StepIndicator active={0} hasNewEntries={false} />
-            <StepReviewExtraction
-              date={state.date}
-              variables={state.variables}
-              onDateChange={(date) => setState({ ...state, date })}
-              onVariablesChange={(variables) =>
-                setState({ ...state, variables })
-              }
-              onNext={() =>
-                handleMap(state.date, state.variables, state.pdfUrl)
-              }
-            />
-          </>
-        )}
-
-        {state.step === "mapping" && (
-          <>
-            <StepIndicator active={1} hasNewEntries={hasNewEntries} />
+          {state.step === "extracting" && (
             <p role="status" className="text-sm text-zinc-600">
-              Mapping variables to vocabulary…
+              Extracting variables from PDF…
             </p>
-          </>
-        )}
+          )}
 
-        {state.step === "review-mapping" && (
-          <>
-            <StepIndicator active={1} hasNewEntries={hasNewEntries} />
-            <StepReviewMapping
-              mappings={state.mappings}
-              vocabulary={vocabulary}
-              onMappingsChange={(mappings) => setState({ ...state, mappings })}
-              onBack={() =>
-                setState({
-                  step: "review-extraction",
-                  pdfUrl: state.pdfUrl,
-                  date: state.date,
-                  variables: state.mappings.map((m) => ({
-                    label: m.label,
-                    value: m.originalValue,
-                    unit: m.originalUnit,
-                  })),
-                })
-              }
-              onSave={() =>
-                handleResearch(state.date, state.mappings, state.pdfUrl)
-              }
-              saving={false}
-            />
-          </>
-        )}
+          {state.step === "review-extraction" && (
+            <>
+              <StepIndicator active={0} hasNewEntries={false} />
+              <StepReviewExtraction
+                date={state.date}
+                variables={state.variables}
+                onDateChange={(date) => setState({ ...state, date })}
+                onVariablesChange={(variables) =>
+                  setState({ ...state, variables })
+                }
+                onNext={() =>
+                  handleMap(state.date, state.variables, state.pdfUrl)
+                }
+              />
+            </>
+          )}
 
-        {state.step === "researching" && (
-          <>
-            <StepIndicator active={2} hasNewEntries={true} />
-            <p role="status" className="text-sm text-zinc-600">
-              Researching new biomarkers…
-            </p>
-          </>
-        )}
+          {state.step === "mapping" && (
+            <>
+              <StepIndicator active={1} hasNewEntries={hasNewEntries} />
+              <p role="status" className="text-sm text-zinc-600">
+                Mapping variables to vocabulary…
+              </p>
+            </>
+          )}
 
-        {state.step === "review-research" && (
-          <>
-            <StepIndicator active={2} hasNewEntries={true} />
-            <StepReviewResearch
-              researched={state.researched}
-              onResearchedChange={(researched) =>
-                setState({ ...state, researched })
-              }
-              onBack={() =>
-                setState({
-                  step: "review-mapping",
-                  pdfUrl: state.pdfUrl,
-                  date: state.date,
-                  mappings: state.mappings,
-                })
-              }
-              onSave={() =>
-                handleSave(
-                  state.date,
-                  state.mappings,
-                  state.researched,
-                  state.pdfUrl,
-                )
-              }
-              saving={false}
-            />
-          </>
-        )}
+          {state.step === "review-mapping" && (
+            <>
+              <StepIndicator active={1} hasNewEntries={hasNewEntries} />
+              <StepReviewMapping
+                mappings={state.mappings}
+                vocabulary={vocabulary}
+                onMappingsChange={(mappings) =>
+                  setState({ ...state, mappings })
+                }
+                onBack={() =>
+                  setState({
+                    step: "review-extraction",
+                    pdfUrl: state.pdfUrl,
+                    date: state.date,
+                    variables: state.mappings.map((m) => ({
+                      label: m.label,
+                      value: m.originalValue,
+                      unit: m.originalUnit,
+                    })),
+                  })
+                }
+                onSave={() =>
+                  handleResearch(state.date, state.mappings, state.pdfUrl)
+                }
+                saving={false}
+              />
+            </>
+          )}
 
-        {state.step === "saving" && (
-          <>
-            <StepIndicator
-              active={hasNewEntries ? 2 : 1}
-              hasNewEntries={hasNewEntries}
-            />
-            <p role="status" className="text-sm text-zinc-600">
-              Saving reading…
-            </p>
-          </>
-        )}
+          {state.step === "researching" && (
+            <>
+              <StepIndicator active={2} hasNewEntries={true} />
+              <p role="status" className="text-sm text-zinc-600">
+                Researching new biomarkers…
+              </p>
+            </>
+          )}
 
-        {state.step === "done" && (
-          <div
-            role="status"
-            className="rounded-2xl bg-emerald-50 p-6 text-center"
-          >
-            <p className="mb-4 text-sm font-medium text-emerald-900">
-              Reading saved successfully.
-            </p>
-            <button
-              type="button"
-              onClick={() => setState({ step: "upload" })}
-              className="button-primary"
+          {state.step === "review-research" && (
+            <>
+              <StepIndicator active={2} hasNewEntries={true} />
+              <StepReviewResearch
+                researched={state.researched}
+                onResearchedChange={(researched) =>
+                  setState({ ...state, researched })
+                }
+                onBack={() =>
+                  setState({
+                    step: "review-mapping",
+                    pdfUrl: state.pdfUrl,
+                    date: state.date,
+                    mappings: state.mappings,
+                  })
+                }
+                onSave={() =>
+                  handleSave(
+                    state.date,
+                    state.mappings,
+                    state.researched,
+                    state.pdfUrl,
+                  )
+                }
+                saving={false}
+              />
+            </>
+          )}
+
+          {state.step === "saving" && (
+            <>
+              <StepIndicator
+                active={hasNewEntries ? 2 : 1}
+                hasNewEntries={hasNewEntries}
+              />
+              <p role="status" className="text-sm text-zinc-600">
+                Saving reading…
+              </p>
+            </>
+          )}
+
+          {state.step === "done" && (
+            <div
+              role="status"
+              className="rounded-2xl bg-emerald-50 p-6 text-center"
             >
-              Upload Another
-            </button>
-          </div>
-        )}
+              <p className="mb-4 text-sm font-medium text-emerald-900">
+                Reading saved successfully.
+              </p>
+              <button
+                type="button"
+                onClick={() => setState({ step: "upload" })}
+                className="button-primary"
+              >
+                Upload Another
+              </button>
+            </div>
+          )}
 
-        {state.step === "error" && (
-          <div className="rounded-2xl bg-red-50 p-5">
-            <p role="alert" className="mb-4 text-sm text-red-800">
-              {state.message}
-            </p>
-            <button
-              type="button"
-              onClick={() => setState(state.returnTo)}
-              className="button-secondary"
-            >
-              Retry
-            </button>
-          </div>
-        )}
+          {state.step === "error" && (
+            <div className="rounded-2xl bg-red-50 p-5">
+              <p role="alert" className="mb-4 text-sm text-red-800">
+                {state.message}
+              </p>
+              <button
+                type="button"
+                onClick={() => setState(state.returnTo)}
+                className="button-secondary"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Right panel: PDF preview (desktop only) */}
       {pdfUrl && (
-        <div className="min-w-0">
+        <div key={pdfUrl} className="admin-pdf-preview min-w-0">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-zinc-800">PDF preview</h2>
             <a

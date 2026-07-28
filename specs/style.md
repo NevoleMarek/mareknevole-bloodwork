@@ -114,6 +114,11 @@ uses the relevant status color.
   layout transitions.
 - The section underline uses a `160ms` transform from `origin-left` with the
   strong ease-out curve.
+- Admin state shells and editing panels enter over `160–180ms` with a
+  four-pixel offset and `0.99` scale. Health import states use an interruptible
+  fixed-height crossfade; copy confirmation labels travel only three pixels.
+- File drop targets respond to active drags only on fine pointers. Coarse
+  pointers and reduced-motion mode use an `80ms` glyph-opacity cue instead.
 - Smooth scrolling is disabled in both CSS and JavaScript when
   `prefers-reduced-motion: reduce` is active.
 - Reduced-motion mode keeps short color, opacity, and focus feedback but

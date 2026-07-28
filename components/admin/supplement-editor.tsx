@@ -133,7 +133,7 @@ export function SupplementEditor({
                     className="border-t border-zinc-900/8 bg-emerald-50/45"
                   >
                     <td colSpan={5} className="p-4">
-                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="admin-state-panel grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                         <input
                           value={state.name}
                           onChange={(e) =>
@@ -316,7 +316,7 @@ export function SupplementEditor({
       </div>
 
       {/* Add supplement form */}
-      <div className="rounded-2xl border border-zinc-900/10 bg-zinc-50/70 p-4 sm:p-5">
+      <div className="admin-state-panel rounded-2xl border border-zinc-900/10 bg-zinc-50/70 p-4 sm:p-5">
         <h3 className="mb-4 text-sm font-semibold text-zinc-800">
           Add supplement
         </h3>

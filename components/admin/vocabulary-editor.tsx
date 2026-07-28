@@ -173,7 +173,7 @@ export function VocabularyEditor({
       </div>
 
       {editing.kind !== "none" && (
-        <div className="mb-5 grid gap-3 rounded-2xl border border-zinc-900/10 bg-zinc-50/70 p-4 text-sm sm:grid-cols-2 lg:grid-cols-5">
+        <div className="admin-state-panel mb-5 grid gap-3 rounded-2xl border border-zinc-900/10 bg-zinc-50/70 p-4 text-sm sm:grid-cols-2 lg:grid-cols-5">
           <input
             placeholder="key"
             aria-label="Vocabulary key"

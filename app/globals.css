@@ -303,6 +303,109 @@ table {
   font-size: 0.875rem;
 }
 
+.admin-state-shell,
+.admin-state-panel,
+.admin-pdf-preview {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transform-origin: top center;
+  transition:
+    opacity 180ms var(--ease-out-strong),
+    transform 180ms var(--ease-out-strong);
+}
+
+.admin-state-panel {
+  transition-duration: 160ms;
+}
+
+.admin-pdf-preview {
+  transform: translateX(0);
+}
+
+@starting-style {
+  .admin-state-shell {
+    opacity: 0;
+    transform: translateY(4px) scale(0.99);
+  }
+
+  .admin-state-panel {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.99);
+  }
+
+  .admin-pdf-preview {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+}
+
+.file-drop-glyph {
+  opacity: 0.72;
+  transition: opacity 80ms var(--ease-out-strong);
+}
+
+.file-drop-shell[data-drag-active="true"] .file-drop-glyph {
+  opacity: 1;
+}
+
+.health-import-state-region {
+  display: grid;
+  height: 10rem;
+}
+
+.health-import-state {
+  grid-area: 1 / 1;
+  min-width: 0;
+  opacity: 1;
+  transform: scale(1);
+  transform-origin: center;
+  transition:
+    opacity 180ms var(--ease-out-strong),
+    transform 180ms var(--ease-out-strong);
+}
+
+.health-import-state[data-phase="entering"],
+.health-import-state[data-phase="leaving"] {
+  opacity: 0;
+  transform: scale(0.985);
+}
+
+.health-import-state[data-phase="leaving"] {
+  pointer-events: none;
+  transition-duration: 160ms;
+}
+
+.copy-label-stack {
+  display: grid;
+}
+
+.copy-label {
+  grid-area: 1 / 1;
+  transition:
+    opacity 160ms var(--ease-out-strong),
+    transform 160ms var(--ease-out-strong);
+}
+
+.copy-label-default {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.copy-label-confirmed {
+  opacity: 0;
+  transform: translateY(3px);
+}
+
+.copy-markdown-button[data-copied="true"] .copy-label-default {
+  opacity: 0;
+  transform: translateY(-3px);
+}
+
+.copy-markdown-button[data-copied="true"] .copy-label-confirmed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .biomarker-table tbody tr {
   transition:
     background-color 160ms var(--ease-out-strong),
@@ -330,6 +433,24 @@ table {
   .button-secondary:hover {
     border-color: rgba(20, 119, 95, 0.34);
     background: white;
+  }
+
+  .file-drop-shell {
+    transition: transform 160ms var(--ease-out-strong);
+  }
+
+  .file-drop-glyph {
+    transition:
+      opacity 80ms var(--ease-out-strong),
+      transform 160ms var(--ease-out-strong);
+  }
+
+  .file-drop-shell[data-drag-active="true"] {
+    transform: scale(0.995);
+  }
+
+  .file-drop-shell[data-drag-active="true"] .file-drop-glyph {
+    transform: translateY(-2px);
   }
 }
 
@@ -477,7 +598,14 @@ table {
   nav a,
   label[class*="cursor-pointer"],
   .interactive-card,
-  .biomarker-table tbody tr {
+  .biomarker-table tbody tr,
+  .admin-state-shell,
+  .admin-state-panel,
+  .admin-pdf-preview,
+  .health-import-state,
+  .file-drop-shell,
+  .file-drop-glyph,
+  .copy-label {
     transition-property:
       color, background-color, border-color, box-shadow, opacity !important;
     transition-duration: 80ms !important;
@@ -486,8 +614,26 @@ table {
   button:active:not(:disabled),
   nav a:active,
   label[class*="cursor-pointer"]:active,
-  .interactive-card:hover {
+  .interactive-card:hover,
+  .admin-state-shell,
+  .admin-state-panel,
+  .admin-pdf-preview,
+  .health-import-state,
+  .file-drop-shell,
+  .file-drop-shell[data-drag-active="true"],
+  .file-drop-glyph,
+  .file-drop-shell[data-drag-active="true"] .file-drop-glyph,
+  .copy-label {
     transform: none;
+  }
+
+  @starting-style {
+    .admin-state-shell,
+    .admin-state-panel,
+    .admin-pdf-preview {
+      opacity: 0;
+      transform: none;
+    }
   }
 }
 

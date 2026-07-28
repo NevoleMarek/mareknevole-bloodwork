@@ -1,12 +1,28 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 export function StepUpload({ onUpload }: { onUpload: (file: File) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const dragDepth = useRef(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault();
+    dragDepth.current += 1;
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    dragDepth.current = Math.max(0, dragDepth.current - 1);
+    if (dragDepth.current === 0) setIsDragging(false);
+  }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
+    dragDepth.current = 0;
+    setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file?.type === "application/pdf") onUpload(file);
   }
@@ -18,6 +34,8 @@ export function StepUpload({ onUpload }: { onUpload: (file: File) => void }) {
 
   return (
     <label
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
       className="block cursor-pointer"
@@ -29,10 +47,13 @@ export function StepUpload({ onUpload }: { onUpload: (file: File) => void }) {
         onChange={handleChange}
         className="peer sr-only"
       />
-      <span className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-900/20 bg-zinc-50/65 p-8 text-center peer-focus-visible:ring-4 peer-focus-visible:ring-emerald-700/20">
+      <span
+        data-drag-active={isDragging}
+        className="file-drop-shell flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-900/20 bg-zinc-50/65 p-8 text-center peer-focus-visible:ring-4 peer-focus-visible:ring-emerald-700/20"
+      >
         <span
           aria-hidden="true"
-          className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-2xl text-emerald-800"
+          className="file-drop-glyph mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-2xl text-emerald-800"
         >
           ↑
         </span>
