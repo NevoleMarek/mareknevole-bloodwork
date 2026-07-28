@@ -16,32 +16,33 @@
 
 ### New files
 
-| File | Responsibility |
-|---|---|
-| `components/dashboard/section-nav.tsx` | Sticky nav bar with scroll-spy and logo animation |
-| `components/dashboard/supplement-table.tsx` | Always-visible supplements table |
-| `components/dashboard/changelog-list.tsx` | Paginated changelog grouped by day |
-| `components/dashboard/supplement-table.test.tsx` | Tests for supplement table |
-| `components/dashboard/changelog-list.test.tsx` | Tests for changelog list |
+| File                                             | Responsibility                                    |
+| ------------------------------------------------ | ------------------------------------------------- |
+| `components/dashboard/section-nav.tsx`           | Sticky nav bar with scroll-spy and logo animation |
+| `components/dashboard/supplement-table.tsx`      | Always-visible supplements table                  |
+| `components/dashboard/changelog-list.tsx`        | Paginated changelog grouped by day                |
+| `components/dashboard/supplement-table.test.tsx` | Tests for supplement table                        |
+| `components/dashboard/changelog-list.test.tsx`   | Tests for changelog list                          |
 
 ### Modified files
 
-| File | Change |
-|---|---|
+| File           | Change                                        |
+| -------------- | --------------------------------------------- |
 | `app/page.tsx` | New layout order, new components, section IDs |
 
 ### Deleted files
 
-| File | Reason |
-|---|---|
-| `components/dashboard/supplement-stack.tsx` | Replaced by supplement-table + changelog-list |
-| `components/dashboard/supplement-stack.test.tsx` | Tests for deleted component |
+| File                                             | Reason                                        |
+| ------------------------------------------------ | --------------------------------------------- |
+| `components/dashboard/supplement-stack.tsx`      | Replaced by supplement-table + changelog-list |
+| `components/dashboard/supplement-stack.test.tsx` | Tests for deleted component                   |
 
 ---
 
 ## Task 1: Supplement table component
 
 **Files:**
+
 - Create: `components/dashboard/supplement-table.tsx`
 - Create: `components/dashboard/supplement-table.test.tsx`
 
@@ -171,6 +172,7 @@ git commit -m "feat: add supplement table component"
 ## Task 2: Changelog list component
 
 **Files:**
+
 - Create: `components/dashboard/changelog-list.tsx`
 - Create: `components/dashboard/changelog-list.test.tsx`
 
@@ -198,9 +200,24 @@ function makeEntries(count: number): SupplementChangelog[] {
 describe("ChangelogList", () => {
   it("groups entries by date, showing date only on first of each group", () => {
     const entries: SupplementChangelog[] = [
-      { id: "c1", date: "2025-06-15", description: "Added Creatine", createdAt: "2025-06-15T00:00:00Z" },
-      { id: "c2", date: "2025-06-15", description: "Changed Vitamin D", createdAt: "2025-06-15T00:00:00Z" },
-      { id: "c3", date: "2025-06-10", description: "Added Fish Oil", createdAt: "2025-06-10T00:00:00Z" },
+      {
+        id: "c1",
+        date: "2025-06-15",
+        description: "Added Creatine",
+        createdAt: "2025-06-15T00:00:00Z",
+      },
+      {
+        id: "c2",
+        date: "2025-06-15",
+        description: "Changed Vitamin D",
+        createdAt: "2025-06-15T00:00:00Z",
+      },
+      {
+        id: "c3",
+        date: "2025-06-10",
+        description: "Added Fish Oil",
+        createdAt: "2025-06-10T00:00:00Z",
+      },
     ];
     render(<ChangelogList changelog={entries} />);
     const dates = screen.getAllByTestId("changelog-date");
@@ -315,6 +332,7 @@ git commit -m "feat: add paginated changelog list component"
 ## Task 3: Section nav component
 
 **Files:**
+
 - Create: `components/dashboard/section-nav.tsx`
 
 - [ ] **Step 1: Write section nav component**
@@ -383,9 +401,7 @@ export function SectionNav() {
             : ""
         }`}
       >
-        <div
-          className={`mx-auto flex w-full max-w-[960px] items-center`}
-        >
+        <div className={`mx-auto flex w-full max-w-[960px] items-center`}>
           <div
             className="overflow-hidden transition-all duration-500"
             style={{
@@ -395,7 +411,7 @@ export function SectionNav() {
               transitionTimingFunction: "cubic-bezier(0.25, 0.1, 0.25, 1)",
             }}
           >
-            <div className="whitespace-nowrap text-sm font-bold tracking-tight">
+            <div className="text-sm font-bold tracking-tight whitespace-nowrap">
               BLOODWORK
             </div>
             <div className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
@@ -409,12 +425,14 @@ export function SectionNav() {
                 type="button"
                 onClick={() => handleClick(id)}
                 className={`relative text-[10px] tracking-[2px] uppercase transition-colors duration-300 ${
-                  active === id ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-600"
+                  active === id
+                    ? "text-zinc-900"
+                    : "text-zinc-400 hover:text-zinc-600"
                 }`}
               >
                 {label}
                 <span
-                  className={`absolute -bottom-0.5 left-0 right-0 h-px bg-zinc-900 transition-transform duration-300 ${
+                  className={`absolute right-0 -bottom-0.5 left-0 h-px bg-zinc-900 transition-transform duration-300 ${
                     active === id ? "scale-x-100" : "scale-x-0"
                   }`}
                 />
@@ -445,6 +463,7 @@ git commit -m "feat: add sticky section nav with scroll-spy"
 ## Task 4: Rewire page and delete old components
 
 **Files:**
+
 - Modify: `app/page.tsx`
 - Delete: `components/dashboard/supplement-stack.tsx`
 - Delete: `components/dashboard/supplement-stack.test.tsx`
@@ -605,6 +624,7 @@ git commit -m "feat: redesign dashboard layout with sticky nav and separated sec
 ## Task 5: Update specs
 
 **Files:**
+
 - Modify: `specs/architecture.md`
 
 - [ ] **Step 1: Update architecture spec**

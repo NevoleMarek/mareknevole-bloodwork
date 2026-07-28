@@ -15,6 +15,7 @@ import {
 import { getCutoffDate, isPeriod } from "@/lib/period";
 import type { Status } from "@/types/bloodwork";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
 export default async function Home({

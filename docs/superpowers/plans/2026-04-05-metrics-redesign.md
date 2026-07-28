@@ -15,6 +15,7 @@
 ### Task 1: Add `featured` column to data model and plumb through types/queries/API
 
 **Files:**
+
 - Modify: `db/schema.sql`
 - Modify: `types/bloodwork.ts`
 - Modify: `db/queries.ts`
@@ -182,10 +183,8 @@ async function handleSave() {
     label: form.label,
     unit: form.unit,
     referenceRange: { min: Number(form.min), max: Number(form.max) },
-    description:
-      editing.kind === "editing" ? editing.entry.description : null,
-    featured:
-      editing.kind === "editing" ? editing.entry.featured : false,
+    description: editing.kind === "editing" ? editing.entry.description : null,
+    featured: editing.kind === "editing" ? editing.entry.featured : false,
   };
   // ... rest unchanged
 }
@@ -194,6 +193,7 @@ async function handleSave() {
 - [ ] **Step 6: Apply schema migration to remote D1**
 
 Run:
+
 ```bash
 bunx wrangler d1 execute bloodwork-db --remote --command="ALTER TABLE vocabulary ADD COLUMN featured INTEGER NOT NULL DEFAULT 0;"
 ```
@@ -213,6 +213,7 @@ git commit -m "feat: add featured flag to vocabulary"
 ### Task 2: Build the dense biomarker table component
 
 **Files:**
+
 - Create: `components/dashboard/biomarker-table.tsx`
 - Create: `components/dashboard/biomarker-table.test.tsx`
 
@@ -227,13 +228,31 @@ import { describe, expect, it } from "vitest";
 import { BiomarkerTable } from "@/components/dashboard/biomarker-table";
 
 const metrics = [
-  { vocabularyKey: "tsh", label: "TSH", value: 2.1, unit: "mIU/L", min: 0.4, max: 4.0, status: "normal" as const },
-  { vocabularyKey: "vitd", label: "Vitamin D", value: 28, unit: "ng/mL", min: 30, max: 100, status: "low" as const },
+  {
+    vocabularyKey: "tsh",
+    label: "TSH",
+    value: 2.1,
+    unit: "mIU/L",
+    min: 0.4,
+    max: 4.0,
+    status: "normal" as const,
+  },
+  {
+    vocabularyKey: "vitd",
+    label: "Vitamin D",
+    value: 28,
+    unit: "ng/mL",
+    min: 30,
+    max: 100,
+    status: "low" as const,
+  },
 ];
 
 describe("BiomarkerTable", () => {
   it("renders all biomarker rows", () => {
-    render(<BiomarkerTable metrics={metrics} selected={[]} onToggle={() => {}} />);
+    render(
+      <BiomarkerTable metrics={metrics} selected={[]} onToggle={() => {}} />,
+    );
     expect(screen.getByText("TSH")).toBeInTheDocument();
     expect(screen.getByText("Vitamin D")).toBeInTheDocument();
     expect(screen.getByText("2.1")).toBeInTheDocument();
@@ -242,7 +261,11 @@ describe("BiomarkerTable", () => {
 
   it("highlights selected rows", () => {
     const { container } = render(
-      <BiomarkerTable metrics={metrics} selected={["tsh"]} onToggle={() => {}} />,
+      <BiomarkerTable
+        metrics={metrics}
+        selected={["tsh"]}
+        onToggle={() => {}}
+      />,
     );
     const rows = container.querySelectorAll("tbody tr");
     expect(rows[0].className).toContain("bg-zinc-50");
@@ -291,14 +314,14 @@ export function BiomarkerTable({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border border-zinc-200 bg-white border-collapse">
+      <table className="w-full border-collapse border border-zinc-200 bg-white">
         <thead>
           <tr className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
-            <th className="pb-2 pl-4 pt-2.5 text-left font-normal" />
-            <th className="pb-2 pt-2.5 text-left font-normal">Biomarker</th>
-            <th className="pb-2 pt-2.5 text-left font-normal">Value</th>
-            <th className="pb-2 pt-2.5 text-left font-normal">Reference</th>
-            <th className="pb-2 pr-4 pt-2.5 text-left font-normal">Unit</th>
+            <th className="pt-2.5 pb-2 pl-4 text-left font-normal" />
+            <th className="pt-2.5 pb-2 text-left font-normal">Biomarker</th>
+            <th className="pt-2.5 pb-2 text-left font-normal">Value</th>
+            <th className="pt-2.5 pb-2 text-left font-normal">Reference</th>
+            <th className="pt-2.5 pr-4 pb-2 text-left font-normal">Unit</th>
           </tr>
         </thead>
         <tbody>
@@ -349,6 +372,7 @@ git commit -m "feat: add dense biomarker table component"
 ### Task 3: Build the unified trend panel component
 
 **Files:**
+
 - Create: `components/dashboard/trend-panel.tsx`
 - Create: `components/dashboard/trend-panel.test.tsx`
 
@@ -405,14 +429,24 @@ const readings: BloodworkReading[] = [
 describe("TrendPanel", () => {
   it("renders nothing when no keys are selected", () => {
     const { container } = render(
-      <TrendPanel selectedKeys={[]} readings={readings} vocabulary={vocabulary} onRemove={() => {}} />,
+      <TrendPanel
+        selectedKeys={[]}
+        readings={readings}
+        vocabulary={vocabulary}
+        onRemove={() => {}}
+      />,
     );
     expect(container.firstChild).toBeNull();
   });
 
   it("renders header and description for selected biomarker", () => {
     render(
-      <TrendPanel selectedKeys={["glucose"]} readings={readings} vocabulary={vocabulary} onRemove={() => {}} />,
+      <TrendPanel
+        selectedKeys={["glucose"]}
+        readings={readings}
+        vocabulary={vocabulary}
+        onRemove={() => {}}
+      />,
     );
     expect(screen.getByText("Glucose")).toBeInTheDocument();
     expect(screen.getByText("70–100 mg/dL")).toBeInTheDocument();
@@ -421,7 +455,12 @@ describe("TrendPanel", () => {
 
   it("renders multiple selected biomarkers", () => {
     render(
-      <TrendPanel selectedKeys={["glucose", "ldl"]} readings={readings} vocabulary={vocabulary} onRemove={() => {}} />,
+      <TrendPanel
+        selectedKeys={["glucose", "ldl"]}
+        readings={readings}
+        vocabulary={vocabulary}
+        onRemove={() => {}}
+      />,
     );
     expect(screen.getByText("Glucose")).toBeInTheDocument();
     expect(screen.getByText("LDL")).toBeInTheDocument();
@@ -473,10 +512,7 @@ function buildChartData(
   return points;
 }
 
-function latestValue(
-  key: string,
-  readings: BloodworkReading[],
-): number | null {
+function latestValue(key: string, readings: BloodworkReading[]): number | null {
   for (let i = readings.length - 1; i >= 0; i--) {
     const m = readings[i].measurements.find((m) => m.vocabularyKey === key);
     if (m) return m.value;
@@ -558,12 +594,7 @@ function BiomarkerTrend({
               tickLine={false}
               width={32}
             />
-            <ReferenceArea
-              y1={min}
-              y2={max}
-              fill="#d4d4d8"
-              fillOpacity={0.2}
-            />
+            <ReferenceArea y1={min} y2={max} fill="#d4d4d8" fillOpacity={0.2} />
             <Line
               type="monotone"
               dataKey="value"
@@ -658,6 +689,7 @@ git commit -m "feat: add unified trend panel component"
 ### Task 4: Wire everything into the dashboard and remove old Trends section
 
 **Files:**
+
 - Modify: `app/page.tsx`
 - Create: `components/dashboard/metrics-section.tsx`
 - Modify: `components/dashboard/section-nav.tsx`
@@ -677,7 +709,11 @@ import type { BiomarkerMetric } from "@/components/dashboard/biomarker-table";
 import { BiomarkerTable } from "@/components/dashboard/biomarker-table";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { TrendPanel } from "@/components/dashboard/trend-panel";
-import type { BloodworkReading, Status, VocabularyEntry } from "@/types/bloodwork";
+import type {
+  BloodworkReading,
+  Status,
+  VocabularyEntry,
+} from "@/types/bloodwork";
 
 const MAX_SELECTED = 10;
 
@@ -771,8 +807,7 @@ Replace the metrics computation to split by featured:
 const allMetrics = latest
   ? latest.measurements.map((m) => {
       const entry = vocabulary.find((e) => e.key === m.vocabularyKey);
-      if (!entry)
-        throw new Error(`Unknown vocabulary key: ${m.vocabularyKey}`);
+      if (!entry) throw new Error(`Unknown vocabulary key: ${m.vocabularyKey}`);
       return {
         vocabularyKey: m.vocabularyKey,
         label: entry.label,
@@ -862,6 +897,7 @@ Expected: all checks pass, build succeeds
 - [ ] **Step 2: Manual verification**
 
 Start dev server with `bun run dev` and verify:
+
 - Featured biomarkers appear as cards in the grid
 - Non-featured biomarkers appear in the dense table
 - Clicking a card or row opens the trend panel between grid and table

@@ -15,6 +15,7 @@
 The PUT endpoint currently doesn't accept or update `startedAt`. Add it so inline edits to the "since" field are persisted and changelog-tracked.
 
 **Files:**
+
 - Modify: `app/api/supplements/route.ts:54-99`
 
 - [ ] **Step 1: Add `startedAt` to the PUT request type and diff logic**
@@ -37,7 +38,12 @@ export async function PUT(req: Request) {
   const old = await db
     .prepare("SELECT * FROM supplements WHERE id = ?")
     .bind(body.id)
-    .first<{ name: string; dose: string; frequency: string; started_at: string }>();
+    .first<{
+      name: string;
+      dose: string;
+      frequency: string;
+      started_at: string;
+    }>();
 
   if (!old) return Response.json({ error: "Not found" }, { status: 404 });
 
@@ -95,6 +101,7 @@ git commit -m "feat: add startedAt support to PUT supplements endpoint"
 Full rewrite of `supplement-editor.tsx`. The component manages three row states via a discriminated union: display, editing, and removing.
 
 **Files:**
+
 - Rewrite: `components/admin/supplement-editor.tsx`
 
 - [ ] **Step 1: Write the new supplement editor component**
@@ -109,7 +116,14 @@ import type { Supplement } from "@/types/bloodwork";
 
 type RowState =
   | { kind: "display" }
-  | { kind: "editing"; name: string; dose: string; frequency: string; startedAt: string; changelogDate: string }
+  | {
+      kind: "editing";
+      name: string;
+      dose: string;
+      frequency: string;
+      startedAt: string;
+      changelogDate: string;
+    }
   | { kind: "removing"; changelogDate: string };
 
 function formatMonth(yyyyMm: string): string {
@@ -214,28 +228,51 @@ export function SupplementEditor({
 
               if (state.kind === "editing") {
                 return (
-                  <tr key={s.id} className="border-t border-zinc-100 bg-stone-50">
+                  <tr
+                    key={s.id}
+                    className="border-t border-zinc-100 bg-stone-50"
+                  >
                     <td colSpan={5} className="py-2">
                       <div className="flex flex-wrap gap-2">
                         <input
                           value={state.name}
-                          onChange={(e) => setRowState(s.id, { ...state, name: e.target.value })}
+                          onChange={(e) =>
+                            setRowState(s.id, {
+                              ...state,
+                              name: e.target.value,
+                            })
+                          }
                           className="flex-1 border border-zinc-200 bg-white px-2 py-1 outline-none"
                         />
                         <input
                           value={state.dose}
-                          onChange={(e) => setRowState(s.id, { ...state, dose: e.target.value })}
+                          onChange={(e) =>
+                            setRowState(s.id, {
+                              ...state,
+                              dose: e.target.value,
+                            })
+                          }
                           className="w-24 border border-zinc-200 bg-white px-2 py-1 outline-none"
                         />
                         <input
                           value={state.frequency}
-                          onChange={(e) => setRowState(s.id, { ...state, frequency: e.target.value })}
+                          onChange={(e) =>
+                            setRowState(s.id, {
+                              ...state,
+                              frequency: e.target.value,
+                            })
+                          }
                           className="w-24 border border-zinc-200 bg-white px-2 py-1 outline-none"
                         />
                         <input
                           type="month"
                           value={state.startedAt}
-                          onChange={(e) => setRowState(s.id, { ...state, startedAt: e.target.value })}
+                          onChange={(e) =>
+                            setRowState(s.id, {
+                              ...state,
+                              startedAt: e.target.value,
+                            })
+                          }
                           className="border border-zinc-200 bg-white px-2 py-1 outline-none"
                         />
                         <button
@@ -258,7 +295,12 @@ export function SupplementEditor({
                         <input
                           type="date"
                           value={state.changelogDate}
-                          onChange={(e) => setRowState(s.id, { ...state, changelogDate: e.target.value })}
+                          onChange={(e) =>
+                            setRowState(s.id, {
+                              ...state,
+                              changelogDate: e.target.value,
+                            })
+                          }
                           className="border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] outline-none"
                         />
                       </div>
@@ -280,7 +322,12 @@ export function SupplementEditor({
                           <input
                             type="date"
                             value={state.changelogDate}
-                            onChange={(e) => setRowState(s.id, { ...state, changelogDate: e.target.value })}
+                            onChange={(e) =>
+                              setRowState(s.id, {
+                                ...state,
+                                changelogDate: e.target.value,
+                              })
+                            }
                             className="border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] outline-none"
                           />
                         </span>
@@ -294,7 +341,9 @@ export function SupplementEditor({
                           </button>
                           <button
                             type="button"
-                            onClick={() => setRowState(s.id, { kind: "display" })}
+                            onClick={() =>
+                              setRowState(s.id, { kind: "display" })
+                            }
                             className="text-zinc-400"
                           >
                             Cancel
@@ -311,7 +360,9 @@ export function SupplementEditor({
                   <td className="py-1.5">{s.name}</td>
                   <td className="py-1.5 text-zinc-500">{s.dose}</td>
                   <td className="py-1.5 text-zinc-500">{s.frequency}</td>
-                  <td className="py-1.5 text-zinc-400">{formatMonth(s.startedAt)}</td>
+                  <td className="py-1.5 text-zinc-400">
+                    {formatMonth(s.startedAt)}
+                  </td>
                   <td className="py-1.5 text-right">
                     <span className="flex justify-end gap-3">
                       <button
@@ -376,7 +427,9 @@ export function SupplementEditor({
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-[90px] text-[10px] text-zinc-500">Frequency</span>
+            <span className="w-[90px] text-[10px] text-zinc-500">
+              Frequency
+            </span>
             <input
               value={form.frequency}
               onChange={(e) => setForm({ ...form, frequency: e.target.value })}
@@ -393,11 +446,15 @@ export function SupplementEditor({
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-[90px] text-[10px] text-zinc-500">Changelog date</span>
+            <span className="w-[90px] text-[10px] text-zinc-500">
+              Changelog date
+            </span>
             <input
               type="date"
               value={form.changelogDate}
-              onChange={(e) => setForm({ ...form, changelogDate: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, changelogDate: e.target.value })
+              }
               className="flex-1 border border-zinc-200 px-2 py-1 outline-none"
             />
           </div>
@@ -437,6 +494,7 @@ git commit -m "feat: rewrite supplement editor with editable table and card-styl
 The dashboard `SupplementTable` currently displays `startedAt` as raw text. Now that it's stored as `YYYY-MM`, format it as "Jan 2025".
 
 **Files:**
+
 - Modify: `components/dashboard/supplement-table.tsx`
 
 - [ ] **Step 1: Add formatMonth helper and use it in the display**
@@ -475,7 +533,9 @@ export function SupplementTable({
                 <td className="py-2">{s.name}</td>
                 <td className="py-2 text-zinc-600">{s.dose}</td>
                 <td className="py-2 text-zinc-600">{s.frequency}</td>
-                <td className="py-2 text-zinc-500">{formatMonth(s.startedAt)}</td>
+                <td className="py-2 text-zinc-500">
+                  {formatMonth(s.startedAt)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -505,11 +565,13 @@ git commit -m "feat: format YYYY-MM supplement dates as readable month+year on d
 Existing `started_at` values are freeform text (e.g. "Jan 2025"). Convert them to `YYYY-MM` format.
 
 **Files:**
+
 - None (SQL migration run manually)
 
 - [ ] **Step 1: Check current values**
 
 Run against remote D1:
+
 ```bash
 bunx wrangler d1 execute bloodwork-db --remote --command="SELECT id, name, started_at FROM supplements WHERE stopped_at IS NULL"
 ```
@@ -545,6 +607,7 @@ Confirm all values are now in `YYYY-MM` format.
 ### Task 5: Run full validation and final commit
 
 **Files:**
+
 - All modified files from tasks 1-3
 
 - [ ] **Step 1: Run full check**

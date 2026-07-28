@@ -47,13 +47,13 @@ A single bordered white container (`border border-zinc-200 bg-white`) that holds
 
 A `<table>` with `border border-zinc-200 bg-white`, collapsed borders.
 
-| Column | Style |
-|--------|-------|
+| Column     | Style                                                                  |
+| ---------- | ---------------------------------------------------------------------- |
 | Status dot | 6px circle, color matches status (green/amber/red/blue at 60% opacity) |
-| Name | `font-semibold`, 13px |
-| Value | `font-bold`, 13px |
-| Reference | muted, 12px, format: "min – max" |
-| Unit | muted, 12px |
+| Name       | `font-semibold`, 13px                                                  |
+| Value      | `font-bold`, 13px                                                      |
+| Reference  | muted, 12px, format: "min – max"                                       |
+| Unit       | muted, 12px                                                            |
 
 Header row: 9px uppercase tracking, muted color, thin bottom border. Body rows: clickable, hover `bg-zinc-50`.
 
@@ -71,6 +71,7 @@ The vocabulary editor (`components/admin/vocabulary-editor.tsx`) gets a "Feature
 ## Charting
 
 Use Recharts (already a dependency) for the trend line charts within the unified panel. Each biomarker gets its own `LineChart` with:
+
 - `ReferenceArea` for the neutral reference range band
 - `Line` with data points
 - Compact axis formatting (month/year on X, minimal ticks on Y)
@@ -86,7 +87,7 @@ export type VocabularyEntry = {
   unit: string;
   referenceRange: { min: number; max: number };
   description: string | null;
-  featured: boolean;  // NEW
+  featured: boolean; // NEW
 };
 ```
 

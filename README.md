@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# bloodwork.mareknevole.com
 
-## Getting Started
+A public dashboard for tracking personal blood work over time. Better decisions come from better data — structured lab results, supplements, and health metrics, all in one place and open for anyone to learn from.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Next.js 16 (OpenNext on Cloudflare Workers)
+- Cloudflare D1 database
+- Tailwind CSS 4
+- Recharts
+- Vitest + Testing Library
+
+## SEO
+
+The following SEO infrastructure is in place:
+
+| File                       | Purpose                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------------------ |
+| `app/layout.tsx`           | Open Graph, Twitter Card (`summary`), canonical URL, `robots` directives, meta description |
+| `app/robots.ts`            | `robots.txt` — allows `/`, disallows `/admin` and `/api`                                   |
+| `app/sitemap.ts`           | XML sitemap for `/` (weekly changeFrequency)                                               |
+| `app/favicon.ico`          | Favicon                                                                                    |
+| `app/layout.tsx` (JSON-LD) | `WebApplication` schema with author link back to mareknevole.com                           |
+
+### Structured data
+
+```json
+{
+  "@type": "WebApplication",
+  "name": "Bloodwork",
+  "applicationCategory": "HealthApplication",
+  "url": "https://bloodwork.mareknevole.com",
+  "author": {
+    "@type": "Person",
+    "name": "Marek Nevole",
+    "url": "https://mareknevole.com"
+  }
+}
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Future improvements
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Dedicated OG image (1200x630) for richer social sharing previews
+- `icon.svg` alongside existing `favicon.ico`
+- Apple touch icon
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Development
 
-## Learn More
+```sh
+bun install
+bun run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Verification
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```sh
+bun run check        # fast: format + lint + typecheck + test
+bun run check:full   # full suite
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```sh
+bun run deploy
+```

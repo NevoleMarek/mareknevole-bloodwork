@@ -47,6 +47,7 @@ CREATE TABLE health_metric_config (
 ### Apple Health export.xml structure
 
 Records are `<Record>` elements with attributes:
+
 - `type`: e.g., `HKQuantityTypeIdentifierHeartRate`
 - `startDate`: ISO-ish datetime
 - `value`: numeric string
@@ -61,6 +62,7 @@ The file is parsed client-side using a SAX-style streaming parser. As each `<Rec
 3. Accumulate into a `Map<metric, Map<date, {sum, count}>>`.
 
 After parsing completes, compute final values:
+
 - `avg` metrics: `sum / count`
 - `sum` metrics: `sum`
 
@@ -72,10 +74,10 @@ Apple Health type identifiers (e.g., `HKQuantityTypeIdentifierHeartRate`) are co
 
 Hardcoded lookup from Apple Health type identifiers to aggregation strategy:
 
-| Strategy | Metric types |
-| -------- | ------------ |
-| `sum` | Steps, Active Energy, Basal Energy, Flights Climbed, Distance Walking/Running, Exercise Time |
-| `avg` | Heart Rate, Resting Heart Rate, HRV, Weight, Body Mass Index, Blood Pressure Systolic/Diastolic, VO2 Max, Respiratory Rate, Body Temperature, Blood Oxygen |
+| Strategy   | Metric types                                                                                                                                                                                   |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sum`      | Steps, Active Energy, Basal Energy, Flights Climbed, Distance Walking/Running, Exercise Time                                                                                                   |
+| `avg`      | Heart Rate, Resting Heart Rate, HRV, Weight, Body Mass Index, Blood Pressure Systolic/Diastolic, VO2 Max, Respiratory Rate, Body Temperature, Blood Oxygen                                     |
 | `duration` | Sleep Analysis — categorical records where duration is computed from `endDate - startDate` (not from `value`). Only records with asleep-category values are included. Summed per day in hours. |
 
 Unknown types default to `avg`.
@@ -103,17 +105,33 @@ Receives parsed and aggregated data from the admin UI.
 ```json
 {
   "metrics": [
-    { "date": "2026-04-03", "metric": "heart_rate", "value": 62.3, "unit": "bpm" },
+    {
+      "date": "2026-04-03",
+      "metric": "heart_rate",
+      "value": 62.3,
+      "unit": "bpm"
+    },
     { "date": "2026-04-03", "metric": "steps", "value": 8432, "unit": "count" }
   ],
   "configs": [
-    { "metric": "heart_rate", "label": "Heart Rate", "unit": "bpm", "aggregation": "avg" },
-    { "metric": "steps", "label": "Steps", "unit": "count", "aggregation": "sum" }
+    {
+      "metric": "heart_rate",
+      "label": "Heart Rate",
+      "unit": "bpm",
+      "aggregation": "avg"
+    },
+    {
+      "metric": "steps",
+      "label": "Steps",
+      "unit": "count",
+      "aggregation": "sum"
+    }
   ]
 }
 ```
 
 **Behavior:**
+
 - `INSERT OR REPLACE` all metrics into `health_metrics`.
 - `INSERT OR IGNORE` all configs into `health_metric_config` (preserves existing visibility).
 - Batched in a D1 transaction.
@@ -158,6 +176,7 @@ Two always-visible sections, stacked vertically:
 **Idle state:** Dashed-border drop zone with "Drop export.xml here" text and click-to-select fallback.
 
 **Processing state:** The drop zone transforms into a progress display:
+
 - Progress bar with percentage.
 - Live stats: metric type count, day count, record count.
 
@@ -174,6 +193,7 @@ Two always-visible sections, stacked vertically:
 ### Styling
 
 Follows existing admin patterns and `specs/style.md`:
+
 - `bg-white border border-zinc-200` cards, no rounded corners, no shadows.
 - Geist Mono typography throughout.
 - Chip active state: `bg-zinc-800 text-white border-zinc-800`.

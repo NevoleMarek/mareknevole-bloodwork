@@ -34,6 +34,7 @@ When the user scrolls past the inline nav buttons:
 ### Active Section Indicator
 
 A scroll listener tracks which section is currently in view (using section element positions relative to viewport). The corresponding nav button gets:
+
 - Text color: `text-zinc-900` (from `text-zinc-400`)
 - Underline: 1px bottom border that scales in via `transform: scaleX(0)` → `scaleX(1)` over 300ms
 
@@ -46,6 +47,7 @@ The accordion wrapper is removed entirely.
 ### New: `components/dashboard/section-nav.tsx`
 
 Client component. Contains:
+
 - The nav buttons (Metrics, Trends, Supplements, Changelog)
 - The compact logo (hidden when inline, visible when stuck)
 - Sticky behavior via IntersectionObserver on a wrapper element
@@ -59,6 +61,7 @@ Props: none (section IDs are hardcoded since the page layout is fixed).
 Server component. Simple table displaying active supplements — same markup as the current `SupplementStack` table but without the accordion wrapper or changelog.
 
 Props:
+
 ```typescript
 {
   supplements: Supplement[];
@@ -70,6 +73,7 @@ Props:
 Client component. Displays changelog entries grouped by day (date on first entry of each group, indented for rest). Shows 20 entries initially, "Load more" button appends next 20.
 
 Props:
+
 ```typescript
 {
   changelog: SupplementChangelog[];
@@ -94,6 +98,7 @@ Keep the file — it may be used elsewhere. Only remove the import from `supplem
 ## Mobile Behavior
 
 On mobile (below `md:` breakpoint):
+
 - Inline nav buttons wrap if needed (flex-wrap)
 - Sticky nav works the same way
 - Logo in sticky nav may need smaller width or be hidden on very narrow screens

@@ -14,38 +14,38 @@
 
 ### New files
 
-| File | Responsibility |
-| ---- | -------------- |
-| `scripts/parse-health-export.ts` | CLI script: SAX parse XML, aggregate daily, output JSON |
-| `scripts/parse-health-export.test.ts` | Tests for the parsing/aggregation logic |
-| `app/api/health-import/route.ts` | POST endpoint: receive JSON, upsert metrics + configs |
-| `app/api/health-config/route.ts` | PATCH endpoint: toggle metric visibility |
-| `app/admin/health/page.tsx` | Admin Health tab server component |
-| `components/admin/health-import.tsx` | Drop zone + upload client component |
-| `components/admin/health-visibility.tsx` | Metric visibility toggles client component |
-| `components/admin/health-admin.tsx` | Client wrapper coordinating import + visibility with refresh |
+| File                                     | Responsibility                                               |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| `scripts/parse-health-export.ts`         | CLI script: SAX parse XML, aggregate daily, output JSON      |
+| `scripts/parse-health-export.test.ts`    | Tests for the parsing/aggregation logic                      |
+| `app/api/health-import/route.ts`         | POST endpoint: receive JSON, upsert metrics + configs        |
+| `app/api/health-config/route.ts`         | PATCH endpoint: toggle metric visibility                     |
+| `app/admin/health/page.tsx`              | Admin Health tab server component                            |
+| `components/admin/health-import.tsx`     | Drop zone + upload client component                          |
+| `components/admin/health-visibility.tsx` | Metric visibility toggles client component                   |
+| `components/admin/health-admin.tsx`      | Client wrapper coordinating import + visibility with refresh |
 
 ### Modified files
 
-| File | Change |
-| ---- | ------ |
-| `types/health.ts` | Remove hardcoded keys, add config types, make metric a string |
-| `db/schema.sql` | Add `health_metric_config` table |
-| `db/queries.ts` | Add config queries, update `getHealthMetrics` to join with config |
-| `db/queries.test.ts` | Add mapper test for new config row mapper |
-| `app/admin/layout.tsx` | Add "Health" nav item |
-| `middleware.ts` | Add `/api/health-import` and `/api/health-config` to matcher |
-| `app/api/data/route.ts` | Use new `getVisibleHealthMetrics` query |
-| `app/page.tsx` | Pass config to `HealthGrid`, use new query |
-| `components/dashboard/health-grid.tsx` | Render dynamically from config instead of hardcoded array |
-| `components/dashboard/health-grid.test.tsx` | Update test data to use new types |
-| `components/dashboard/health-chart.test.tsx` | Update test data to use new types |
-| `components/dashboard/blood-pressure-chart.test.tsx` | Update test data to use new types |
+| File                                                 | Change                                                            |
+| ---------------------------------------------------- | ----------------------------------------------------------------- |
+| `types/health.ts`                                    | Remove hardcoded keys, add config types, make metric a string     |
+| `db/schema.sql`                                      | Add `health_metric_config` table                                  |
+| `db/queries.ts`                                      | Add config queries, update `getHealthMetrics` to join with config |
+| `db/queries.test.ts`                                 | Add mapper test for new config row mapper                         |
+| `app/admin/layout.tsx`                               | Add "Health" nav item                                             |
+| `middleware.ts`                                      | Add `/api/health-import` and `/api/health-config` to matcher      |
+| `app/api/data/route.ts`                              | Use new `getVisibleHealthMetrics` query                           |
+| `app/page.tsx`                                       | Pass config to `HealthGrid`, use new query                        |
+| `components/dashboard/health-grid.tsx`               | Render dynamically from config instead of hardcoded array         |
+| `components/dashboard/health-grid.test.tsx`          | Update test data to use new types                                 |
+| `components/dashboard/health-chart.test.tsx`         | Update test data to use new types                                 |
+| `components/dashboard/blood-pressure-chart.test.tsx` | Update test data to use new types                                 |
 
 ### Deleted files
 
-| File | Reason |
-| ---- | ------ |
+| File                              | Reason                           |
+| --------------------------------- | -------------------------------- |
 | `app/api/health-metrics/route.ts` | Replaced by `/api/health-import` |
 
 ---
@@ -53,6 +53,7 @@
 ### Task 1: Types and Schema
 
 **Files:**
+
 - Modify: `types/health.ts`
 - Modify: `db/schema.sql`
 
@@ -118,6 +119,7 @@ git commit -m "feat: update health types and add config table schema"
 ### Task 2: Database Queries
 
 **Files:**
+
 - Modify: `db/queries.ts`
 - Modify: `db/queries.test.ts`
 
@@ -272,6 +274,7 @@ git commit -m "feat: add health metric config queries and mapper"
 ### Task 3: API Endpoints
 
 **Files:**
+
 - Create: `app/api/health-import/route.ts`
 - Create: `app/api/health-config/route.ts`
 - Delete: `app/api/health-metrics/route.ts`
@@ -387,6 +390,7 @@ git commit -m "feat: add health import/config endpoints, remove old health-metri
 ### Task 4: Admin UI
 
 **Files:**
+
 - Create: `components/admin/health-import.tsx`
 - Create: `components/admin/health-visibility.tsx`
 - Create: `app/admin/health/page.tsx`
@@ -709,6 +713,7 @@ git commit -m "feat: add admin health tab with import drop zone and visibility t
 ### Task 5: Dashboard Dynamic Rendering
 
 **Files:**
+
 - Modify: `components/dashboard/health-grid.tsx`
 - Modify: `components/dashboard/health-grid.test.tsx`
 - Modify: `components/dashboard/health-chart.test.tsx`
@@ -916,6 +921,7 @@ Read `components/dashboard/blood-pressure-chart.test.tsx` and update the type im
 In `app/page.tsx`, replace the `getHealthMetrics` import and usage:
 
 Change the import:
+
 ```typescript
 import {
   getActiveSupplements,
@@ -927,12 +933,14 @@ import {
 ```
 
 Replace the `healthMetrics` fetch line:
+
 ```typescript
 const { metrics: healthMetrics, configs: healthConfigs } =
   await getVisibleHealthMetrics(db);
 ```
 
 Update the HealthGrid usage:
+
 ```typescript
 <HealthGrid metrics={healthMetrics} configs={healthConfigs} />
 ```
@@ -987,6 +995,7 @@ git commit -m "feat: render health dashboard dynamically from metric config"
 ### Task 6: CLI Script — Core Parsing Logic
 
 **Files:**
+
 - Create: `scripts/parse-health-export.ts`
 - Create: `scripts/parse-health-export.test.ts`
 
@@ -1220,7 +1229,12 @@ export function aggregateRecords(records: RawRecord[]) {
     dayMap.set(date, bucket);
   }
 
-  const metrics: { date: string; metric: string; value: number; unit: string }[] = [];
+  const metrics: {
+    date: string;
+    metric: string;
+    value: number;
+    unit: string;
+  }[] = [];
   const configs: {
     metric: string;
     label: string;
@@ -1244,7 +1258,12 @@ export function aggregateRecords(records: RawRecord[]) {
         aggregation === "avg"
           ? Math.round((bucket.sum / bucket.count) * 100) / 100
           : Math.round(bucket.sum * 100) / 100;
-      metrics.push({ date, metric: key, value, unit: aggregation === "duration" ? "hr" : meta.unit });
+      metrics.push({
+        date,
+        metric: key,
+        value,
+        unit: aggregation === "duration" ? "hr" : meta.unit,
+      });
     }
   }
 
@@ -1334,6 +1353,7 @@ git commit -m "feat: add CLI script to parse Apple Health XML exports"
 ### Task 7: Cleanup and Full Verification
 
 **Files:**
+
 - Modify: `specs/architecture.md`
 
 - [ ] **Step 1: Run the full check**
@@ -1344,6 +1364,7 @@ Expected: All pass.
 - [ ] **Step 2: Update specs/architecture.md**
 
 Update the architecture spec to reflect:
+
 - New CLI script `scripts/parse-health-export.ts`
 - New API endpoints: `POST /api/health-import`, `PATCH /api/health-config`, `GET /api/health-config`
 - Removed: `POST /api/health-metrics`, `HEALTH_API_TOKEN` env var

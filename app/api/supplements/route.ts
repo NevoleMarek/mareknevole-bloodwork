@@ -66,7 +66,12 @@ export async function PUT(req: Request) {
   const old = await db
     .prepare("SELECT * FROM supplements WHERE id = ?")
     .bind(body.id)
-    .first<{ name: string; dose: string; frequency: string; started_at: string }>();
+    .first<{
+      name: string;
+      dose: string;
+      frequency: string;
+      started_at: string;
+    }>();
 
   if (!old) return Response.json({ error: "Not found" }, { status: 404 });
 

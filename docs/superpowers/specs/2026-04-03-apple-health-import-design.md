@@ -6,15 +6,15 @@ Import daily health metrics from Apple Health into the bloodwork dashboard via a
 
 ## Metrics
 
-| Key | Label | Unit | Source |
-|-----|-------|------|--------|
-| `weight` | Weight | kg | Apple Health |
-| `resting_hr` | Resting HR | bpm | Apple Health |
-| `hrv` | HRV | ms | Apple Health |
-| `blood_pressure_systolic` | BP Systolic | mmHg | Apple Health |
-| `blood_pressure_diastolic` | BP Diastolic | mmHg | Apple Health |
-| `sleep_duration` | Sleep | hr | Apple Health (computed sum of sleep intervals) |
-| `vo2_max` | VO2 Max | mL/kg/min | Apple Health |
+| Key                        | Label        | Unit      | Source                                         |
+| -------------------------- | ------------ | --------- | ---------------------------------------------- |
+| `weight`                   | Weight       | kg        | Apple Health                                   |
+| `resting_hr`               | Resting HR   | bpm       | Apple Health                                   |
+| `hrv`                      | HRV          | ms        | Apple Health                                   |
+| `blood_pressure_systolic`  | BP Systolic  | mmHg      | Apple Health                                   |
+| `blood_pressure_diastolic` | BP Diastolic | mmHg      | Apple Health                                   |
+| `sleep_duration`           | Sleep        | hr        | Apple Health (computed sum of sleep intervals) |
+| `vo2_max`                  | VO2 Max      | mL/kg/min | Apple Health                                   |
 
 ## Data Storage
 

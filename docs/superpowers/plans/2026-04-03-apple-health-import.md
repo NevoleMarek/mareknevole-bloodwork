@@ -13,6 +13,7 @@
 ### Task 1: Types and Constants
 
 **Files:**
+
 - Create: `types/health.ts`
 
 - [ ] **Step 1: Create types/health.ts**
@@ -60,6 +61,7 @@ git commit -m "feat: add health metric types and constants"
 ### Task 2: Database Schema
 
 **Files:**
+
 - Modify: `db/schema.sql`
 
 - [ ] **Step 1: Add health_metrics table to schema.sql**
@@ -96,6 +98,7 @@ git commit -m "feat: add health_metrics table to D1 schema"
 ### Task 3: Database Query Function
 
 **Files:**
+
 - Modify: `db/queries.ts`
 
 - [ ] **Step 1: Add the query function**
@@ -151,6 +154,7 @@ git commit -m "feat: add getHealthMetrics query function"
 ### Task 4: Middleware — Bearer Token Auth
 
 **Files:**
+
 - Modify: `middleware.ts`
 
 - [ ] **Step 1: Extend middleware to accept bearer token for health-metrics endpoint**
@@ -221,6 +225,7 @@ git commit -m "feat: add bearer token auth for health-metrics endpoint"
 ### Task 5: API Route
 
 **Files:**
+
 - Create: `app/api/health-metrics/route.ts`
 
 - [ ] **Step 1: Create the POST handler**
@@ -242,12 +247,21 @@ export async function POST(request: Request) {
 
   assert(typeof body.date === "string" && body.date.length > 0, "Missing date");
   assert(!isNaN(Date.parse(body.date)), "Invalid date");
-  assert(Array.isArray(body.metrics) && body.metrics.length > 0, "Missing metrics");
+  assert(
+    Array.isArray(body.metrics) && body.metrics.length > 0,
+    "Missing metrics",
+  );
 
   for (const m of body.metrics) {
     assert(VALID_KEYS.has(m.metric), `Unknown metric: ${m.metric}`);
-    assert(typeof m.value === "number" && isFinite(m.value), `Invalid value for ${m.metric}`);
-    assert(typeof m.unit === "string" && m.unit.length > 0, `Missing unit for ${m.metric}`);
+    assert(
+      typeof m.value === "number" && isFinite(m.value),
+      `Invalid value for ${m.metric}`,
+    );
+    assert(
+      typeof m.unit === "string" && m.unit.length > 0,
+      `Missing unit for ${m.metric}`,
+    );
   }
 
   const statements = body.metrics.map((m) =>
@@ -281,6 +295,7 @@ git commit -m "feat: add POST /api/health-metrics endpoint"
 ### Task 6: Linear Regression Utility
 
 **Files:**
+
 - Create: `lib/linear-regression.ts`
 - Create: `lib/linear-regression.test.ts`
 
@@ -392,6 +407,7 @@ git commit -m "feat: add linear regression utility with tests"
 ### Task 7: Health Chart Component
 
 **Files:**
+
 - Create: `components/dashboard/health-chart.tsx`
 - Create: `components/dashboard/health-chart.test.tsx`
 
@@ -414,9 +430,7 @@ const sampleData: HealthMetric[] = [
 
 describe("HealthChart", () => {
   it("renders metric label and latest value", () => {
-    render(
-      <HealthChart label="Resting HR" unit="bpm" data={sampleData} />,
-    );
+    render(<HealthChart label="Resting HR" unit="bpm" data={sampleData} />);
     expect(screen.getByText("Resting HR")).toBeInTheDocument();
     expect(screen.getByText("55")).toBeInTheDocument();
     expect(screen.getByText("bpm")).toBeInTheDocument();
@@ -461,9 +475,7 @@ export function HealthChart({
   const latest = data.at(-1);
 
   const chartData = useMemo(() => {
-    const reg = linearRegression(
-      data.map((d, i) => ({ x: i, y: d.value })),
-    );
+    const reg = linearRegression(data.map((d, i) => ({ x: i, y: d.value })));
     return data.map((d, i) => ({
       date: new Date(d.date).toLocaleDateString("en-US", {
         month: "short",
@@ -558,6 +570,7 @@ git commit -m "feat: add HealthChart component with trend line"
 ### Task 8: Blood Pressure Chart Component
 
 **Files:**
+
 - Create: `components/dashboard/blood-pressure-chart.tsx`
 - Create: `components/dashboard/blood-pressure-chart.test.tsx`
 
@@ -573,19 +586,37 @@ import { BloodPressureChart } from "@/components/dashboard/blood-pressure-chart"
 import type { HealthMetric } from "@/types/health";
 
 const systolic: HealthMetric[] = [
-  { date: "2026-03-01", metric: "blood_pressure_systolic", value: 120, unit: "mmHg" },
-  { date: "2026-03-15", metric: "blood_pressure_systolic", value: 118, unit: "mmHg" },
+  {
+    date: "2026-03-01",
+    metric: "blood_pressure_systolic",
+    value: 120,
+    unit: "mmHg",
+  },
+  {
+    date: "2026-03-15",
+    metric: "blood_pressure_systolic",
+    value: 118,
+    unit: "mmHg",
+  },
 ];
 const diastolic: HealthMetric[] = [
-  { date: "2026-03-01", metric: "blood_pressure_diastolic", value: 80, unit: "mmHg" },
-  { date: "2026-03-15", metric: "blood_pressure_diastolic", value: 78, unit: "mmHg" },
+  {
+    date: "2026-03-01",
+    metric: "blood_pressure_diastolic",
+    value: 80,
+    unit: "mmHg",
+  },
+  {
+    date: "2026-03-15",
+    metric: "blood_pressure_diastolic",
+    value: 78,
+    unit: "mmHg",
+  },
 ];
 
 describe("BloodPressureChart", () => {
   it("renders label and combined latest value", () => {
-    render(
-      <BloodPressureChart systolic={systolic} diastolic={diastolic} />,
-    );
+    render(<BloodPressureChart systolic={systolic} diastolic={diastolic} />);
     expect(screen.getByText("Blood Pressure")).toBeInTheDocument();
     expect(screen.getByText("118/78")).toBeInTheDocument();
     expect(screen.getByText("mmHg")).toBeInTheDocument();
@@ -755,6 +786,7 @@ git commit -m "feat: add BloodPressureChart component"
 ### Task 9: Health Grid Component
 
 **Files:**
+
 - Create: `components/dashboard/health-grid.tsx`
 - Create: `components/dashboard/health-grid.test.tsx`
 
@@ -773,8 +805,18 @@ const metrics: HealthMetric[] = [
   { date: "2026-03-01", metric: "weight", value: 82, unit: "kg" },
   { date: "2026-03-01", metric: "resting_hr", value: 58, unit: "bpm" },
   { date: "2026-03-01", metric: "hrv", value: 42, unit: "ms" },
-  { date: "2026-03-01", metric: "blood_pressure_systolic", value: 120, unit: "mmHg" },
-  { date: "2026-03-01", metric: "blood_pressure_diastolic", value: 80, unit: "mmHg" },
+  {
+    date: "2026-03-01",
+    metric: "blood_pressure_systolic",
+    value: 120,
+    unit: "mmHg",
+  },
+  {
+    date: "2026-03-01",
+    metric: "blood_pressure_diastolic",
+    value: 80,
+    unit: "mmHg",
+  },
   { date: "2026-03-01", metric: "sleep_duration", value: 7.3, unit: "hr" },
   { date: "2026-03-01", metric: "vo2_max", value: 45, unit: "mL/kg/min" },
 ];
@@ -840,10 +882,7 @@ const CHARTS: ChartConfig[] = [
   { type: "single", key: "vo2_max", label: "VO2 Max", unit: "mL/kg/min" },
 ];
 
-function filterByPeriod(
-  data: HealthMetric[],
-  period: Period,
-): HealthMetric[] {
+function filterByPeriod(data: HealthMetric[], period: Period): HealthMetric[] {
   const now = new Date();
   const cutoff = new Date(
     now.getFullYear(),
@@ -937,6 +976,7 @@ git commit -m "feat: add HealthGrid component with period selector"
 ### Task 10: Wire Up Dashboard
 
 **Files:**
+
 - Modify: `app/page.tsx`
 - Modify: `components/dashboard/section-nav.tsx`
 
@@ -997,6 +1037,7 @@ git commit -m "feat: add Health section to dashboard"
 ### Task 11: Public Data API
 
 **Files:**
+
 - Modify: `app/api/data/route.ts`
 
 - [ ] **Step 1: Include health metrics in the public data response**
@@ -1044,6 +1085,7 @@ git commit -m "feat: include health metrics in public data API"
 ### Task 12: Update Specs
 
 **Files:**
+
 - Modify: `specs/architecture.md`
 
 - [ ] **Step 1: Update architecture.md**

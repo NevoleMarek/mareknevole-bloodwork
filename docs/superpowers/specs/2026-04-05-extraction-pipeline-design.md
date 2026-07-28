@@ -6,11 +6,11 @@ Upgrade the PDF upload wizard to use newer Gemini models, translate extracted la
 
 ## Model Changes
 
-| Step | Current | New |
-|------|---------|-----|
-| Extract | `gemini-2.5-flash` | `gemini-3-flash-preview` |
-| Map | `gemini-2.5-flash` | `gemini-3-flash-preview` |
-| Research (new) | — | `gemini-3.1-pro-preview` |
+| Step           | Current            | New                      |
+| -------------- | ------------------ | ------------------------ |
+| Extract        | `gemini-2.5-flash` | `gemini-3-flash-preview` |
+| Map            | `gemini-2.5-flash` | `gemini-3-flash-preview` |
+| Research (new) | —                  | `gemini-3.1-pro-preview` |
 
 The `callGemini` function accepts a model parameter so each caller can specify which model to use.
 
@@ -70,6 +70,7 @@ The research step may refine the reference ranges proposed by the mapping step a
 ### Prompt
 
 Instructs Gemini 3.1 Pro to:
+
 - Research each biomarker by its label and unit
 - Provide a concise description (1-2 sentences: what it measures, clinical significance)
 - Provide evidence-based reference ranges for healthy adults

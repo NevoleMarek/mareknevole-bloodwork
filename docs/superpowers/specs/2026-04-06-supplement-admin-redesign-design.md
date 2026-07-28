@@ -41,13 +41,13 @@ The table displays all active supplements with columns: Supplement, Dose, Freque
 
 A stacked card-style form always visible below the table. Fields:
 
-| Field          | Input type       | Default   |
-|----------------|------------------|-----------|
-| Name           | text             | empty     |
-| Dose           | text             | empty     |
-| Frequency      | text             | "daily"   |
-| Since          | `type="month"`   | empty     |
-| Changelog date | `type="date"`    | today     |
+| Field          | Input type     | Default |
+| -------------- | -------------- | ------- |
+| Name           | text           | empty   |
+| Dose           | text           | empty   |
+| Frequency      | text           | "daily" |
+| Since          | `type="month"` | empty   |
+| Changelog date | `type="date"`  | today   |
 
 Each field has a label on the left (90px wide) and the input stretching to fill. "Add" button below, aligned with inputs.
 

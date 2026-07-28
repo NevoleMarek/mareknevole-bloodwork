@@ -33,20 +33,30 @@ bun run scripts/parse-health-export.ts ~/Desktop/export.xml -o health-data.json
 ```json
 {
   "metrics": [
-    { "date": "2026-04-03", "metric": "heart_rate", "value": 62.3, "unit": "bpm" }
+    {
+      "date": "2026-04-03",
+      "metric": "heart_rate",
+      "value": 62.3,
+      "unit": "bpm"
+    }
   ],
   "configs": [
-    { "metric": "heart_rate", "label": "Heart Rate", "unit": "bpm", "aggregation": "avg" }
+    {
+      "metric": "heart_rate",
+      "label": "Heart Rate",
+      "unit": "bpm",
+      "aggregation": "avg"
+    }
   ]
 }
 ```
 
 ### Aggregation mapping
 
-| Strategy | Metric types |
-| -------- | ------------ |
-| `sum` | Steps, Active Energy, Basal Energy, Flights Climbed, Distance Walking/Running, Exercise Time |
-| `avg` | Heart Rate, Resting Heart Rate, HRV, Weight, Body Mass Index, Blood Pressure Systolic/Diastolic, VO2 Max, Respiratory Rate, Body Temperature, Blood Oxygen |
+| Strategy   | Metric types                                                                                                                                                                                   |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sum`      | Steps, Active Energy, Basal Energy, Flights Climbed, Distance Walking/Running, Exercise Time                                                                                                   |
+| `avg`      | Heart Rate, Resting Heart Rate, HRV, Weight, Body Mass Index, Blood Pressure Systolic/Diastolic, VO2 Max, Respiratory Rate, Body Temperature, Blood Oxygen                                     |
 | `duration` | Sleep Analysis — categorical records where duration is computed from `endDate - startDate` (not from `value`). Only records with asleep-category values are included. Summed per day in hours. |
 
 Unknown types default to `avg`.
@@ -110,15 +120,26 @@ Receives the JSON file contents from the admin UI.
 ```json
 {
   "metrics": [
-    { "date": "2026-04-03", "metric": "heart_rate", "value": 62.3, "unit": "bpm" }
+    {
+      "date": "2026-04-03",
+      "metric": "heart_rate",
+      "value": 62.3,
+      "unit": "bpm"
+    }
   ],
   "configs": [
-    { "metric": "heart_rate", "label": "Heart Rate", "unit": "bpm", "aggregation": "avg" }
+    {
+      "metric": "heart_rate",
+      "label": "Heart Rate",
+      "unit": "bpm",
+      "aggregation": "avg"
+    }
   ]
 }
 ```
 
 **Behavior:**
+
 - `INSERT OR REPLACE` all metrics into `health_metrics`.
 - `INSERT OR IGNORE` all configs into `health_metric_config` (preserves existing visibility).
 - Batched in a D1 transaction.
@@ -177,6 +198,7 @@ Two always-visible sections, stacked vertically:
 ### Styling
 
 Follows existing admin patterns and `specs/style.md`:
+
 - `bg-white border border-zinc-200` cards, no rounded corners, no shadows.
 - Geist Mono typography throughout.
 - Chip active state: `bg-zinc-800 text-white border-zinc-800`.
