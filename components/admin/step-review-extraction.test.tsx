@@ -33,6 +33,10 @@ describe("StepReviewExtraction", () => {
     expect(rows).toHaveLength(3);
     const newRow = rows[2];
     expect(newRow).toHaveAttribute("data-new", "true");
+    expect(newRow.querySelectorAll(".extraction-variable-cell")).toHaveLength(
+      4,
+    );
+    expect(rows[1]).not.toHaveAttribute("data-new");
 
     const label = within(newRow).getByRole("textbox", {
       name: "Variable 2 label",

@@ -86,40 +86,54 @@ export function StepReviewExtraction({
                 className="extraction-variable-row border-t border-zinc-900/8"
               >
                 <td className="p-2 pl-4">
-                  <input
-                    value={v.label}
-                    onChange={(e) => updateVariable(i, "label", e.target.value)}
-                    aria-label={`Variable ${i + 1} label`}
-                    className="field w-full text-sm"
-                  />
+                  <div className="extraction-variable-cell">
+                    <input
+                      value={v.label}
+                      onChange={(e) =>
+                        updateVariable(i, "label", e.target.value)
+                      }
+                      aria-label={`Variable ${i + 1} label`}
+                      className="field w-full text-sm"
+                    />
+                  </div>
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    step="any"
-                    value={v.value}
-                    onChange={(e) => updateVariable(i, "value", e.target.value)}
-                    aria-label={`${v.label || `Variable ${i + 1}`} value`}
-                    className="field w-24 text-sm"
-                  />
+                  <div className="extraction-variable-cell">
+                    <input
+                      type="number"
+                      step="any"
+                      value={v.value}
+                      onChange={(e) =>
+                        updateVariable(i, "value", e.target.value)
+                      }
+                      aria-label={`${v.label || `Variable ${i + 1}`} value`}
+                      className="field w-24 text-sm"
+                    />
+                  </div>
                 </td>
                 <td className="p-2">
-                  <input
-                    value={v.unit}
-                    onChange={(e) => updateVariable(i, "unit", e.target.value)}
-                    aria-label={`${v.label || `Variable ${i + 1}`} unit`}
-                    className="field w-24 text-sm"
-                  />
+                  <div className="extraction-variable-cell">
+                    <input
+                      value={v.unit}
+                      onChange={(e) =>
+                        updateVariable(i, "unit", e.target.value)
+                      }
+                      aria-label={`${v.label || `Variable ${i + 1}`} unit`}
+                      className="field w-24 text-sm"
+                    />
+                  </div>
                 </td>
                 <td className="p-2 pr-4 text-center">
-                  <button
-                    type="button"
-                    onClick={() => deleteVariable(i)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full text-lg text-red-700"
-                    aria-label={`Remove ${v.label || `variable ${i + 1}`}`}
-                  >
-                    <span aria-hidden="true">&times;</span>
-                  </button>
+                  <div className="extraction-variable-cell flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => deleteVariable(i)}
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-lg text-red-700"
+                      aria-label={`Remove ${v.label || `variable ${i + 1}`}`}
+                    >
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

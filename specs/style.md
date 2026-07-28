@@ -95,8 +95,10 @@ uses the relevant status color.
 
 ## Controls and interaction
 
-- Buttons and button-styled anchors respond on pointer-down with a
+- Buttons, navigation links, button-styled anchors, and upload labels use a
+  delegated pointer-held state. They respond on pointer-down with a
   transform-only `scale(0.98)` over `160ms`, then release over `100ms`.
+  Keyboard activation is immediate and never enters the pointer-held state.
 - Color and border responses use the strong ease-out curve
   `cubic-bezier(0.16, 1, 0.3, 1)`.
 - Card lift is limited to fine-pointer hover and moves no more than `2px`.
@@ -123,8 +125,8 @@ uses the relevant status color.
   labels travel only three pixels.
 - File drop targets respond to active drags only on fine pointers. Coarse
   pointers and reduced-motion mode use an `80ms` glyph-opacity cue instead.
-- Appended extraction rows enter over `160ms` from a four-pixel offset;
-  reduced motion keeps only the `80ms` opacity cue.
+- The inner cells of the latest appended extraction row enter over `160ms`
+  from a four-pixel offset; reduced motion keeps only the `80ms` opacity cue.
 - Section navigation scrolls immediately in every motion mode so this
   repeatedly used control never delays access to data.
 - Reduced-motion mode keeps short color, opacity, and focus feedback but

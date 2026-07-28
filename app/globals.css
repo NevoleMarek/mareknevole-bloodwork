@@ -98,10 +98,14 @@ label[class*="cursor-pointer"] {
     border-color var(--duration-control) var(--ease-out-strong);
 }
 
-button:active:not(:disabled),
-nav a:active,
-a:is(.button-primary, .button-secondary, .button-quiet):active,
-label[class*="cursor-pointer"]:active {
+button[data-pointer-pressed="true"]:not(:disabled),
+nav a[data-pointer-pressed="true"],
+a:is(
+    .button-primary,
+    .button-secondary,
+    .button-quiet
+  )[data-pointer-pressed="true"],
+label[class*="cursor-pointer"][data-pointer-pressed="true"] {
   transform: scale(0.98);
   transition-duration: var(--duration-control);
 }
@@ -336,6 +340,38 @@ table {
   transform: translateX(0);
 }
 
+.extraction-variable-cell {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.extraction-variable-row[data-new="true"] .extraction-variable-cell {
+  animation: extraction-variable-cell-enter var(--duration-control)
+    var(--ease-out-strong) both;
+}
+
+@keyframes extraction-variable-cell-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes extraction-variable-cell-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 @starting-style {
   .admin-state-shell {
     opacity: 0;
@@ -355,11 +391,6 @@ table {
   .health-import-state {
     opacity: 0;
     transform: scale(0.97);
-  }
-
-  .extraction-variable-row[data-new="true"] {
-    opacity: 0;
-    transform: translateY(4px);
   }
 }
 
@@ -424,14 +455,6 @@ table {
 .copy-markdown-button[data-copied="true"] .copy-label-confirmed {
   opacity: 1;
   transform: translateY(0);
-}
-
-.extraction-variable-row[data-new="true"] {
-  opacity: 1;
-  transform: translateY(0);
-  transition:
-    opacity var(--duration-control) var(--ease-out-strong),
-    transform var(--duration-control) var(--ease-out-strong);
 }
 
 .biomarker-table tbody tr {
@@ -631,17 +654,20 @@ table {
   .health-import-state,
   .file-drop-shell,
   .file-drop-glyph,
-  .copy-label,
-  .extraction-variable-row[data-new="true"] {
+  .copy-label {
     transition-property:
       color, background-color, border-color, box-shadow, opacity !important;
     transition-duration: var(--duration-feedback) !important;
   }
 
-  button:active:not(:disabled),
-  nav a:active,
-  a:is(.button-primary, .button-secondary, .button-quiet):active,
-  label[class*="cursor-pointer"]:active,
+  button[data-pointer-pressed="true"]:not(:disabled),
+  nav a[data-pointer-pressed="true"],
+  a:is(
+      .button-primary,
+      .button-secondary,
+      .button-quiet
+    )[data-pointer-pressed="true"],
+  label[class*="cursor-pointer"][data-pointer-pressed="true"],
   .interactive-card:hover,
   .section-nav-indicator,
   .admin-state-shell,
@@ -653,14 +679,23 @@ table {
   .file-drop-glyph,
   .file-drop-shell[data-drag-active="true"] .file-drop-glyph,
   .copy-label,
-  .extraction-variable-row[data-new="true"] {
+  .extraction-variable-row[data-new="true"] .extraction-variable-cell {
     transform: none !important;
   }
 
-  button:active:not(:disabled),
-  nav a:active,
-  a:is(.button-primary, .button-secondary, .button-quiet):active,
-  label[class*="cursor-pointer"]:active {
+  .extraction-variable-row[data-new="true"] .extraction-variable-cell {
+    animation-duration: var(--duration-feedback);
+    animation-name: extraction-variable-cell-fade;
+  }
+
+  button[data-pointer-pressed="true"]:not(:disabled),
+  nav a[data-pointer-pressed="true"],
+  a:is(
+      .button-primary,
+      .button-secondary,
+      .button-quiet
+    )[data-pointer-pressed="true"],
+  label[class*="cursor-pointer"][data-pointer-pressed="true"] {
     opacity: 0.82;
   }
 
@@ -681,11 +716,6 @@ table {
     }
 
     .health-import-state {
-      opacity: 0;
-      transform: none !important;
-    }
-
-    .extraction-variable-row[data-new="true"] {
       opacity: 0;
       transform: none !important;
     }
