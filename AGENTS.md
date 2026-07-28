@@ -60,7 +60,7 @@ Deployed to Cloudflare Workers at `bloodwork.mareknevole.com` with D1 database.
 - **Production owner:** `alchemy.run.ts` is an Effect Stack. `prod` preserves the Worker, D1, KV, domain, and bindings. Other stages use isolated resources.
 - **Build:** `bun run build:worker` compiles OpenNext without a production Wrangler manifest.
 - **Plan:** `bun run plan:production` builds and verifies locally, then shows an Alchemy plan for `prod`.
-- **First adoption:** only after review, run `bun alchemy deploy --stage prod --adopt` with `ADMIN_PASSWORD` and `GEMINI_API_KEY` provided locally. Do not run it as part of normal development.
+- **First adoption:** only after review, run `bun alchemy deploy --stage prod --adopt` with `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ADMIN_PASSWORD`, and `GEMINI_API_KEY` provided locally. The Alchemy build seeds OpenNext's KV cache and D1 tag table before publication. Do not run it as part of normal development.
 - **Local platform:** `wrangler.dev.jsonc` supports `next dev` and `bun run db:migrate`. It is not a production deployment config.
 
 ## Commit workflow

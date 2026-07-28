@@ -15,11 +15,11 @@ The stack lives in `alchemy.run.ts`. Production deploys use the explicit `prod` 
 bun run plan:production
 ```
 
-The first production deployment is a separate approved operation. It must use `bun alchemy deploy --stage prod --adopt` after the reviewer confirms that D1 name `bloodwork-db` has existing database ID `59c89aab-650f-4814-9182-dc6691e74237`, KV title `NEXT_INC_CACHE_KV` has existing namespace ID `3ce48886bf744930a9e9114f7c707019`, and both runtime secrets are supplied. This migration does not run that command.
+The first production deployment is a separate approved operation. It must use `bun alchemy deploy --stage prod --adopt` after the reviewer confirms that D1 name `bloodwork-db` has existing database ID `59c89aab-650f-4814-9182-dc6691e74237`, KV title `NEXT_INC_CACHE_KV` has existing namespace ID `3ce48886bf744930a9e9114f7c707019`, and `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and both runtime secrets are supplied. This migration does not run that command.
 
 ## Chosen shape
 
-`Cloudflare.Website.StaticSite` runs the unchanged OpenNext compiler. Its `main` points at `.open-next/worker.js`, `outdir` points at `.open-next/assets`, and `bundle: false` preserves OpenNext's module graph. The resource name is a convenience. Bloodwork remains a dynamic Next Worker with D1-backed pages, route handlers, auth, and Gemini calls.
+`Cloudflare.Website.StaticSite` runs the OpenNext compiler, then an Alchemy-owned cache seed. The seed writes each `.open-next/cache` value under OpenNext's build-ID-scoped KV key and creates the `revalidations` table used by the D1 tag cache. It is idempotent. `main` points at `.open-next/worker.js`, `outdir` points at `.open-next/assets`, and `bundle: false` preserves OpenNext's module graph. Explicit module rules upload only the runtime directories. They keep browser assets, cache files, templates, and build configuration out of Worker modules.
 
 The stack is an `Effect.gen` program. It yields one D1 resource and one KV resource. The D1 value appears under both `DB` and `NEXT_TAG_CACHE_D1`. The KV value appears only under `NEXT_INC_CACHE_KV`. `Config.redacted` produces the two Worker secret bindings. No second D1 or KV resource can drift from those bindings.
 
@@ -36,4 +36,4 @@ The login route now decodes its untrusted JSON body with Effect Schema. That kee
 
 ## Risks
 
-Alchemy discovers the existing D1 by name and the KV namespace by title. Before the approved adoption, verify that D1 name `bloodwork-db` still maps to database ID `59c89aab-650f-4814-9182-dc6691e74237`, and that KV title `NEXT_INC_CACHE_KV` still maps to namespace ID `3ce48886bf744930a9e9114f7c707019`. Review the plan before adoption. Cloud behavior remains not verified until that deployment occurs.
+Alchemy discovers the existing D1 by name and the KV namespace by title. Before the approved adoption, verify that D1 name `bloodwork-db` still maps to database ID `59c89aab-650f-4814-9182-dc6691e74237`, and that KV title `NEXT_INC_CACHE_KV` still maps to namespace ID `3ce48886bf744930a9e9114f7c707019`. The deployment token needs Workers KV Storage Write and D1 write access. Review the plan before adoption. Cloud behavior remains not verified until that deployment occurs.

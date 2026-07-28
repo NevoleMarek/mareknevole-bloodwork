@@ -49,3 +49,6 @@ docs/superpowers/brainstorms
 
 # Local Cloudflare development state
 .wrangler/
+
+# Local Alchemy state and bundles
+.alchemy/

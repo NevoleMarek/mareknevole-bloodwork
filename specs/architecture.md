@@ -107,11 +107,11 @@ D1 SQLite database with tables: `vocabulary`, `readings`, `measurements`, `suppl
 
 ## Deployment contract
 
-`alchemy.run.ts` is the only production deployment declaration. Its Effect Stack builds the existing OpenNext output and publishes `.open-next/worker.js` plus `.open-next/assets` without rebundling. `prod` preserves the physical Worker name `bloodwork`, D1 name `bloodwork-db`, KV title `NEXT_INC_CACHE_KV`, and `bloodwork.mareknevole.com`. Other stages omit these names and cannot attach the production domain.
+`alchemy.run.ts` is the only production deployment declaration. Its Effect Stack builds the existing OpenNext output, seeds the build-scoped KV cache and D1 `revalidations` table through the Cloudflare API, and publishes `.open-next/worker.js` plus `.open-next/assets` without rebundling. `prod` preserves the physical Worker name `bloodwork`, D1 name `bloodwork-db`, KV title `NEXT_INC_CACHE_KV`, and `bloodwork.mareknevole.com`. Other stages omit these names and cannot attach the production domain.
 
 The D1 resource is bound twice as `DB` and `NEXT_TAG_CACHE_D1`. The KV resource is bound once as `NEXT_INC_CACHE_KV`. Both secrets use `Config.redacted` and become Cloudflare secret bindings. `scripts/verify-effect-alchemy.ts` checks this shape offline against a real OpenNext artifact.
 
-`wrangler.dev.jsonc` exists only for `next dev` and local D1 commands. OpenNext needs it to create its local platform proxy. It has no production deployment role.
+`wrangler.dev.jsonc` exists only for `next dev` and local D1 commands. OpenNext needs it to create its local platform proxy. It has no production deployment role. Alchemy uploads only OpenNext's server runtime modules. Browser assets are uploaded only through the StaticSite asset directory.
 
 ## Runtime secrets
 
@@ -128,7 +128,7 @@ Cloudflare Worker secrets supplied to Alchemy when an approved production deploy
 - Full validation: `bun run check:full` — runs the fast suite, Worker build, and deployment contract check
 - Watch mode: `bun run test:watch`
 
-The first production deployment must be reviewed and run with `bun alchemy deploy --stage prod --adopt`. It has not been run for this migration, so Cloudflare provisioning remains not verified.
+The first production deployment must be reviewed and run with `bun alchemy deploy --stage prod --adopt`. Its environment needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ADMIN_PASSWORD`, and `GEMINI_API_KEY`. It has not been run for this migration, so Cloudflare provisioning remains not verified.
 
 ## Architectural Constraints
 

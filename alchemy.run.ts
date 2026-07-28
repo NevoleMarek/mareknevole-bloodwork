@@ -3,6 +3,8 @@ import * as Cloudflare from "alchemy/Cloudflare";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 
+import { openNextWorkerModuleRules } from "@/lib/opennext-worker-bundle";
+
 const production = {
   databaseName: "bloodwork-db",
   domain: "bloodwork.mareknevole.com",
@@ -30,7 +32,7 @@ export default Alchemy.Stack(
       ...(isProduction ? { domain: production.domain } : {}),
       ...(isProduction ? { name: production.workerName } : {}),
       bundle: false,
-      command: "bun run build:worker",
+      command: "bun run build:production-worker",
       compatibility: {
         date: "2025-12-01",
         flags: ["nodejs_compat"],
@@ -41,9 +43,13 @@ export default Alchemy.Stack(
         GEMINI_API_KEY: Config.redacted("GEMINI_API_KEY"),
         NEXT_INC_CACHE_KV: incrementalCache,
         NEXT_TAG_CACHE_D1: database,
+        OPENNEXT_CACHE_ACCOUNT_ID: Config.string("CLOUDFLARE_ACCOUNT_ID"),
+        OPENNEXT_CACHE_D1_ID: database.databaseId,
+        OPENNEXT_CACHE_KV_ID: incrementalCache.namespaceId,
       },
       main: ".open-next/worker.js",
       outdir: ".open-next/assets",
+      rules: openNextWorkerModuleRules,
     });
 
     return { url: site.url };
