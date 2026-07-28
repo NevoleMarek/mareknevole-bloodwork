@@ -125,8 +125,8 @@ uses the relevant status color.
   pointers and reduced-motion mode use an `80ms` glyph-opacity cue instead.
 - Appended extraction rows enter over `160ms` from a four-pixel offset;
   reduced motion keeps only the `80ms` opacity cue.
-- Smooth scrolling is disabled in both CSS and JavaScript when
-  `prefers-reduced-motion: reduce` is active.
+- Section navigation scrolls immediately in every motion mode so this
+  repeatedly used control never delays access to data.
 - Reduced-motion mode keeps short color, opacity, and focus feedback but
   removes transform movement.
 - Avoid looping, decorative, or full-viewport motion.

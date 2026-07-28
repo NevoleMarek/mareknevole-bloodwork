@@ -35,11 +35,8 @@ export function SectionNav() {
   function handleClick(id: SectionId) {
     const el = document.getElementById(id);
     if (!el) return;
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
     const top = el.getBoundingClientRect().top + window.scrollY - 112;
-    window.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+    window.scrollTo({ top, behavior: "auto" });
   }
 
   return (
