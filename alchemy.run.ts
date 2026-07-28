@@ -6,8 +6,6 @@ import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import { cast } from "effect/Function";
 
-import { openNextWorkerModuleRules } from "@/lib/opennext-worker-bundle";
-
 const production = {
   databaseName: "bloodwork-db",
   domain: "bloodwork.mareknevole.com",
@@ -61,14 +59,13 @@ export default Alchemy.Stack(
           directory: build.outdir,
           hash: build.hash.output,
         }),
-        bundle: false,
+        bundle: true,
         compatibility: {
           date: "2025-12-01",
           flags: ["nodejs_compat"],
         },
         env: workerEnv,
         main: ".open-next/worker.js",
-        rules: openNextWorkerModuleRules,
       });
     }).pipe(Namespace.push("BloodworkSite"));
 

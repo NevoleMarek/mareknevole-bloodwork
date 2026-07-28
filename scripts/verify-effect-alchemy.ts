@@ -2,7 +2,6 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { readOpenNextCacheEntries } from "@/lib/opennext-cache";
-import { OPENNEXT_WORKER_MODULE_GLOBS } from "@/lib/opennext-worker-bundle";
 
 const root = process.cwd();
 const stack = read("alchemy.run.ts");
@@ -32,7 +31,7 @@ for (const text of [
   "name: production.databaseName",
   "title: production.kvTitle",
   'main: ".open-next/worker.js"',
-  "bundle: false",
+  "bundle: true",
   'Command.Build("Build"',
   'Cloudflare.Worker("Worker"',
   'Namespace.push("BloodworkSite")',
@@ -53,7 +52,6 @@ for (const text of [
   "OPENNEXT_CACHE_KV_ID: incrementalCache.namespaceId",
   "env: buildEnv",
   "env: workerEnv",
-  "rules: openNextWorkerModuleRules",
 ]) {
   assert(stack.includes(text), `missing ${text}`);
 }
@@ -117,26 +115,10 @@ assert(
   "the force-dynamic dashboard has no build-time cache entry",
 );
 
-const modules = workerModules(".open-next");
-const moduleBytes = modules.reduce(
-  (total, path) => total + statSync(resolve(root, ".open-next", path)).size,
-  0,
-);
-assert(
-  modules.length === 10,
-  "the Worker module rules contain the ten OpenNext runtime dependencies",
-);
-assert(
-  modules.every((path) => !/[?*{}[\]]/.test(path)),
-  "the Worker module rules use literal paths",
-);
-assert(
-  moduleBytes < 64 * 1024 * 1024,
-  "the uncompressed Worker module selection is below Cloudflare's 64 MiB limit",
-);
+assertFile(".open-next/server-functions/default/handler.mjs");
 
 console.log(
-  `Effect Alchemy deployment contract verified. ${cacheEntries.length} cache entries and ${modules.length} Worker modules (${moduleBytes} bytes).`,
+  `Effect Alchemy deployment contract verified. ${cacheEntries.length} cache entries and a bundled OpenNext Worker.`,
 );
 
 function read(path: string) {
@@ -162,11 +144,4 @@ function assert(condition: unknown, message: string): asserts condition {
 
 function count(value: string, needle: string) {
   return value.split(needle).length - 1;
-}
-
-function workerModules(outputDir: string) {
-  for (const path of OPENNEXT_WORKER_MODULE_GLOBS) {
-    assertFile(`${outputDir}/${path}`);
-  }
-  return [...OPENNEXT_WORKER_MODULE_GLOBS].sort();
 }
