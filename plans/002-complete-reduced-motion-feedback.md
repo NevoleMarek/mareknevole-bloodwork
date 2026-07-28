@@ -1,6 +1,6 @@
 # 002 — Complete reduced-motion feedback
 
-- **Status**: TODO
+- **Status**: DONE
 - **Commit**: 7490320
 - **Severity**: MEDIUM
 - **Category**: Accessibility

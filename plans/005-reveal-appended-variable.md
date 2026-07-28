@@ -1,6 +1,6 @@
 # 005 — Reveal the appended variable
 
-- **Status**: TODO
+- **Status**: DONE
 - **Commit**: 7490320
 - **Severity**: LOW
 - **Category**: Missed opportunities

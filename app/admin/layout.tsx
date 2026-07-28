@@ -63,7 +63,7 @@ export default function AdminLayout({
                     key={item.href}
                     href={item.href}
                     aria-current={isActive ? "page" : undefined}
-                    className={`flex min-h-10 items-center rounded-xl px-3 text-xs font-semibold transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                    className={`flex min-h-10 items-center rounded-xl px-3 text-xs font-semibold ${
                       isActive
                         ? "bg-emerald-50 text-emerald-800"
                         : "text-zinc-500 hover:text-zinc-900"

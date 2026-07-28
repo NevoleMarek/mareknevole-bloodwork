@@ -72,6 +72,7 @@ export function HealthChart({
               domain={["dataMin - 1", "dataMax + 1"]}
             />
             <Tooltip
+              isAnimationActive={false}
               cursor={{ stroke: "rgba(20, 119, 95, 0.16)" }}
               contentStyle={{
                 fontFamily:

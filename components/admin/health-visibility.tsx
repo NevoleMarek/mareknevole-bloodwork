@@ -46,7 +46,7 @@ export function HealthVisibility({
             type="button"
             onClick={() => toggle(c.metric, !c.visible)}
             aria-pressed={c.visible}
-            className={`min-h-10 rounded-full border px-3.5 text-xs font-semibold transition-colors duration-[160ms] ${
+            className={`min-h-10 rounded-full border px-3.5 text-xs font-semibold ${
               c.visible
                 ? "border-emerald-700 bg-emerald-700 text-white"
                 : "border-zinc-900/12 bg-white text-zinc-600"

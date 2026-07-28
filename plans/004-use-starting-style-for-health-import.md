@@ -1,6 +1,6 @@
 # 004 — Use starting style for health import
 
-- **Status**: TODO
+- **Status**: DONE
 - **Commit**: 7490320
 - **Severity**: LOW
 - **Category**: Interruptibility; physicality & origin

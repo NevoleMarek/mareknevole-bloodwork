@@ -1,6 +1,6 @@
 # 001 — Disable chart tooltip motion
 
-- **Status**: TODO
+- **Status**: DONE
 - **Commit**: 7490320
 - **Severity**: HIGH
 - **Category**: Purpose & frequency; easing & duration

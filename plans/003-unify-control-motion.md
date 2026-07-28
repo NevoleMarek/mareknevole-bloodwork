@@ -1,6 +1,6 @@
 # 003 — Unify control motion
 
-- **Status**: TODO
+- **Status**: DONE
 - **Commit**: 7490320
 - **Severity**: MEDIUM
 - **Category**: Interruptibility; performance; cohesion & tokens

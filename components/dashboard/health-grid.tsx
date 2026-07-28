@@ -51,7 +51,7 @@ export function HealthGrid({
               href={p === "6M" ? "/" : `/?period=${p}`}
               scroll={false}
               aria-current={period === p ? "page" : undefined}
-              className={`flex min-h-9 min-w-11 items-center justify-center rounded-full px-3 font-semibold transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              className={`flex min-h-9 min-w-11 items-center justify-center rounded-full px-3 font-semibold ${
                 period === p
                   ? "bg-emerald-700 text-white shadow-sm"
                   : "text-zinc-500 hover:text-zinc-900"

@@ -59,6 +59,11 @@ describe("HealthImport", () => {
     expect(screen.getByText("Imported 4 metrics, 3 days")).toBeInTheDocument();
     expect(onImported).toHaveBeenCalledOnce();
     expect(document.querySelectorAll(".health-import-state").length).toBe(3);
+    expect(
+      screen
+        .getByText("Imported 4 metrics, 3 days")
+        .closest(".health-import-state"),
+    ).toHaveAttribute("data-phase", "stable");
 
     act(() => vi.advanceTimersByTime(180));
 

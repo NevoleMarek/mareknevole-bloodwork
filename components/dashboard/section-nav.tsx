@@ -68,7 +68,7 @@ export function SectionNav() {
                 type="button"
                 onClick={() => handleClick(id)}
                 aria-current={active === id ? "location" : undefined}
-                className={`relative min-h-11 rounded-xl px-2 text-[0.68rem] font-semibold whitespace-nowrap transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)] sm:px-3 sm:text-[0.72rem] ${
+                className={`relative min-h-11 rounded-xl px-2 text-[0.68rem] font-semibold whitespace-nowrap sm:px-3 sm:text-[0.72rem] ${
                   active === id
                     ? "text-emerald-800"
                     : "text-zinc-500 hover:text-zinc-900"
@@ -77,7 +77,8 @@ export function SectionNav() {
                 {label}
                 <span
                   aria-hidden="true"
-                  className={`absolute right-2 bottom-1.5 left-2 h-0.5 origin-left rounded-full bg-emerald-700 transition-transform duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)] sm:right-3 sm:left-3 ${
+                  data-active={active === id}
+                  className={`section-nav-indicator absolute right-2 bottom-1.5 left-2 h-0.5 origin-left rounded-full bg-emerald-700 sm:right-3 sm:left-3 ${
                     active === id ? "scale-x-100" : "scale-x-0"
                   }`}
                 />

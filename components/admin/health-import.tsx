@@ -11,8 +11,10 @@ type ImportState =
 type StateLayer = {
   id: number;
   state: ImportState;
-  phase: "entering" | "stable" | "leaving";
+  phase: "stable" | "leaving";
 };
+
+const STATE_TRANSITION_MS = 180;
 
 export function HealthImport({ onImported }: { onImported: () => void }) {
   const [layers, setLayers] = useState<StateLayer[]>([
@@ -22,12 +24,10 @@ export function HealthImport({ onImported }: { onImported: () => void }) {
   const [isDragging, setIsDragging] = useState(false);
   const nextLayerId = useRef(1);
   const dragDepth = useRef(0);
-  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const removeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const transitionTo = useCallback((state: ImportState) => {
-    if (settleTimer.current) clearTimeout(settleTimer.current);
     if (removeTimer.current) clearTimeout(removeTimer.current);
 
     const id = nextLayerId.current;
@@ -37,24 +37,16 @@ export function HealthImport({ onImported }: { onImported: () => void }) {
     setActiveLayerId(id);
     setLayers((current) => [
       ...current.map((layer): StateLayer => ({ ...layer, phase: "leaving" })),
-      { id, state, phase: "entering" },
+      { id, state, phase: "stable" },
     ]);
 
-    settleTimer.current = setTimeout(() => {
-      setLayers((current) =>
-        current.map((layer) =>
-          layer.id === id ? { ...layer, phase: "stable" } : layer,
-        ),
-      );
-    });
     removeTimer.current = setTimeout(() => {
       setLayers((current) => current.filter((layer) => layer.id === id));
-    }, 180);
+    }, STATE_TRANSITION_MS);
   }, []);
 
   useEffect(
     () => () => {
-      if (settleTimer.current) clearTimeout(settleTimer.current);
       if (removeTimer.current) clearTimeout(removeTimer.current);
       if (resetTimer.current) clearTimeout(resetTimer.current);
     },

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import type { ExtractedVariable } from "@/types/wizard";
 
 type Props = {
@@ -17,6 +19,8 @@ export function StepReviewExtraction({
   onVariablesChange,
   onNext,
 }: Props) {
+  const [latestAddedIndex, setLatestAddedIndex] = useState<number | null>(null);
+
   function updateVariable(
     index: number,
     field: keyof ExtractedVariable,
@@ -31,10 +35,12 @@ export function StepReviewExtraction({
   }
 
   function deleteVariable(index: number) {
+    setLatestAddedIndex(null);
     onVariablesChange(variables.filter((_, i) => i !== index));
   }
 
   function addVariable() {
+    setLatestAddedIndex(variables.length);
     onVariablesChange([...variables, { label: "", value: 0, unit: "" }]);
   }
 
@@ -74,7 +80,11 @@ export function StepReviewExtraction({
           </thead>
           <tbody>
             {variables.map((v, i) => (
-              <tr key={i} className="border-t border-zinc-900/8">
+              <tr
+                key={i}
+                data-new={latestAddedIndex === i || undefined}
+                className="extraction-variable-row border-t border-zinc-900/8"
+              >
                 <td className="p-2 pl-4">
                   <input
                     value={v.label}

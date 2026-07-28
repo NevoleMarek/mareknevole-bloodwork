@@ -95,8 +95,8 @@ uses the relevant status color.
 
 ## Controls and interaction
 
-- Buttons respond on pointer-down with a transform-only `scale(0.98)` over
-  `160ms`.
+- Buttons and button-styled anchors respond on pointer-down with a
+  transform-only `scale(0.98)` over `160ms`, then release over `100ms`.
 - Color and border responses use the strong ease-out curve
   `cubic-bezier(0.16, 1, 0.3, 1)`.
 - Card lift is limited to fine-pointer hover and moves no more than `2px`.
@@ -109,16 +109,22 @@ uses the relevant status color.
 
 ## Motion
 
+- Authored motion uses shared `80ms`, `100ms`, `160ms`, and `180ms` duration
+  tokens for feedback, release, controls, and state transitions.
 - Medical charts and trend lines never animate.
 - Sticky navigation keeps stable geometry; no padding, width, margin, or
   layout transitions.
 - The section underline uses a `160ms` transform from `origin-left` with the
   strong ease-out curve.
 - Admin state shells and editing panels enter over `160–180ms` with a
-  four-pixel offset and `0.99` scale. Health import states use an interruptible
-  fixed-height crossfade; copy confirmation labels travel only three pixels.
+  four-pixel offset and `0.99` scale. Health import states enter from
+  `scale(0.97)` with `@starting-style` and retain an interruptible,
+  transition-based exit inside a fixed-height crossfade. Copy confirmation
+  labels travel only three pixels.
 - File drop targets respond to active drags only on fine pointers. Coarse
   pointers and reduced-motion mode use an `80ms` glyph-opacity cue instead.
+- Appended extraction rows enter over `160ms` from a four-pixel offset;
+  reduced motion keeps only the `80ms` opacity cue.
 - Smooth scrolling is disabled in both CSS and JavaScript when
   `prefers-reduced-motion: reduce` is active.
 - Reduced-motion mode keeps short color, opacity, and focus feedback but

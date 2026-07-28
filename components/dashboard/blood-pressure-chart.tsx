@@ -84,6 +84,7 @@ export function BloodPressureChart({
               domain={["dataMin - 5", "dataMax + 5"]}
             />
             <Tooltip
+              isAnimationActive={false}
               cursor={{ stroke: "rgba(20, 119, 95, 0.16)" }}
               contentStyle={{
                 fontFamily:

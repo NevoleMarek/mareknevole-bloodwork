@@ -4,11 +4,11 @@ All plans were audited against commit `7490320`.
 
 | Plan | Title                                | Severity | Status |
 | ---- | ------------------------------------ | -------- | ------ |
-| 001  | Disable chart tooltip motion         | HIGH     | TODO   |
-| 002  | Complete reduced-motion feedback     | MEDIUM   | TODO   |
-| 003  | Unify control motion                 | MEDIUM   | TODO   |
-| 004  | Use starting style for health import | LOW      | TODO   |
-| 005  | Reveal the appended variable         | LOW      | TODO   |
+| 001  | Disable chart tooltip motion         | HIGH     | DONE   |
+| 002  | Complete reduced-motion feedback     | MEDIUM   | DONE   |
+| 003  | Unify control motion                 | MEDIUM   | DONE   |
+| 004  | Use starting style for health import | LOW      | DONE   |
+| 005  | Reveal the appended variable         | LOW      | DONE   |
 
 ## Recommended execution order
 
