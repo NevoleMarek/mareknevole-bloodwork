@@ -65,50 +65,62 @@ function BiomarkerTrend({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-4 px-4 py-2 text-[11px]">
-        <span className="min-w-[100px] text-[10px] font-bold tracking-[1px] uppercase">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 pt-4 pb-2 sm:px-5">
+        <span className="min-w-[100px] text-sm font-semibold tracking-[-0.01em] text-zinc-900">
           {entry.label}
         </span>
-        <span className="text-zinc-500">
+        <span className="data-value text-xs text-zinc-500">
           {min}–{max} {entry.unit}
         </span>
         {latest !== null && (
-          <span>
-            Latest: <strong>{latest}</strong>
+          <span className="data-value rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-900">
+            Latest <strong>{latest}</strong>
           </span>
         )}
         <button
           type="button"
           onClick={onRemove}
-          className="ml-auto px-1.5 text-sm text-zinc-400 hover:text-zinc-900"
+          aria-label={`Remove ${entry.label} trend`}
+          className="ml-auto flex h-10 w-10 items-center justify-center rounded-full text-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
         >
-          ×
+          <span aria-hidden="true">×</span>
         </button>
       </div>
-      <div className="px-4 pb-2">
-        <ResponsiveContainer width="100%" height={80}>
+      <div
+        className="px-2 pb-3 sm:px-4"
+        role="img"
+        aria-label={`${entry.label} history. Latest value ${latest ?? "unavailable"} ${entry.unit}; reference range ${min} to ${max}.`}
+      >
+        <ResponsiveContainer width="100%" height={110}>
           <LineChart data={chartData}>
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 8, fill: "#a1a1aa" }}
+              tick={{ fontSize: 9, fill: "#77827e" }}
               axisLine={false}
               tickLine={false}
+              minTickGap={20}
             />
             <YAxis
               domain={[yMin, yMax]}
-              tick={{ fontSize: 8, fill: "#a1a1aa" }}
+              tick={{ fontSize: 9, fill: "#77827e" }}
               axisLine={false}
               tickLine={false}
-              width={32}
+              width={34}
             />
-            <ReferenceArea y1={min} y2={max} fill="#d4d4d8" fillOpacity={0.2} />
+            <ReferenceArea
+              y1={min}
+              y2={max}
+              fill="#70bd9f"
+              fillOpacity={0.13}
+            />
             <Line
               type="monotone"
               dataKey="value"
-              stroke="#18181b"
-              strokeWidth={1.5}
-              dot={{ r: 2.5, fill: "#18181b" }}
-              activeDot={{ r: 4 }}
+              stroke="#14775f"
+              strokeWidth={2}
+              dot={{ r: 2.5, fill: "#14775f", strokeWidth: 0 }}
+              activeDot={{ r: 4, fill: "#14775f", strokeWidth: 2 }}
+              isAnimationActive={false}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -137,7 +149,7 @@ export function TrendPanel({
   if (selectedKeys.length === 0) return null;
 
   return (
-    <div className="border border-zinc-200 bg-white">
+    <div className="surface overflow-hidden">
       {selectedKeys.map((key, i) => {
         const entry = vocabMap.get(key);
         if (!entry) return null;
@@ -145,7 +157,7 @@ export function TrendPanel({
           <div
             key={key}
             className={
-              i < selectedKeys.length - 1 ? "border-b border-zinc-200" : ""
+              i < selectedKeys.length - 1 ? "border-b border-zinc-900/8" : ""
             }
           >
             <BiomarkerTrend
@@ -156,16 +168,16 @@ export function TrendPanel({
           </div>
         );
       })}
-      <div className="border-t border-zinc-200 px-4 py-3">
+      <div className="border-t border-zinc-900/8 bg-zinc-50/70 px-4 py-4 sm:px-5">
         {selectedKeys.map((key) => {
           const entry = vocabMap.get(key);
           if (!entry || !entry.description) return null;
           return (
-            <div key={key} className="mb-2 last:mb-0">
-              <div className="text-[10px] font-bold tracking-[1px] uppercase">
+            <div key={key} className="mb-3 last:mb-0">
+              <div className="text-xs font-semibold text-zinc-800">
                 {entry.label}
               </div>
-              <div className="text-[11px] leading-relaxed text-zinc-500">
+              <div className="mt-1 text-xs leading-5 text-zinc-600">
                 {entry.description}
               </div>
             </div>

@@ -17,22 +17,26 @@ export function ChangelogList({
 
   return (
     <div>
-      <div className="space-y-1 text-[10px] text-zinc-500">
+      <div className="space-y-1">
         {visible.map((entry, i) => {
           const showDate = i === 0 || visible[i - 1].date !== entry.date;
           return (
             <div
               key={entry.id}
               data-testid="changelog-entry"
-              className="flex gap-3"
+              className="grid grid-cols-[5.5rem_0.75rem_1fr] items-start gap-2 py-1.5 text-sm"
             >
               <span
                 data-testid="changelog-date"
-                className="w-[70px] shrink-0 whitespace-nowrap text-zinc-400"
+                className="data-value pt-px text-xs whitespace-nowrap text-zinc-500"
               >
                 {showDate ? entry.date : ""}
               </span>
-              <span>{entry.description}</span>
+              <span
+                aria-hidden="true"
+                className="mt-[0.42rem] h-1.5 w-1.5 rounded-full bg-emerald-600"
+              />
+              <span className="text-zinc-700">{entry.description}</span>
             </div>
           );
         })}
@@ -41,7 +45,7 @@ export function ChangelogList({
         <button
           type="button"
           onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-          className="mt-3 border border-zinc-200 px-4 py-1.5 text-[10px] text-zinc-500 hover:border-zinc-900 hover:text-zinc-900"
+          className="button-secondary mt-4"
         >
           Load more
         </button>

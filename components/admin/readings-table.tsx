@@ -14,27 +14,41 @@ export function ReadingsTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-[11px]">
+    <div className="admin-table-scroll overflow-x-auto rounded-2xl border border-zinc-900/10 bg-white">
+      <table className="w-full text-sm">
+        <caption className="sr-only">Imported bloodwork readings</caption>
         <thead>
-          <tr className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
-            <td className="pb-2">Date</td>
-            <td className="pb-2">Source</td>
-            <td className="pb-2">Markers</td>
-            <td className="pb-2"></td>
+          <tr className="text-[0.68rem] font-semibold tracking-[0.07em] text-zinc-500 uppercase">
+            <th scope="col" className="px-4 py-3 text-left">
+              Date
+            </th>
+            <th scope="col" className="px-4 py-3 text-left">
+              Source
+            </th>
+            <th scope="col" className="px-4 py-3 text-left">
+              Markers
+            </th>
+            <th scope="col" className="px-4 py-3 text-right">
+              <span className="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody className="text-zinc-900">
           {[...readings].reverse().map((r) => (
-            <tr key={r.date} className="border-t border-zinc-100">
-              <td className="py-1.5">{r.date}</td>
-              <td className="py-1.5 text-zinc-500">{r.source}</td>
-              <td className="py-1.5 text-zinc-500">{r.measurements.length}</td>
-              <td className="py-1.5 text-right">
+            <tr key={r.date} className="border-t border-zinc-900/8">
+              <td className="data-value px-4 py-3 font-medium">{r.date}</td>
+              <td className="max-w-64 truncate px-4 py-3 text-zinc-600">
+                {r.source}
+              </td>
+              <td className="data-value px-4 py-3 text-zinc-600">
+                {r.measurements.length}
+              </td>
+              <td className="px-4 py-2 text-right">
                 <button
                   type="button"
                   onClick={() => onDelete(r.date)}
-                  className="text-zinc-400 hover:text-red-400"
+                  className="min-h-9 rounded-full px-3 text-xs font-semibold text-red-700"
+                  aria-label={`Delete reading from ${r.date}`}
                 >
                   Delete
                 </button>

@@ -33,14 +33,17 @@ export function MetricsSection({
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 min-[370px]:grid-cols-2 md:grid-cols-4 md:gap-4">
         {featured.map((m) => (
-          <div
+          <button
             key={m.vocabularyKey}
             onClick={() => toggle(m.vocabularyKey)}
-            className={`cursor-pointer ${
+            type="button"
+            aria-pressed={selected.includes(m.vocabularyKey)}
+            aria-label={`${m.label}: ${m.value} ${m.unit}. ${selected.includes(m.vocabularyKey) ? "Remove from trends" : "Add to trends"}`}
+            className={`min-w-0 rounded-3xl text-left ${
               selected.includes(m.vocabularyKey)
-                ? "[&>div]:border-zinc-900"
+                ? "[&>div]:border-emerald-600 [&>div]:shadow-[0_0_0_3px_rgba(20,119,95,0.1)]"
                 : ""
             }`}
           >
@@ -52,11 +55,11 @@ export function MetricsSection({
               max={m.max}
               status={m.status}
             />
-          </div>
+          </button>
         ))}
       </div>
 
-      <div className="mt-4">
+      <div className="mt-5">
         <TrendPanel
           selectedKeys={selected}
           readings={readings}
@@ -68,10 +71,15 @@ export function MetricsSection({
       </div>
 
       {nonFeatured.length > 0 && (
-        <div className="mt-4">
-          <h3 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
-            All Biomarkers
-          </h3>
+        <div className="mt-8">
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <h3 className="text-sm font-semibold tracking-[-0.01em] text-zinc-800">
+              All biomarkers
+            </h3>
+            <p className="text-xs text-zinc-500">
+              Select up to {MAX_SELECTED} to compare
+            </p>
+          </div>
           <BiomarkerTable
             metrics={nonFeatured}
             selected={selected}

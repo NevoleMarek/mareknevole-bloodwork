@@ -27,14 +27,23 @@ export default function AdminVocabularyPage() {
     setEntries(await loadEntries());
   }, []);
 
-  if (!entries) return <p className="text-xs text-zinc-400">Loading...</p>;
+  if (!entries)
+    return (
+      <p role="status" className="text-sm text-zinc-500">
+        Loading vocabulary…
+      </p>
+    );
 
   return (
-    <div>
-      <h2 className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
-        Vocabulary
-      </h2>
-      <VocabularyEditor entries={entries} onRefresh={refresh} />
-    </div>
+    <>
+      <div className="admin-page-title">
+        <p className="eyebrow">Data dictionary</p>
+        <h1 className="mt-2">Vocabulary</h1>
+        <p>Manage marker names, units, ranges, and dashboard visibility.</p>
+      </div>
+      <section className="admin-panel">
+        <VocabularyEditor entries={entries} onRefresh={refresh} />
+      </section>
+    </>
   );
 }

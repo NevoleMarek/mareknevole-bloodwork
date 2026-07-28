@@ -2,11 +2,15 @@ import { UploadWizard } from "@/components/admin/upload-wizard";
 
 export default function UploadPage() {
   return (
-    <section>
-      <h2 className="mb-4 text-[9px] tracking-[2px] text-zinc-400 uppercase">
-        Upload Reading
-      </h2>
-      <UploadWizard />
-    </section>
+    <>
+      <div className="admin-page-title">
+        <p className="eyebrow">New lab panel</p>
+        <h1 className="mt-2">Upload reading</h1>
+        <p>Extract, review, and save biomarker data from a PDF report.</p>
+      </div>
+      <section className="admin-panel">
+        <UploadWizard />
+      </section>
+    </>
   );
 }

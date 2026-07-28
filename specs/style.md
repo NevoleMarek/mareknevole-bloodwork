@@ -2,62 +2,149 @@
 
 ## Core concept
 
-Typography-driven design built on Geist Mono. Structure comes from whitespace and type hierarchy — no dot grid, no ASCII box corners, no decorative elements.
+Bloodwork is a calm, health-oriented data product. The interface should feel
+precise without feeling clinical: generous whitespace, clear hierarchy, warm
+neutral surfaces, and a restrained evergreen accent. Data remains the focus.
+Decoration never competes with a measurement.
 
-## Background
+The public dashboard and admin workspace share one visual language. Public
+pages are editorial and spacious; admin pages are denser, but use the same
+type, color, controls, radii, and focus treatment.
 
-- Page background: `bg-stone-50` (`#fafaf9`)
-- Card background: `bg-white`
+## Background and materials
+
+- Page background: pale green-neutral `#f3f7f5`, with static low-contrast
+  radial washes.
+- Primary surface: white `#ffffff`.
+- Muted surface: `#f8faf9`.
+- Floating navigation: translucent warm white with `20px` blur and restrained
+  saturation.
+- Use translucency only for floating navigation or hierarchy. Data cards,
+  charts, tables, and forms remain solid for legibility.
+- `prefers-reduced-transparency` replaces glass with a solid white surface.
+- `prefers-contrast: more` strengthens borders and muted text.
 
 ## Typography
 
-- Font: Geist Mono exclusively — set globally on `body`, never overridden per-element
-- Title: `text-2xl font-semibold tracking-tight`
-- Subtitle: `text-[10px] uppercase tracking-widest`
-- Section labels: `text-[9px] tracking-[2px]`
-- Metric values: `text-3xl font-bold`
-- Units: `text-xs` with muted color
-- Body text: `text-xs` or `text-sm`
+- Primary font: the platform system stack, beginning with `-apple-system` and
+  `BlinkMacSystemFont`.
+- Monospace is reserved for stable identifiers and machine-oriented values,
+  using Geist Mono through `font-mono`.
+- Display title: responsive `2.8rem–5.8rem`, `0.94` line height, `-0.065em`
+  tracking.
+- Page title: responsive `1.75rem–2.5rem`, `1.05` line height, `-0.04em`
+  tracking.
+- Section title: responsive `1.5rem–2rem`, `1.05` line height, `-0.035em`
+  tracking.
+- Body: `0.875rem–1.125rem` with `1.55–1.75` line height.
+- Eyebrow: `0.6875rem`, bold, uppercase, `0.13em` tracking.
+- Small controls never fall below `0.75rem`; primary touch targets remain at
+  least `44px` tall.
+- Use tabular figures for measurements, dates, ranges, and counts.
 
 ## Color palette
 
-- Primary text: `text-zinc-900`
-- Muted text: `text-zinc-500`
-- Subtle text: `text-zinc-400`
-- Borders: `border-zinc-200`
-- Track fill: `bg-zinc-100`
+| Role          | Value                    |
+| ------------- | ------------------------ |
+| Primary text  | `#17231f`                |
+| Muted text    | `#63706b`                |
+| Subtle text   | `#85908c`                |
+| Accent        | `#14775f`                |
+| Accent strong | `#0e604d`                |
+| Accent soft   | `#e3f3ed`                |
+| Hairline      | `rgba(23, 35, 31, 0.10)` |
+| Strong border | `rgba(23, 35, 31, 0.18)` |
+| Destructive   | `#b84a4a`                |
 
 ### Status colors
 
-Desaturated at 30% opacity, used for range bar zones only:
+Status is always communicated with text as well as color.
 
-| Zone       | Color                |
-| ---------- | -------------------- |
-| Normal     | green at 30% opacity |
-| Borderline | amber at 30% opacity |
-| High / Low | red at 30% opacity   |
-| Reference  | blue at 30% opacity  |
+| Status     | Treatment |
+| ---------- | --------- |
+| In range   | Emerald   |
+| Borderline | Amber     |
+| High       | Rose      |
+| Low        | Sky blue  |
 
-## Spacing
+Reference ranges use a low-opacity emerald track. The current-value marker
+uses the relevant status color.
 
-- Base unit: 4px
-- Card padding / gap: 16px
-- Section gap: 32px
-- Page padding: 24px
-- Max width: 960px
+## Spacing and layout
 
-## Borders
+- Base spacing unit: `4px`.
+- Public content width: `1180px`.
+- Admin content width: `1216px`.
+- Mobile outer gutter: `16px` public, `12px` admin.
+- Desktop outer gutter: `24–32px`.
+- Section spacing: `64px` mobile, `80px` desktop.
+- Card gap: `12px` mobile, `16px` desktop.
+- Card padding: `16–20px`; feature and admin panels may use `24px`.
+- Public hero uses a split layout at desktop and stacks naturally on mobile.
 
-- Thin uniform `border-zinc-200`
-- No rounded corners
-- No shadows
+## Shape, borders, and depth
 
-## Responsive
+- Data cards and panels use `24px` radii.
+- Compact glass navigation uses `18–20px` radii.
+- Inputs use `11–13px` radii.
+- Buttons and segmented controls are pill-shaped.
+- Default borders are one-pixel hairlines using the line tokens.
+- Data surfaces use only a one-pixel grounding shadow.
+- Elevated hero and floating navigation may use a broad, low-opacity shadow.
+- Avoid stacked translucent surfaces.
 
-- Breakpoint: `md:` (768px) — below this is mobile, above is desktop
-- Mobile padding: 16px horizontal (`px-4`), 24px vertical (`py-6`)
-- Desktop padding: 24px horizontal (`px-6`), 32px vertical (`py-8`)
-- Intro text: single column on mobile (`columns-1`), two on desktop (`md:columns-2`)
-- Metric cards: 2-column grid on mobile (`grid-cols-2`), 4-column on desktop (`md:grid-cols-4`)
-- Tables: `overflow-x-auto` wrapper for horizontal scroll on mobile
-- Admin forms: `flex-wrap` so fixed-width inputs wrap on narrow screens
+## Controls and interaction
+
+- Buttons respond on pointer-down with a transform-only `scale(0.98)` over
+  `160ms`.
+- Color and border responses use the strong ease-out curve
+  `cubic-bezier(0.16, 1, 0.3, 1)`.
+- Card lift is limited to fine-pointer hover and moves no more than `2px`.
+- Hover-dependent behavior is gated with
+  `(hover: hover) and (pointer: fine)`.
+- Keyboard focus uses a visible three-pixel evergreen ring with offset.
+- Selected controls expose semantic state with `aria-pressed` or
+  `aria-current`, not color alone.
+- Destructive actions remain visible and use explicit labels.
+
+## Motion
+
+- Medical charts and trend lines never animate.
+- Sticky navigation keeps stable geometry; no padding, width, margin, or
+  layout transitions.
+- The section underline uses a `160ms` transform from `origin-left` with the
+  strong ease-out curve.
+- Smooth scrolling is disabled in both CSS and JavaScript when
+  `prefers-reduced-motion: reduce` is active.
+- Reduced-motion mode keeps short color, opacity, and focus feedback but
+  removes transform movement.
+- Avoid looping, decorative, or full-viewport motion.
+
+## Responsive behavior
+
+- Design and test at `320px`, `390px`, and desktop widths.
+- Featured metric cards use one column at the narrowest width, two above
+  `370px`, and four on desktop.
+- Public biomarker and supplement tables become semantic card rows below
+  `640px`; they do not require horizontal page scrolling.
+- Admin data tables retain contained horizontal scrolling because their
+  editing semantics need complete columns. Their scroll regions never expand
+  the document width.
+- Public and admin navigation are compact, horizontally scrollable regions on
+  narrow screens with hidden scrollbars.
+- Admin forms stack into one column on mobile and use two or more columns only
+  when space permits.
+- Charts use at least `170px` plot height and allow Recharts to reduce tick
+  density with `minTickGap`.
+
+## Accessibility
+
+- Every route includes a skip link to the main content.
+- Clickable metric cards and biomarker rows are keyboard operable and expose
+  selection state.
+- Tables use captions and semantic column headers.
+- Inputs, checkboxes, icon buttons, and file controls have programmatic labels.
+- File drop zones retain a focusable native file input.
+- Loading, success, and error states use status or alert semantics.
+- Charts provide concise accessible summaries in addition to visual tooltips.
+- Status never relies on a colored dot alone.

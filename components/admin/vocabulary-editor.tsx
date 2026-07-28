@@ -94,54 +94,74 @@ export function VocabularyEditor({
 
   return (
     <div>
-      <div className="overflow-x-auto">
-        <table className="mb-4 w-full text-[11px]">
+      <div className="admin-table-scroll mb-5 overflow-x-auto rounded-2xl border border-zinc-900/10 bg-white">
+        <table className="w-full text-sm">
+          <caption className="sr-only">Biomarker vocabulary</caption>
           <thead>
-            <tr className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
-              <td className="pb-2">Key</td>
-              <td className="pb-2">Label</td>
-              <td className="pb-2">Unit</td>
-              <td className="pb-2">Range</td>
-              <td className="pb-2">Visible</td>
-              <td className="pb-2">Featured</td>
-              <td className="pb-2"></td>
+            <tr className="text-[0.68rem] font-semibold tracking-[0.07em] text-zinc-500 uppercase">
+              <th scope="col" className="px-4 py-3 text-left">
+                Key
+              </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Label
+              </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Unit
+              </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Range
+              </th>
+              <th scope="col" className="px-4 py-3 text-center">
+                Visible
+              </th>
+              <th scope="col" className="px-4 py-3 text-center">
+                Featured
+              </th>
+              <th scope="col" className="px-4 py-3 text-right">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody className="text-zinc-900">
             {entries.map((e) => (
-              <tr key={e.key} className="border-t border-zinc-100">
-                <td className="py-1.5 text-zinc-500">{e.key}</td>
-                <td className="py-1.5">{e.label}</td>
-                <td className="py-1.5 text-zinc-500">{e.unit}</td>
-                <td className="py-1.5 text-zinc-500">
+              <tr key={e.key} className="border-t border-zinc-900/8">
+                <td className="px-4 py-3 font-mono text-xs text-zinc-500">
+                  {e.key}
+                </td>
+                <td className="px-4 py-3 font-medium">{e.label}</td>
+                <td className="px-4 py-3 text-zinc-600">{e.unit}</td>
+                <td className="data-value px-4 py-3 text-zinc-600">
                   {e.referenceRange.min}–{e.referenceRange.max}
                 </td>
-                <td className="py-1.5">
+                <td className="px-4 py-3 text-center">
                   <input
                     type="checkbox"
                     checked={e.visible}
                     onChange={() => toggleVisible(e)}
+                    aria-label={`Show ${e.label} on dashboard`}
                   />
                 </td>
-                <td className="py-1.5">
+                <td className="px-4 py-3 text-center">
                   <input
                     type="checkbox"
                     checked={e.featured}
                     onChange={() => toggleFeatured(e)}
+                    aria-label={`Feature ${e.label}`}
                   />
                 </td>
-                <td className="space-x-2 py-1.5 text-right">
+                <td className="space-x-1 px-4 py-2 text-right whitespace-nowrap">
                   <button
                     type="button"
                     onClick={() => startEdit(e)}
-                    className="text-zinc-400 hover:text-zinc-600"
+                    className="button-quiet min-h-9 px-2 text-xs"
                   >
                     Edit
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(e.key)}
-                    className="text-zinc-400 hover:text-red-400"
+                    className="min-h-9 rounded-full px-2 text-xs font-semibold text-red-700"
+                    aria-label={`Delete ${e.label}`}
                   >
                     Delete
                   </button>
@@ -153,62 +173,65 @@ export function VocabularyEditor({
       </div>
 
       {editing.kind !== "none" && (
-        <div className="mb-4 flex flex-wrap gap-2 border border-zinc-200 p-3 text-[11px]">
+        <div className="mb-5 grid gap-3 rounded-2xl border border-zinc-900/10 bg-zinc-50/70 p-4 text-sm sm:grid-cols-2 lg:grid-cols-5">
           <input
             placeholder="key"
+            aria-label="Vocabulary key"
             value={form.key}
             onChange={(e) => setForm({ ...form, key: e.target.value })}
             disabled={editing.kind === "editing"}
-            className="w-24 border border-zinc-200 px-2 py-1 outline-none"
+            className="field w-full font-mono text-xs"
           />
           <input
             placeholder="label"
+            aria-label="Biomarker label"
             value={form.label}
             onChange={(e) => setForm({ ...form, label: e.target.value })}
-            className="flex-1 border border-zinc-200 px-2 py-1 outline-none"
+            className="field w-full"
           />
           <input
             placeholder="unit"
+            aria-label="Unit"
             value={form.unit}
             onChange={(e) => setForm({ ...form, unit: e.target.value })}
-            className="w-20 border border-zinc-200 px-2 py-1 outline-none"
+            className="field w-full"
           />
           <input
             placeholder="min"
+            aria-label="Reference minimum"
             value={form.min}
             onChange={(e) => setForm({ ...form, min: e.target.value })}
-            className="w-16 border border-zinc-200 px-2 py-1 outline-none"
+            className="field w-full"
           />
           <input
             placeholder="max"
+            aria-label="Reference maximum"
             value={form.max}
             onChange={(e) => setForm({ ...form, max: e.target.value })}
-            className="w-16 border border-zinc-200 px-2 py-1 outline-none"
+            className="field w-full"
           />
-          <button
-            type="button"
-            onClick={handleSave}
-            className="border border-zinc-900 px-3 py-1 hover:bg-zinc-900 hover:text-white"
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditing({ kind: "none" })}
-            className="px-3 py-1 text-zinc-400"
-          >
-            Cancel
-          </button>
+          <div className="flex gap-2 sm:col-span-2 lg:col-span-5">
+            <button
+              type="button"
+              onClick={handleSave}
+              className="button-primary"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing({ kind: "none" })}
+              className="button-secondary"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
       {editing.kind === "none" && (
-        <button
-          type="button"
-          onClick={startAdd}
-          className="border border-zinc-200 px-4 py-1.5 text-[10px] text-zinc-500 hover:border-zinc-900 hover:text-zinc-900"
-        >
-          + Add Entry
+        <button type="button" onClick={startAdd} className="button-primary">
+          + Add entry
         </button>
       )}
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 const SECTIONS = [
   { id: "metrics", label: "Metrics" },
@@ -12,32 +12,11 @@ const SECTIONS = [
 type SectionId = (typeof SECTIONS)[number]["id"];
 
 export function SectionNav() {
-  const [stuck, setStuck] = useState(false);
   const [active, setActive] = useState<SectionId>("metrics");
-  const [navHeight, setNavHeight] = useState(0);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const navRef = useRef<HTMLElement>(null);
-
-  const measureNav = useCallback(() => {
-    if (navRef.current) setNavHeight(navRef.current.offsetHeight);
-  }, []);
-
-  useEffect(() => {
-    measureNav();
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => setStuck(!entry.isIntersecting),
-      { threshold: 0 },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [measureNav]);
 
   useEffect(() => {
     function onScroll() {
-      const offset = 80;
+      const offset = 140;
       let current: SectionId = SECTIONS[0].id;
       for (const { id } of SECTIONS) {
         const el = document.getElementById(id);
@@ -49,59 +28,56 @@ export function SectionNav() {
     }
 
     window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  function handleClick(id: string) {
+  function handleClick(id: SectionId) {
     const el = document.getElementById(id);
     if (!el) return;
-    const top = el.getBoundingClientRect().top + window.scrollY - 60;
-    window.scrollTo({ top, behavior: "smooth" });
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const top = el.getBoundingClientRect().top + window.scrollY - 112;
+    window.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
   }
 
   return (
-    <div className="mt-6" style={{ minHeight: stuck ? navHeight : undefined }}>
-      <div ref={sentinelRef} className="h-0" />
+    <div className="sticky top-3 z-50 mt-4">
       <nav
-        ref={navRef}
-        className={`flex items-center py-3 transition-[padding] duration-500 ${
-          stuck
-            ? "fixed top-0 right-0 left-0 z-50 border-b border-zinc-200 bg-stone-50 px-4 md:px-6"
-            : ""
-        }`}
+        aria-label="Dashboard sections"
+        className="flex min-h-14 items-center gap-4 rounded-[1.15rem] border border-white/75 bg-white/78 px-1 shadow-[0_10px_30px_rgba(23,35,31,0.08)] backdrop-blur-xl sm:px-3"
       >
-        <div className={`mx-auto flex w-full max-w-[960px] items-center`}>
-          <div
-            className="hidden overflow-hidden transition-all duration-500 md:block"
-            style={{
-              width: stuck ? 120 : 0,
-              opacity: stuck ? 1 : 0,
-              marginRight: stuck ? 24 : 0,
-              transitionTimingFunction: "cubic-bezier(0.25, 0.1, 0.25, 1)",
-            }}
-          >
-            <div className="text-sm font-bold tracking-tight whitespace-nowrap">
-              BLOODWORK
-            </div>
-            <div className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
-              Marek Nevole
-            </div>
-          </div>
-          <div className="flex gap-3 md:gap-4">
+        <a
+          href="#"
+          className="hidden shrink-0 rounded-xl px-2 py-1.5 md:block"
+          aria-label="Back to the top"
+        >
+          <span className="block text-xs font-semibold tracking-[-0.01em] text-zinc-900">
+            Bloodwork
+          </span>
+          <span className="block text-[0.62rem] font-medium tracking-[0.08em] text-zinc-500 uppercase">
+            Health record
+          </span>
+        </a>
+        <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-max items-center">
             {SECTIONS.map(({ id, label }) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => handleClick(id)}
-                className={`relative text-[10px] tracking-[2px] uppercase transition-colors duration-300 ${
+                aria-current={active === id ? "location" : undefined}
+                className={`relative min-h-11 rounded-xl px-2 text-[0.68rem] font-semibold whitespace-nowrap transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)] sm:px-3 sm:text-[0.72rem] ${
                   active === id
-                    ? "text-zinc-900"
-                    : "text-zinc-400 hover:text-zinc-600"
+                    ? "text-emerald-800"
+                    : "text-zinc-500 hover:text-zinc-900"
                 }`}
               >
                 {label}
                 <span
-                  className={`absolute right-0 -bottom-0.5 left-0 h-px bg-zinc-900 transition-transform duration-300 ${
+                  aria-hidden="true"
+                  className={`absolute right-2 bottom-1.5 left-2 h-0.5 origin-left rounded-full bg-emerald-700 transition-transform duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)] sm:right-3 sm:left-3 ${
                     active === id ? "scale-x-100" : "scale-x-0"
                   }`}
                 />

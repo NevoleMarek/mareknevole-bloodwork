@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafaf9;
-  --foreground: #18181b;
+  color-scheme: light;
+  --background: #f3f7f5;
+  --foreground: #17231f;
+  --muted: #63706b;
+  --subtle: #85908c;
+  --line: rgba(23, 35, 31, 0.1);
+  --line-strong: rgba(23, 35, 31, 0.18);
+  --surface: #ffffff;
+  --surface-muted: #f8faf9;
+  --glass: rgba(250, 252, 251, 0.78);
+  --accent: #14775f;
+  --accent-strong: #0e604d;
+  --accent-soft: #e3f3ed;
+  --danger: #b84a4a;
+  --shadow-sm: 0 1px 2px rgba(23, 35, 31, 0.04);
+  --shadow-md:
+    0 18px 50px rgba(23, 35, 31, 0.07), 0 2px 10px rgba(23, 35, 31, 0.04);
+  --ease-out-strong: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @theme inline {
@@ -17,14 +33,36 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 7rem;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 body {
   min-height: 100vh;
-  background-color: var(--background);
+  background:
+    radial-gradient(
+      circle at 10% -10%,
+      rgba(122, 190, 166, 0.18),
+      transparent 27rem
+    ),
+    radial-gradient(
+      circle at 100% 22rem,
+      rgba(191, 221, 210, 0.14),
+      transparent 30rem
+    ),
+    var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-mono), monospace;
-  line-height: 1.5;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Segoe UI", sans-serif;
+  font-optical-sizing: auto;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -33,17 +71,447 @@ a {
 }
 
 button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
 nav a,
 label[class*="cursor-pointer"] {
   cursor: pointer;
-  transition:
-    transform 75ms ease-out,
-    opacity 75ms ease-out;
+  transform: translateZ(0);
+  transition: transform 160ms var(--ease-out-strong);
 }
 
 button:active:not(:disabled),
 nav a:active,
 label[class*="cursor-pointer"]:active {
-  transform: scale(0.97);
-  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+:where(a, button, input, select, textarea, [role="button"]):focus-visible {
+  outline: 3px solid rgba(20, 119, 95, 0.28);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: rgba(20, 119, 95, 0.18);
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 0.75rem;
+  left: -100vw;
+  border-radius: 999px;
+  background: var(--foreground);
+  padding: 0.7rem 1rem;
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.skip-link:focus {
+  left: 0.75rem;
+}
+
+.data-value,
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.125rem;
+}
+
+.section-heading h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.section-heading p {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.surface {
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.surface-elevated {
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 1.75rem;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow-md);
+}
+
+.button-primary,
+.button-secondary,
+.button-quiet {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.625rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.button-primary {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.button-secondary {
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--foreground);
+}
+
+.button-quiet {
+  color: var(--muted);
+}
+
+.field {
+  min-height: 2.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.8rem;
+  background: var(--surface);
+  padding: 0.625rem 0.75rem;
+  color: var(--foreground);
+  outline: none;
+}
+
+.field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(20, 119, 95, 0.12);
+}
+
+.mobile-data-table {
+  width: 100%;
+}
+
+.admin-shell {
+  width: min(100%, 76rem);
+  margin-inline: auto;
+  padding: 1rem 1rem 4rem;
+  contain: inline-size;
+}
+
+.admin-chrome {
+  position: sticky;
+  z-index: 40;
+  top: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 1.25rem;
+  background: var(--glass);
+  padding: 0.55rem 0.65rem 0.55rem 1rem;
+  box-shadow: 0 10px 30px rgba(23, 35, 31, 0.08);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+}
+
+.admin-shell :where(input:not([type="checkbox"]), select, textarea) {
+  border-color: var(--line-strong);
+  border-radius: 0.7rem;
+  background: var(--surface);
+  outline: none;
+}
+
+.admin-shell :where(input:not([type="checkbox"]), select, textarea):focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(20, 119, 95, 0.1);
+}
+
+.admin-shell :where(input[type="checkbox"]) {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--accent);
+}
+
+.admin-shell :where(table) {
+  min-width: 42rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-table-scroll {
+  max-width: 100%;
+  contain: paint;
+}
+
+.admin-shell :where(tbody tr) {
+  border-color: var(--line);
+}
+
+.admin-panel {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.88);
+  padding: clamp(1rem, 3vw, 1.5rem);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-page-title {
+  margin-bottom: 1.5rem;
+}
+
+.admin-page-title h1 {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.admin-page-title p {
+  margin-top: 0.45rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.biomarker-table tbody tr {
+  transition:
+    background-color 160ms var(--ease-out-strong),
+    box-shadow 160ms var(--ease-out-strong);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .interactive-card {
+    transition:
+      transform 180ms var(--ease-out-strong),
+      border-color 180ms var(--ease-out-strong),
+      box-shadow 180ms var(--ease-out-strong);
+  }
+
+  .interactive-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(20, 119, 95, 0.2);
+    box-shadow: 0 14px 32px rgba(23, 35, 31, 0.09);
+  }
+
+  .button-primary:hover {
+    background: var(--accent-strong);
+  }
+
+  .button-secondary:hover {
+    border-color: rgba(20, 119, 95, 0.34);
+    background: white;
+  }
+}
+
+@media (max-width: 639px) {
+  .section-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .biomarker-table,
+  .biomarker-table tbody {
+    display: block;
+  }
+
+  .biomarker-table thead {
+    display: none;
+  }
+
+  .biomarker-table tbody {
+    display: grid;
+    gap: 0.625rem;
+  }
+
+  .biomarker-table tbody tr {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+    gap: 0.3rem 0.65rem;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: var(--surface);
+    padding: 0.85rem 0.95rem;
+  }
+
+  .biomarker-table tbody td {
+    padding: 0;
+  }
+
+  .biomarker-table tbody td:nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+    margin-left: -0.5rem;
+  }
+
+  .biomarker-table tbody td:nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+    overflow: hidden;
+    font-weight: 650;
+    text-overflow: ellipsis;
+  }
+
+  .biomarker-table tbody td:nth-child(3) {
+    grid-column: 3;
+    grid-row: 1;
+    font-size: 1rem;
+    font-weight: 650;
+  }
+
+  .biomarker-table tbody td:nth-child(4) {
+    grid-column: 3;
+    grid-row: 2;
+    text-align: right;
+  }
+
+  .biomarker-table tbody td:nth-child(4)::before {
+    content: "Range ";
+    color: var(--subtle);
+  }
+
+  .biomarker-table tbody td:nth-child(5) {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .supplement-table,
+  .supplement-table tbody {
+    display: block;
+  }
+
+  .supplement-table thead {
+    display: none;
+  }
+
+  .supplement-table tbody {
+    display: grid;
+    gap: 0.625rem;
+  }
+
+  .supplement-table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.3rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .supplement-table tbody td {
+    padding: 0;
+  }
+
+  .supplement-table tbody td:nth-child(1) {
+    font-weight: 650;
+  }
+
+  .supplement-table tbody td:nth-child(2) {
+    font-weight: 650;
+    text-align: right;
+  }
+
+  .supplement-table tbody td:nth-child(3)::before {
+    content: "Frequency · ";
+    color: var(--subtle);
+  }
+
+  .supplement-table tbody td:nth-child(4) {
+    text-align: right;
+  }
+
+  .admin-shell {
+    padding-inline: 0.75rem;
+  }
+
+  .admin-chrome {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 359px) {
+  .hero-owner-link {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  button,
+  nav a,
+  label[class*="cursor-pointer"],
+  .interactive-card,
+  .biomarker-table tbody tr {
+    transition-property:
+      color, background-color, border-color, box-shadow, opacity !important;
+    transition-duration: 80ms !important;
+  }
+
+  button:active:not(:disabled),
+  nav a:active,
+  label[class*="cursor-pointer"]:active,
+  .interactive-card:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .surface-elevated,
+  .admin-chrome {
+    border-color: var(--line-strong);
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --muted: #3f4945;
+    --subtle: #515b57;
+    --line: rgba(23, 35, 31, 0.3);
+    --line-strong: rgba(23, 35, 31, 0.55);
+  }
+
+  .surface-elevated,
+  .admin-chrome {
+    border-color: var(--line-strong);
+    background: var(--surface);
+  }
 }

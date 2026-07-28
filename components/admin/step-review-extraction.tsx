@@ -41,79 +41,86 @@ export function StepReviewExtraction({
   return (
     <div>
       <div className="mb-6">
-        <div className="mb-2 text-[9px] tracking-[2px] text-zinc-500 uppercase">
+        <label
+          htmlFor="test-date"
+          className="mb-2 block text-xs font-semibold text-zinc-700"
+        >
           Test Date
-        </div>
+        </label>
         <input
+          id="test-date"
           type="date"
           value={date}
           onChange={(e) => onDateChange(e.target.value)}
-          className="border border-zinc-200 px-2.5 py-1.5 text-xs"
+          className="field text-sm"
         />
       </div>
 
-      <div className="mb-2 text-[9px] tracking-[2px] text-zinc-500 uppercase">
+      <h2 className="mb-3 text-sm font-semibold text-zinc-800">
         Extracted Variables
-      </div>
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="border-b border-zinc-200 text-left">
-            <th className="pr-2 pb-2 text-[9px] font-semibold tracking-[1px] text-zinc-500 uppercase">
-              Label
-            </th>
-            <th className="px-2 pb-2 text-[9px] font-semibold tracking-[1px] text-zinc-500 uppercase">
-              Value
-            </th>
-            <th className="px-2 pb-2 text-[9px] font-semibold tracking-[1px] text-zinc-500 uppercase">
-              Unit
-            </th>
-            <th className="w-8 pb-2 pl-2" />
-          </tr>
-        </thead>
-        <tbody>
-          {variables.map((v, i) => (
-            <tr key={i} className="border-b border-zinc-100">
-              <td className="py-2 pr-2">
-                <input
-                  value={v.label}
-                  onChange={(e) => updateVariable(i, "label", e.target.value)}
-                  className="w-full border border-zinc-200 px-1.5 py-1 text-xs"
-                />
-              </td>
-              <td className="px-2 py-2">
-                <input
-                  type="number"
-                  step="any"
-                  value={v.value}
-                  onChange={(e) => updateVariable(i, "value", e.target.value)}
-                  className="w-20 border border-zinc-200 px-1.5 py-1 text-xs"
-                />
-              </td>
-              <td className="px-2 py-2">
-                <input
-                  value={v.unit}
-                  onChange={(e) => updateVariable(i, "unit", e.target.value)}
-                  className="w-20 border border-zinc-200 px-1.5 py-1 text-xs"
-                />
-              </td>
-              <td className="py-2 pl-2 text-center">
-                <button
-                  type="button"
-                  onClick={() => deleteVariable(i)}
-                  className="text-zinc-400 hover:text-zinc-600"
-                >
-                  &times;
-                </button>
-              </td>
+      </h2>
+      <div className="admin-table-scroll overflow-x-auto rounded-2xl border border-zinc-900/10 bg-white">
+        <table className="w-full text-sm">
+          <caption className="sr-only">Extracted biomarker variables</caption>
+          <thead>
+            <tr className="text-left text-[0.68rem] font-semibold tracking-[0.07em] text-zinc-500 uppercase">
+              <th className="px-4 py-3">Label</th>
+              <th className="px-4 py-3">Value</th>
+              <th className="px-4 py-3">Unit</th>
+              <th className="w-12 px-4 py-3">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {variables.map((v, i) => (
+              <tr key={i} className="border-t border-zinc-900/8">
+                <td className="p-2 pl-4">
+                  <input
+                    value={v.label}
+                    onChange={(e) => updateVariable(i, "label", e.target.value)}
+                    aria-label={`Variable ${i + 1} label`}
+                    className="field w-full text-sm"
+                  />
+                </td>
+                <td className="p-2">
+                  <input
+                    type="number"
+                    step="any"
+                    value={v.value}
+                    onChange={(e) => updateVariable(i, "value", e.target.value)}
+                    aria-label={`${v.label || `Variable ${i + 1}`} value`}
+                    className="field w-24 text-sm"
+                  />
+                </td>
+                <td className="p-2">
+                  <input
+                    value={v.unit}
+                    onChange={(e) => updateVariable(i, "unit", e.target.value)}
+                    aria-label={`${v.label || `Variable ${i + 1}`} unit`}
+                    className="field w-24 text-sm"
+                  />
+                </td>
+                <td className="p-2 pr-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => deleteVariable(i)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-lg text-red-700"
+                    aria-label={`Remove ${v.label || `variable ${i + 1}`}`}
+                  >
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <button
         type="button"
         onClick={addVariable}
-        className="mt-3 border border-zinc-200 px-3 py-1 text-xs text-zinc-500 hover:text-zinc-700"
+        className="button-secondary mt-4"
       >
         + Add variable
       </button>
@@ -123,7 +130,7 @@ export function StepReviewExtraction({
           type="button"
           onClick={onNext}
           disabled={variables.length === 0}
-          className="bg-zinc-900 px-5 py-2 text-xs text-white hover:bg-zinc-800 disabled:opacity-40"
+          className="button-primary disabled:opacity-40"
         >
           Next: Map Variables &rarr;
         </button>

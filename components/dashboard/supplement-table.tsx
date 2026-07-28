@@ -13,23 +13,32 @@ export function SupplementTable({
 }) {
   return (
     <div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+      <div>
+        <table className="supplement-table w-full text-sm">
+          <caption className="sr-only">Current active supplements</caption>
           <thead>
-            <tr className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
-              <td className="pb-2">Supplement</td>
-              <td className="pb-2">Dose</td>
-              <td className="pb-2">Frequency</td>
-              <td className="pb-2">Since</td>
+            <tr className="text-[0.68rem] font-semibold tracking-[0.07em] text-zinc-500 uppercase">
+              <th scope="col" className="pb-3 text-left">
+                Supplement
+              </th>
+              <th scope="col" className="pb-3 text-left">
+                Dose
+              </th>
+              <th scope="col" className="pb-3 text-left">
+                Frequency
+              </th>
+              <th scope="col" className="pb-3 text-left">
+                Since
+              </th>
             </tr>
           </thead>
           <tbody className="text-zinc-900">
             {supplements.map((s) => (
-              <tr key={s.id} className="border-t border-zinc-100">
-                <td className="py-2">{s.name}</td>
-                <td className="py-2 text-zinc-600">{s.dose}</td>
-                <td className="py-2 text-zinc-600">{s.frequency}</td>
-                <td className="py-2 text-zinc-500">
+              <tr key={s.id} className="border-t border-zinc-900/8">
+                <td className="py-3 font-medium">{s.name}</td>
+                <td className="data-value py-3 text-zinc-700">{s.dose}</td>
+                <td className="py-3 text-zinc-600">{s.frequency}</td>
+                <td className="data-value py-3 text-zinc-500">
                   {formatMonth(s.startedAt)}
                 </td>
               </tr>

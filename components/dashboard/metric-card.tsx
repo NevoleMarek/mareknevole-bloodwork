@@ -2,6 +2,20 @@ import type { Status } from "@/types/bloodwork";
 
 import { RangeBar } from "@/components/dashboard/range-bar";
 
+const statusLabel: Record<Status, string> = {
+  normal: "In range",
+  borderline: "Borderline",
+  high: "High",
+  low: "Low",
+};
+
+const statusStyle: Record<Status, string> = {
+  normal: "bg-emerald-50 text-emerald-800",
+  borderline: "bg-amber-50 text-amber-800",
+  high: "bg-rose-50 text-rose-800",
+  low: "bg-sky-50 text-sky-800",
+};
+
 export function MetricCard({
   label,
   value,
@@ -18,13 +32,26 @@ export function MetricCard({
   status: Status;
 }) {
   return (
-    <div className="border border-zinc-200 bg-white p-4">
-      <div className="mb-2 text-[9px] tracking-[2px] text-zinc-500 uppercase">
-        {label}
+    <div className="surface interactive-card flex h-full min-h-[10.5rem] flex-col p-4 text-left sm:p-5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-[0.72rem] leading-4 font-semibold tracking-[0.04em] text-zinc-600 uppercase">
+          {label}
+        </div>
+        <span
+          className={`rounded-full px-2 py-1 text-[0.62rem] leading-none font-semibold whitespace-nowrap ${statusStyle[status]}`}
+        >
+          {statusLabel[status]}
+        </span>
       </div>
-      <div className="mb-1 text-3xl font-bold text-zinc-900">{value}</div>
-      <div className="mb-2.5 text-xs text-zinc-500">{unit}</div>
-      <RangeBar value={value} min={min} max={max} status={status} />
+      <div className="mt-4 flex items-baseline gap-1.5">
+        <span className="data-value text-[2rem] leading-none font-semibold tracking-[-0.045em] text-zinc-950">
+          {value}
+        </span>
+        <span className="text-xs text-zinc-500">{unit}</span>
+      </div>
+      <div className="mt-auto pt-5">
+        <RangeBar value={value} min={min} max={max} status={status} />
+      </div>
     </div>
   );
 }

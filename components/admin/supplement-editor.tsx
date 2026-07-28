@@ -100,15 +100,26 @@ export function SupplementEditor({
   return (
     <div className="space-y-6">
       {/* Active supplements table */}
-      <div className="overflow-x-auto">
-        <table className="mb-2 w-full text-[11px]">
+      <div className="admin-table-scroll overflow-x-auto rounded-2xl border border-zinc-900/10 bg-white">
+        <table className="w-full text-sm">
+          <caption className="sr-only">Active supplements</caption>
           <thead>
-            <tr className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
-              <td className="pb-2">Supplement</td>
-              <td className="pb-2">Dose</td>
-              <td className="pb-2">Frequency</td>
-              <td className="pb-2">Since</td>
-              <td className="pb-2"></td>
+            <tr className="text-[0.68rem] font-semibold tracking-[0.07em] text-zinc-500 uppercase">
+              <th scope="col" className="px-4 py-3 text-left">
+                Supplement
+              </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Dose
+              </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Frequency
+              </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Since
+              </th>
+              <th scope="col" className="px-4 py-3 text-right">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody className="text-zinc-900">
@@ -119,10 +130,10 @@ export function SupplementEditor({
                 return (
                   <tr
                     key={s.id}
-                    className="border-t border-zinc-100 bg-stone-50"
+                    className="border-t border-zinc-900/8 bg-emerald-50/45"
                   >
-                    <td colSpan={5} className="py-2">
-                      <div className="flex flex-wrap gap-2">
+                    <td colSpan={5} className="p-4">
+                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                         <input
                           value={state.name}
                           onChange={(e) =>
@@ -131,7 +142,8 @@ export function SupplementEditor({
                               name: e.target.value,
                             })
                           }
-                          className="flex-1 border border-zinc-200 bg-white px-2 py-1 outline-none"
+                          aria-label="Supplement name"
+                          className="field w-full"
                         />
                         <input
                           value={state.dose}
@@ -141,7 +153,8 @@ export function SupplementEditor({
                               dose: e.target.value,
                             })
                           }
-                          className="w-24 border border-zinc-200 bg-white px-2 py-1 outline-none"
+                          aria-label="Supplement dose"
+                          className="field w-full"
                         />
                         <input
                           value={state.frequency}
@@ -151,7 +164,8 @@ export function SupplementEditor({
                               frequency: e.target.value,
                             })
                           }
-                          className="w-24 border border-zinc-200 bg-white px-2 py-1 outline-none"
+                          aria-label="Supplement frequency"
+                          className="field w-full"
                         />
                         <input
                           type="month"
@@ -162,26 +176,30 @@ export function SupplementEditor({
                               startedAt: e.target.value,
                             })
                           }
-                          className="border border-zinc-200 bg-white px-2 py-1 outline-none"
+                          aria-label="Supplement start month"
+                          className="field w-full"
                         />
                         <button
                           type="button"
                           onClick={() => handleSave(s.id)}
-                          className="border border-zinc-900 px-3 py-1 hover:bg-zinc-900 hover:text-white"
+                          className="button-primary"
                         >
                           Save
                         </button>
                         <button
                           type="button"
                           onClick={() => setRowState(s.id, { kind: "display" })}
-                          className="px-3 py-1 text-zinc-400"
+                          className="button-secondary"
                         >
                           Cancel
                         </button>
                       </div>
-                      <div className="mt-1.5 flex items-center gap-2 text-[10px] text-zinc-500">
-                        <span>Changelog date:</span>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-600">
+                        <label htmlFor={`edit-changelog-${s.id}`}>
+                          Changelog date
+                        </label>
                         <input
+                          id={`edit-changelog-${s.id}`}
                           type="date"
                           value={state.changelogDate}
                           onChange={(e) =>
@@ -190,7 +208,7 @@ export function SupplementEditor({
                               changelogDate: e.target.value,
                             })
                           }
-                          className="border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] outline-none"
+                          className="field text-xs"
                         />
                       </div>
                     </td>
@@ -200,15 +218,19 @@ export function SupplementEditor({
 
               if (state.kind === "removing") {
                 return (
-                  <tr key={s.id} className="border-t border-zinc-100 bg-red-50">
-                    <td colSpan={5} className="py-2">
-                      <div className="flex items-center gap-3">
+                  <tr
+                    key={s.id}
+                    className="border-t border-zinc-900/8 bg-red-50"
+                  >
+                    <td colSpan={5} className="p-4">
+                      <div className="flex flex-wrap items-center gap-3">
                         <span>
                           Remove <strong>{s.name}</strong>?
                         </span>
-                        <span className="flex items-center gap-1.5 text-[10px] text-zinc-500">
-                          <span>Date:</span>
+                        <span className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-600">
+                          <label htmlFor={`remove-date-${s.id}`}>Date</label>
                           <input
+                            id={`remove-date-${s.id}`}
                             type="date"
                             value={state.changelogDate}
                             onChange={(e) =>
@@ -217,14 +239,14 @@ export function SupplementEditor({
                                 changelogDate: e.target.value,
                               })
                             }
-                            className="border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] outline-none"
+                            className="field text-xs"
                           />
                         </span>
-                        <span className="ml-auto flex gap-2 text-[10px]">
+                        <span className="ml-auto flex gap-2 text-xs">
                           <button
                             type="button"
                             onClick={() => handleRemove(s.id)}
-                            className="border border-red-400 px-3 py-0.5 text-red-500 hover:bg-red-500 hover:text-white"
+                            className="min-h-10 rounded-full bg-red-700 px-4 font-semibold text-white"
                           >
                             Confirm
                           </button>
@@ -233,7 +255,7 @@ export function SupplementEditor({
                             onClick={() =>
                               setRowState(s.id, { kind: "display" })
                             }
-                            className="text-zinc-400"
+                            className="button-secondary min-h-10"
                           >
                             Cancel
                           </button>
@@ -245,15 +267,17 @@ export function SupplementEditor({
               }
 
               return (
-                <tr key={s.id} className="border-t border-zinc-100">
-                  <td className="py-1.5">{s.name}</td>
-                  <td className="py-1.5 text-zinc-500">{s.dose}</td>
-                  <td className="py-1.5 text-zinc-500">{s.frequency}</td>
-                  <td className="py-1.5 text-zinc-400">
+                <tr key={s.id} className="border-t border-zinc-900/8">
+                  <td className="px-4 py-3 font-medium">{s.name}</td>
+                  <td className="data-value px-4 py-3 text-zinc-600">
+                    {s.dose}
+                  </td>
+                  <td className="px-4 py-3 text-zinc-600">{s.frequency}</td>
+                  <td className="data-value px-4 py-3 text-zinc-500">
                     {formatMonth(s.startedAt)}
                   </td>
-                  <td className="py-1.5 text-right">
-                    <span className="flex justify-end gap-3">
+                  <td className="px-4 py-2 text-right">
+                    <span className="flex justify-end gap-1">
                       <button
                         type="button"
                         onClick={() =>
@@ -266,7 +290,7 @@ export function SupplementEditor({
                             changelogDate: today(),
                           })
                         }
-                        className="text-zinc-400 hover:text-zinc-900"
+                        className="button-quiet min-h-9 px-2 text-xs"
                       >
                         Edit
                       </button>
@@ -278,7 +302,7 @@ export function SupplementEditor({
                             changelogDate: today(),
                           })
                         }
-                        className="text-zinc-400 hover:text-red-400"
+                        className="min-h-9 rounded-full px-2 text-xs font-semibold text-red-700"
                       >
                         Remove
                       </button>
@@ -292,50 +316,56 @@ export function SupplementEditor({
       </div>
 
       {/* Add supplement form */}
-      <div className="border border-zinc-200 p-4">
-        <div className="mb-3 text-[9px] tracking-[2px] text-zinc-400 uppercase">
-          Add Supplement
-        </div>
-        <div className="flex flex-col gap-2 text-[11px]">
-          <div className="flex items-center gap-2">
-            <span className="w-[90px] text-[10px] text-zinc-500">Name</span>
+      <div className="rounded-2xl border border-zinc-900/10 bg-zinc-50/70 p-4 sm:p-5">
+        <h3 className="mb-4 text-sm font-semibold text-zinc-800">
+          Add supplement
+        </h3>
+        <div className="grid gap-3 text-sm sm:grid-cols-2">
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-600">
+              Name
+            </span>
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="e.g. Creatine"
-              className="flex-1 border border-zinc-200 px-2 py-1 outline-none"
+              className="field w-full"
             />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-[90px] text-[10px] text-zinc-500">Dose</span>
+          </label>
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-600">
+              Dose
+            </span>
             <input
               value={form.dose}
               onChange={(e) => setForm({ ...form, dose: e.target.value })}
               placeholder="e.g. 5g"
-              className="flex-1 border border-zinc-200 px-2 py-1 outline-none"
+              className="field w-full"
             />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-[90px] text-[10px] text-zinc-500">
+          </label>
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-600">
               Frequency
             </span>
             <input
               value={form.frequency}
               onChange={(e) => setForm({ ...form, frequency: e.target.value })}
-              className="flex-1 border border-zinc-200 px-2 py-1 outline-none"
+              className="field w-full"
             />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-[90px] text-[10px] text-zinc-500">Since</span>
+          </label>
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-600">
+              Since
+            </span>
             <input
               type="month"
               value={form.startedAt}
               onChange={(e) => setForm({ ...form, startedAt: e.target.value })}
-              className="flex-1 border border-zinc-200 px-2 py-1 outline-none"
+              className="field w-full"
             />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-[90px] text-[10px] text-zinc-500">
+          </label>
+          <label className="sm:col-span-2">
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-600">
               Changelog date
             </span>
             <input
@@ -344,19 +374,16 @@ export function SupplementEditor({
               onChange={(e) =>
                 setForm({ ...form, changelogDate: e.target.value })
               }
-              className="flex-1 border border-zinc-200 px-2 py-1 outline-none"
+              className="field w-full sm:max-w-xs"
             />
-          </div>
-          <div className="flex items-center gap-2 pt-1">
-            <span className="w-[90px]"></span>
-            <button
-              type="button"
-              onClick={handleAdd}
-              className="border border-zinc-900 px-4 py-1 text-[10px] hover:bg-zinc-900 hover:text-white"
-            >
-              Add
-            </button>
-          </div>
+          </label>
+          <button
+            type="button"
+            onClick={handleAdd}
+            className="button-primary mt-1 sm:col-span-2 sm:w-fit"
+          >
+            Add supplement
+          </button>
         </div>
       </div>
     </div>

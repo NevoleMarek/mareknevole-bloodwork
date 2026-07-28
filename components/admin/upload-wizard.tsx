@@ -31,18 +31,23 @@ function StepIndicator({
     ? ["Extract", "Map", "Research"]
     : ["Extract", "Map"];
   return (
-    <div className="mb-6 flex gap-4 text-[9px] tracking-[2px] uppercase">
+    <ol aria-label="Import progress" className="mb-6 flex flex-wrap gap-2">
       {labels.map((label, i) => (
-        <span
+        <li
           key={label}
-          className={
-            i === active ? "font-semibold text-zinc-900" : "text-zinc-400"
-          }
+          aria-current={i === active ? "step" : undefined}
+          className={`flex min-h-9 items-center rounded-full px-3 text-xs font-semibold ${
+            i === active
+              ? "bg-emerald-700 text-white"
+              : i < active
+                ? "bg-emerald-50 text-emerald-800"
+                : "bg-zinc-100 text-zinc-500"
+          }`}
         >
           {i + 1}. {label}
-        </span>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }
 
@@ -253,16 +258,14 @@ export function UploadWizard() {
     state.mappings.some((m) => m.isNew);
 
   return (
-    <div className="flex gap-0">
+    <div className={`grid gap-6 ${pdfUrl ? "md:grid-cols-2" : ""}`}>
       {/* Left panel */}
-      <div
-        className={`flex-1 ${pdfUrl ? "md:border-r md:border-zinc-200 md:pr-6" : ""}`}
-      >
+      <div className="min-w-0">
         {state.step === "upload" && <StepUpload onUpload={handleUpload} />}
 
         {state.step === "extracting" && (
-          <p className="text-xs text-zinc-500">
-            Extracting variables from PDF...
+          <p role="status" className="text-sm text-zinc-600">
+            Extracting variables from PDF…
           </p>
         )}
 
@@ -286,8 +289,8 @@ export function UploadWizard() {
         {state.step === "mapping" && (
           <>
             <StepIndicator active={1} hasNewEntries={hasNewEntries} />
-            <p className="text-xs text-zinc-500">
-              Mapping variables to vocabulary...
+            <p role="status" className="text-sm text-zinc-600">
+              Mapping variables to vocabulary…
             </p>
           </>
         )}
@@ -322,8 +325,8 @@ export function UploadWizard() {
         {state.step === "researching" && (
           <>
             <StepIndicator active={2} hasNewEntries={true} />
-            <p className="text-xs text-zinc-500">
-              Researching new biomarkers...
+            <p role="status" className="text-sm text-zinc-600">
+              Researching new biomarkers…
             </p>
           </>
         )}
@@ -363,19 +366,24 @@ export function UploadWizard() {
               active={hasNewEntries ? 2 : 1}
               hasNewEntries={hasNewEntries}
             />
-            <p className="text-xs text-zinc-500">Saving reading...</p>
+            <p role="status" className="text-sm text-zinc-600">
+              Saving reading…
+            </p>
           </>
         )}
 
         {state.step === "done" && (
-          <div className="text-center">
-            <p className="mb-4 text-xs text-zinc-500">
+          <div
+            role="status"
+            className="rounded-2xl bg-emerald-50 p-6 text-center"
+          >
+            <p className="mb-4 text-sm font-medium text-emerald-900">
               Reading saved successfully.
             </p>
             <button
               type="button"
               onClick={() => setState({ step: "upload" })}
-              className="border border-zinc-900 px-4 py-1.5 text-xs text-zinc-900 hover:bg-zinc-900 hover:text-white"
+              className="button-primary"
             >
               Upload Another
             </button>
@@ -383,12 +391,14 @@ export function UploadWizard() {
         )}
 
         {state.step === "error" && (
-          <div>
-            <p className="mb-4 text-xs text-red-400">{state.message}</p>
+          <div className="rounded-2xl bg-red-50 p-5">
+            <p role="alert" className="mb-4 text-sm text-red-800">
+              {state.message}
+            </p>
             <button
               type="button"
               onClick={() => setState(state.returnTo)}
-              className="border border-zinc-200 px-4 py-1.5 text-xs text-zinc-500 hover:text-zinc-700"
+              className="button-secondary"
             >
               Retry
             </button>
@@ -398,13 +408,21 @@ export function UploadWizard() {
 
       {/* Right panel: PDF preview (desktop only) */}
       {pdfUrl && (
-        <div className="hidden flex-1 pl-6 md:block">
-          <div className="mb-2 text-[9px] tracking-[2px] text-zinc-500 uppercase">
-            PDF Preview
+        <div className="min-w-0">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-zinc-800">PDF preview</h2>
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="button-secondary min-h-9 px-3 text-xs"
+            >
+              Open PDF <span aria-hidden="true">↗</span>
+            </a>
           </div>
           <iframe
             src={pdfUrl}
-            className="h-[600px] w-full border border-zinc-200"
+            className="hidden h-[600px] w-full rounded-2xl border border-zinc-900/10 bg-white md:block"
             title="PDF preview"
           />
         </div>

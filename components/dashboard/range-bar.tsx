@@ -1,10 +1,10 @@
 import type { Status } from "@/types/bloodwork";
 
-const statusZoneColor: Record<Status, string> = {
-  normal: "bg-green-400/30",
-  borderline: "bg-amber-400/30",
-  high: "bg-red-400/30",
-  low: "bg-blue-400/30",
+const statusMarkerColor: Record<Status, string> = {
+  normal: "bg-emerald-700",
+  borderline: "bg-amber-600",
+  high: "bg-rose-600",
+  low: "bg-sky-600",
 };
 
 function computePositions(
@@ -38,19 +38,19 @@ export function RangeBar({
   const { zoneLeft, zoneWidth, valuePos } = computePositions(value, min, max);
 
   return (
-    <div>
-      <div className="relative h-1 bg-zinc-100">
+    <div role="img" aria-label={`${value}; reference range ${min} to ${max}`}>
+      <div className="relative h-1.5 overflow-visible rounded-full bg-zinc-100">
         <div
           data-testid="range-zone"
-          className={`absolute h-full ${statusZoneColor[status]}`}
+          className="absolute h-full rounded-full bg-emerald-400/30"
           style={{ left: `${zoneLeft}%`, width: `${zoneWidth}%` }}
         />
         <div
-          className="absolute top-[-2px] h-2 w-[3px] rounded-sm bg-zinc-900"
+          className={`absolute top-1/2 h-3 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_0_2px_white] ${statusMarkerColor[status]}`}
           style={{ left: `${valuePos}%` }}
         />
       </div>
-      <div className="mt-1 flex justify-between text-[9px] text-zinc-400">
+      <div className="data-value mt-1.5 flex justify-between text-[0.65rem] text-zinc-500">
         <span>{min}</span>
         <span>{max}</span>
       </div>

@@ -25,31 +25,37 @@ export function HealthVisibility({
   }, []);
 
   return (
-    <div className="border border-zinc-200 bg-white p-4">
-      <div className="mb-3 flex items-baseline justify-between">
-        <span className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
-          Dashboard visibility
-        </span>
-        <span className="text-[10px] text-zinc-400">
+    <section className="admin-panel">
+      <div className="mb-5 flex items-baseline justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-zinc-800">
+            Dashboard visibility
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Choose the daily signals shown publicly.
+          </p>
+        </div>
+        <span className="data-value text-xs whitespace-nowrap text-zinc-500">
           {visibleCount} of {items.length} shown
         </span>
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {items.map((c) => (
           <button
             key={c.metric}
             type="button"
             onClick={() => toggle(c.metric, !c.visible)}
-            className={`px-2.5 py-1 text-[10px] transition-colors ${
+            aria-pressed={c.visible}
+            className={`min-h-10 rounded-full border px-3.5 text-xs font-semibold transition-colors duration-[160ms] ${
               c.visible
-                ? "border border-zinc-800 bg-zinc-800 text-white"
-                : "border border-zinc-200 text-zinc-400"
+                ? "border-emerald-700 bg-emerald-700 text-white"
+                : "border-zinc-900/12 bg-white text-zinc-600"
             }`}
           >
             {c.label}
           </button>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

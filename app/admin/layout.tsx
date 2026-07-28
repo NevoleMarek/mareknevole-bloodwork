@@ -28,39 +28,63 @@ export default function AdminLayout({
   }
 
   return (
-    <main className="mx-auto w-full max-w-[960px] px-4 py-6 md:px-6 md:py-8">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-2">
-        <nav className="flex gap-4 text-[10px] tracking-[2px] uppercase">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`relative py-1 transition-colors duration-200 ${
-                  isActive
-                    ? "text-zinc-900"
-                    : "text-zinc-400 hover:text-zinc-900"
-                }`}
-              >
-                {item.label}
-                <span
-                  className={`absolute right-0 -bottom-0.5 left-0 h-px origin-left bg-zinc-900 transition-transform duration-200 ${
-                    isActive ? "scale-x-100" : "scale-x-0"
-                  }`}
-                />
-              </Link>
-            );
-          })}
-        </nav>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="text-[10px] tracking-[2px] text-zinc-400 uppercase hover:text-zinc-600"
+    <main id="main-content" className="admin-shell">
+      <header className="admin-chrome">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2.5 rounded-xl py-1 pr-2"
+          aria-label="View public Bloodwork dashboard"
         >
-          Logout
-        </button>
-      </div>
+          <span
+            aria-hidden="true"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-sm font-semibold text-white"
+          >
+            B
+          </span>
+          <span>
+            <span className="block text-xs font-semibold text-zinc-900">
+              Bloodwork
+            </span>
+            <span className="block text-[0.62rem] font-semibold tracking-[0.08em] text-zinc-500 uppercase">
+              Admin
+            </span>
+          </span>
+        </Link>
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+          <nav
+            aria-label="Admin sections"
+            className="min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            <div className="flex min-w-max gap-0.5">
+              {navItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`flex min-h-10 items-center rounded-xl px-3 text-xs font-semibold transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                      isActive
+                        ? "bg-emerald-50 text-emerald-800"
+                        : "text-zinc-500 hover:text-zinc-900"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+          <span aria-hidden="true" className="h-6 w-px bg-zinc-900/10" />
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="button-quiet min-h-10 shrink-0 px-3 text-xs"
+          >
+            Log out
+          </button>
+        </div>
+      </header>
       {children}
     </main>
   );

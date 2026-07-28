@@ -41,20 +41,26 @@ export function HealthGrid({
   return (
     <div>
       <div className="mb-4 flex justify-end">
-        <div className="flex shrink-0 border border-zinc-200 text-[9px]">
+        <nav
+          aria-label="Health history period"
+          className="flex shrink-0 gap-0.5 rounded-full border border-zinc-900/10 bg-white/75 p-1 text-xs shadow-sm"
+        >
           {PERIODS.map((p) => (
             <Link
               key={p}
               href={p === "6M" ? "/" : `/?period=${p}`}
               scroll={false}
-              className={`px-2.5 py-1 ${
-                period === p ? "bg-zinc-900 text-white" : "text-zinc-400"
+              aria-current={period === p ? "page" : undefined}
+              className={`flex min-h-9 min-w-11 items-center justify-center rounded-full px-3 font-semibold transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                period === p
+                  ? "bg-emerald-700 text-white shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-900"
               }`}
             >
               {p}
             </Link>
           ))}
-        </div>
+        </nav>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {hasBP && (

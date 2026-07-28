@@ -41,7 +41,11 @@ export default function AdminDataPage() {
   }, []);
 
   if (data.kind === "loading") {
-    return <p className="text-xs text-zinc-400">Loading...</p>;
+    return (
+      <p role="status" className="text-sm text-zinc-500">
+        Loading readings…
+      </p>
+    );
   }
 
   function handleExportMarkdown() {
@@ -63,16 +67,21 @@ export default function AdminDataPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[9px] tracking-[2px] text-zinc-400 uppercase">
-            Readings
-          </h2>
+    <>
+      <div className="admin-page-title">
+        <p className="eyebrow">Source records</p>
+        <h1 className="mt-2">Readings</h1>
+        <p>Review imported panels or export the dataset as structured text.</p>
+      </div>
+      <section className="admin-panel">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-zinc-800">
+            {data.readings.length} lab panels
+          </p>
           <button
             type="button"
             onClick={handleExportMarkdown}
-            className="text-[10px] text-zinc-400 hover:text-zinc-600"
+            className="button-secondary"
           >
             Copy as Markdown
           </button>
@@ -89,6 +98,6 @@ export default function AdminDataPage() {
           }}
         />
       </section>
-    </div>
+    </>
   );
 }

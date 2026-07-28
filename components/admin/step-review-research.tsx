@@ -25,29 +25,32 @@ export function StepReviewResearch({
 
   return (
     <div>
-      <div className="mb-2 text-[9px] tracking-[2px] text-zinc-500 uppercase">
+      <h2 className="mb-3 text-sm font-semibold text-zinc-800">
         New Biomarker Research
-      </div>
+      </h2>
       <div className="space-y-4">
         {researched.map((entry, i) => (
-          <div key={entry.vocabularyKey} className="border border-zinc-200 p-4">
-            <div className="mb-2 text-xs font-semibold text-zinc-900">
+          <div
+            key={entry.vocabularyKey}
+            className="rounded-2xl border border-zinc-900/10 bg-white p-4 sm:p-5"
+          >
+            <div className="mb-4 font-mono text-xs font-semibold text-zinc-900">
               {entry.vocabularyKey}
             </div>
-            <label className="mb-1 block text-[9px] tracking-[1px] text-zinc-500 uppercase">
+            <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
               Description
             </label>
             <textarea
               value={entry.description}
               onChange={(e) => updateEntry(i, { description: e.target.value })}
               rows={2}
-              className="mb-3 w-full border border-zinc-200 px-2 py-1.5 text-xs text-zinc-900"
+              className="field mb-4 w-full text-sm text-zinc-900"
             />
-            <div className="flex gap-4">
-              <div>
-                <label className="mb-1 block text-[9px] tracking-[1px] text-zinc-500 uppercase">
+            <div className="grid grid-cols-2 gap-3 sm:max-w-md">
+              <label>
+                <span className="mb-1.5 block text-xs font-semibold text-zinc-700">
                   Ref Min
-                </label>
+                </span>
                 <input
                   type="number"
                   step="any"
@@ -60,13 +63,13 @@ export function StepReviewResearch({
                       },
                     })
                   }
-                  className="w-24 border border-zinc-200 px-2 py-1.5 text-xs"
+                  className="field w-full text-sm"
                 />
-              </div>
-              <div>
-                <label className="mb-1 block text-[9px] tracking-[1px] text-zinc-500 uppercase">
+              </label>
+              <label>
+                <span className="mb-1.5 block text-xs font-semibold text-zinc-700">
                   Ref Max
-                </label>
+                </span>
                 <input
                   type="number"
                   step="any"
@@ -79,27 +82,23 @@ export function StepReviewResearch({
                       },
                     })
                   }
-                  className="w-24 border border-zinc-200 px-2 py-1.5 text-xs"
+                  className="field w-full text-sm"
                 />
-              </div>
+              </label>
             </div>
           </div>
         ))}
       </div>
 
       <div className="mt-8 flex justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="border border-zinc-200 px-5 py-2 text-xs text-zinc-500 hover:text-zinc-700"
-        >
+        <button type="button" onClick={onBack} className="button-secondary">
           &larr; Back
         </button>
         <button
           type="button"
           onClick={onSave}
           disabled={saving}
-          className="bg-zinc-900 px-5 py-2 text-xs text-white hover:bg-zinc-800 disabled:opacity-40"
+          className="button-primary disabled:opacity-40"
         >
           {saving ? "Saving..." : "Save Reading"}
         </button>
