@@ -10,6 +10,10 @@ const lockfile = read("bun.lock");
 const packageJson = read("package.json");
 
 assert(
+  !stack.includes("Cloudflare.Website.StaticSite"),
+  "the deployment graph does not use StaticSite",
+);
+assert(
   !existsSync(resolve(root, "wrangler.jsonc")),
   "wrangler.jsonc was removed",
 );
@@ -28,24 +32,35 @@ for (const text of [
   "name: production.databaseName",
   "title: production.kvTitle",
   'main: ".open-next/worker.js"',
-  'outdir: ".open-next/assets"',
   "bundle: false",
+  'Command.Build("Build"',
+  'Cloudflare.Worker("Worker"',
+  'Namespace.push("BloodworkSite")',
   'command: "bun run build:production-worker"',
+  'outdir: ".open-next/assets"',
+  "directory: build.outdir",
   'date: "2025-12-01"',
   '"nodejs_compat"',
-  "return { url: site.url }",
+  "return { url: worker.url }",
 ]) {
   assert(stack.includes(text), `missing ${text}`);
 }
 
 for (const text of [
+  'CLOUDFLARE_API_TOKEN: Config.redacted("CLOUDFLARE_API_TOKEN")',
   'Config.string("CLOUDFLARE_ACCOUNT_ID")',
   "OPENNEXT_CACHE_D1_ID: database.databaseId",
   "OPENNEXT_CACHE_KV_ID: incrementalCache.namespaceId",
+  "env: buildEnv",
+  "env: workerEnv",
   "rules: openNextWorkerModuleRules",
 ]) {
   assert(stack.includes(text), `missing ${text}`);
 }
+assert(
+  count(stack, "CLOUDFLARE_API_TOKEN") === 2,
+  "the Cloudflare API token exists only as the buildEnv key and config name",
+);
 assert(read(".gitignore").includes(".alchemy/"), ".alchemy is ignored");
 assert(
   !packageJson.includes("opennextjs-cloudflare deploy"),
