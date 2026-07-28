@@ -46,3 +46,6 @@ docs/superpowers/brainstorms
 
 # OpenNext build output
 .open-next/
+
+# Local Cloudflare development state
+.wrangler/

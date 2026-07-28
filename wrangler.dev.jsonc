@@ -1,13 +1,7 @@
 {
-  "name": "bloodwork",
+  "name": "bloodwork-local",
   "compatibility_date": "2025-12-01",
   "compatibility_flags": ["nodejs_compat"],
-  "routes": [{ "pattern": "bloodwork.mareknevole.com", "custom_domain": true }],
-  "main": ".open-next/worker.js",
-  "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS",
-  },
   "kv_namespaces": [
     {
       "binding": "NEXT_INC_CACHE_KV",

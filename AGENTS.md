@@ -57,10 +57,11 @@ Before writing any UI code, read `specs/style.md`. It defines the typography-dri
 
 Deployed to Cloudflare Workers at `bloodwork.mareknevole.com` with D1 database.
 
-- **Deploy:** `bun run deploy` (runs check, builds with OpenNext, deploys via wrangler)
-- **Secrets:** `bunx wrangler secret put <KEY>` (e.g. `ADMIN_PASSWORD`)
-- **D1 schema changes:** `bunx wrangler d1 execute bloodwork-db --remote --file=db/schema.sql`
-- **Config:** `wrangler.jsonc` has D1 binding, custom domain, and `nodejs_compat` flag
+- **Production owner:** `alchemy.run.ts` is an Effect Stack. `prod` preserves the Worker, D1, KV, domain, and bindings. Other stages use isolated resources.
+- **Build:** `bun run build:worker` compiles OpenNext without a production Wrangler manifest.
+- **Plan:** `bun run plan:production` builds and verifies locally, then shows an Alchemy plan for `prod`.
+- **First adoption:** only after review, run `bun alchemy deploy --stage prod --adopt` with `ADMIN_PASSWORD` and `GEMINI_API_KEY` provided locally. Do not run it as part of normal development.
+- **Local platform:** `wrangler.dev.jsonc` supports `next dev` and `bun run db:migrate`. It is not a production deployment config.
 
 ## Commit workflow
 

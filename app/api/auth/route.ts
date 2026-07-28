@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
+import * as Schema from "effect/Schema";
 
 const SESSION_COOKIE = "bloodwork-session";
+const LoginRequest = Schema.Struct({ password: Schema.String });
 
 async function timingSafeEqual(a: string, b: string): Promise<boolean> {
   const encoder = new TextEncoder();
@@ -17,7 +19,12 @@ async function timingSafeEqual(a: string, b: string): Promise<boolean> {
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export async function POST(req: Request) {
-  const { password } = (await req.json()) as { password: string };
+  let password: string;
+  try {
+    ({ password } = Schema.decodeUnknownSync(LoginRequest)(await req.json()));
+  } catch {
+    return Response.json({ error: "Invalid login request" }, { status: 400 });
+  }
   const adminPassword = process.env.ADMIN_PASSWORD;
 
   if (!adminPassword || !(await timingSafeEqual(password, adminPassword))) {

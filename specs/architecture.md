@@ -9,7 +9,7 @@
 - Testing: `Vitest`, `jsdom`, and Testing Library
 - Code quality: `ESLint` and `Prettier`
 - AI: `@google/generative-ai` — Gemini via Google Generative AI SDK
-- Deployment: Cloudflare Workers with `@opennextjs/cloudflare` adapter
+- Deployment: Alchemy v2 `Cloudflare.Website.StaticSite` with an OpenNext prebuilt Worker
 
 ## Route Structure
 
@@ -81,13 +81,13 @@ Password-based authentication via middleware + session cookie. Middleware protec
 
 ## Caching
 
-The public dashboard (`/`) uses ISR with a 1-hour revalidation interval. Cache infrastructure:
+The OpenNext cache infrastructure remains configured for incremental and tag caching:
 
 - **Incremental cache**: Cloudflare KV (`NEXT_INC_CACHE_KV` binding)
 - **Tag cache**: D1 `revalidations` table (`NEXT_TAG_CACHE_D1` binding, same database)
 - **On-demand revalidation**: All mutation API routes call `revalidatePath("/")` to invalidate the cache immediately after data changes
 
-Health metrics are filtered server-side by period (URL search param `?period=1M|6M|1Y|ALL`, default `6M`). Each period variant is cached independently.
+`/` currently exports `dynamic = "force-dynamic"`, so it is rendered from D1 on each request. `revalidate = 3600` and the cache bindings remain in place for OpenNext behavior, but they do not make the current public page a one-hour ISR route. Health metrics are filtered server-side by period (URL search param `?period=1M|6M|1Y|ALL`, default `6M`).
 
 ## Data
 
@@ -105,9 +105,17 @@ D1 SQLite database with tables: `vocabulary`, `readings`, `measurements`, `suppl
 - `middleware.ts` — auth middleware for admin routes
 - `public/` — static assets
 
-## Environment Variables
+## Deployment contract
 
-Cloudflare Workers secrets (set via `bunx wrangler secret put`):
+`alchemy.run.ts` is the only production deployment declaration. Its Effect Stack builds the existing OpenNext output and publishes `.open-next/worker.js` plus `.open-next/assets` without rebundling. `prod` preserves the physical Worker name `bloodwork`, D1 name `bloodwork-db`, KV title `NEXT_INC_CACHE_KV`, and `bloodwork.mareknevole.com`. Other stages omit these names and cannot attach the production domain.
+
+The D1 resource is bound twice as `DB` and `NEXT_TAG_CACHE_D1`. The KV resource is bound once as `NEXT_INC_CACHE_KV`. Both secrets use `Config.redacted` and become Cloudflare secret bindings. `scripts/verify-effect-alchemy.ts` checks this shape offline against a real OpenNext artifact.
+
+`wrangler.dev.jsonc` exists only for `next dev` and local D1 commands. OpenNext needs it to create its local platform proxy. It has no production deployment role.
+
+## Runtime secrets
+
+Cloudflare Worker secrets supplied to Alchemy when an approved production deploy runs:
 
 - `GEMINI_API_KEY` — Google Generative AI API key
 - `ADMIN_PASSWORD` — password for admin login
@@ -115,8 +123,12 @@ Cloudflare Workers secrets (set via `bunx wrangler secret put`):
 ## Verification Workflow
 
 - Fast iteration: `bun run check` — auto-fixes formatting and lint, then runs typecheck + test in parallel
-- Full validation: `bun run check:full` — adds production build
+- Worker build: `bun run build:worker` — creates the OpenNext Worker and assets without a production Wrangler manifest
+- Deployment contract: `bun run verify:deployment` — checks the stack, binding ownership, exact versions, and build artifacts offline
+- Full validation: `bun run check:full` — runs the fast suite, Worker build, and deployment contract check
 - Watch mode: `bun run test:watch`
+
+The first production deployment must be reviewed and run with `bun alchemy deploy --stage prod --adopt`. It has not been run for this migration, so Cloudflare provisioning remains not verified.
 
 ## Architectural Constraints
 
