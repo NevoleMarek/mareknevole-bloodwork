@@ -1,0 +1,33 @@
+name: Conventional PR title
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, edited, synchronize]
+
+permissions:
+  contents: read
+
+env:
+  CONVCO_VERSION: v0.4.2
+
+jobs:
+  validate:
+    name: Conventional PR title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install convco
+        run: |
+          curl -sSfL "https://github.com/convco/convco/releases/download/${CONVCO_VERSION}/convco-ubuntu.zip" \
+            | zcat \
+            > /usr/local/bin/convco
+          chmod +x /usr/local/bin/convco
+      - name: Check PR title is conventional
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          printf '%s\n' "$PR_TITLE" \
+            | convco check \
+              --from-stdin \
+              --config .github/versionrc
