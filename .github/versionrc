@@ -1,0 +1,17 @@
+# Convco configuration for the conventional PR-title check.
+
+types:
+  - type: feat
+  - type: fix
+  - type: docs
+  - type: refactor
+  - type: perf
+  - type: test
+  - type: build
+  - type: ci
+  - type: chore
+
+# Replace this generic rule with documented repository scopes when available.
+scopeRegex: "^([a-z][a-z0-9-]*)?$"
+
+lineLength: 100
