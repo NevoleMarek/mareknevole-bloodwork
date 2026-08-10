@@ -102,6 +102,7 @@ D1 SQLite database with tables: `vocabulary`, `readings`, `measurements`, `suppl
 - `scripts/parse-health-export.ts` — CLI: parse Apple Health XML → JSON
 - `prompts/` — Gemini prompt templates
 - `specs/` — living product and architecture documentation
+- `.github/workflows/deploy-production.yml` deploys production after pushes to `main`
 - `middleware.ts` — auth middleware for admin routes
 - `public/` — static assets
 
@@ -126,9 +127,10 @@ Cloudflare Worker secrets supplied to Alchemy when an approved production deploy
 - Worker build: `bun run build:worker` — creates the OpenNext Worker and assets without a production Wrangler manifest
 - Deployment contract: `bun run verify:deployment` — checks the stack, binding ownership, exact versions, and build artifacts offline
 - Full validation: `bun run check:full` — runs the fast suite, Worker build, and deployment contract check
+- GitHub Actions runs the full validation suite, then deploys the `prod` stage after a push to `main`
 - Watch mode: `bun run test:watch`
 
-Production deployment runs with `bun alchemy deploy --stage prod --adopt`. Its environment needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ADMIN_PASSWORD`, and `GEMINI_API_KEY`.
+The first production adoption runs manually with `bun alchemy deploy --stage prod --adopt`. Later deployments run in GitHub Actions with `bun alchemy deploy --stage prod --yes`. Both environments need `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ADMIN_PASSWORD`, and `GEMINI_API_KEY`.
 
 ## Architectural Constraints
 
