@@ -70,5 +70,3 @@ bun run plan:production
 `wrangler.dev.jsonc` supports local Next and D1 development only. It is not a production deployment manifest.
 
 The first production migration is intentionally manual. Review the plan, confirm that D1 name `bloodwork-db` has existing database ID `59c89aab-650f-4814-9182-dc6691e74237` and KV title `NEXT_INC_CACHE_KV` has existing namespace ID `3ce48886bf744930a9e9114f7c707019`, then run `bun alchemy deploy --stage prod --adopt`. The deployment environment needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ADMIN_PASSWORD`, and `GEMINI_API_KEY`. Alchemy builds the Worker, seeds the build-scoped KV entries, initializes the D1 tag table, and publishes the Worker. No deploy occurs as part of this repository change.
-
-See [the deployment rationale](docs/effect-alchemy-rationale.md) for the exact shape and tradeoffs.

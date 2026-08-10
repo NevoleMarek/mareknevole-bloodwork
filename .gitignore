@@ -40,9 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Superpowers brainstorm sessions
+# Local planning documents
 .superpowers/
-docs/superpowers/brainstorms
+/docs/
 
 # OpenNext build output
 .open-next/
