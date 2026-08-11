@@ -11,8 +11,7 @@ import type { Status } from "@/types/bloodwork";
 export default async function Home() {
   await connection();
 
-  const { vocabulary, labs, supplements, changelog } =
-    await getCachedDashboard();
+  const { vocabulary, labs, supplements } = await getCachedDashboard();
 
   const latest = labs.latestPanel;
   const latestDate = latest
@@ -199,7 +198,7 @@ export default async function Home() {
           <p>A record of what changed, and when.</p>
         </div>
         <div className="surface p-5 sm:p-7">
-          <ChangelogList changelog={changelog} />
+          <ChangelogList />
         </div>
       </section>
 
