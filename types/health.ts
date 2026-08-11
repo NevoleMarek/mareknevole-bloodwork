@@ -13,6 +13,11 @@ export type HealthMetricConfig = {
   visible: boolean;
 };
 
+export type HealthData = {
+  metrics: HealthMetric[];
+  configs: HealthMetricConfig[];
+};
+
 export type HealthImportRequest = {
   metrics: { date: string; metric: string; value: number; unit: string }[];
   configs: {

@@ -5,22 +5,14 @@ import { HealthGrid } from "@/components/dashboard/health-grid";
 import { MetricsSection } from "@/components/dashboard/metrics-section";
 import { SectionNav } from "@/components/dashboard/section-nav";
 import { SupplementTable } from "@/components/dashboard/supplement-table";
-import { getCachedDashboard, getCachedHealth } from "@/lib/data-cache";
-import { isPeriod } from "@/lib/period";
+import { getCachedDashboard } from "@/lib/data-cache";
 import type { Status } from "@/types/bloodwork";
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
+export default async function Home() {
   await connection();
 
-  const params = await searchParams;
-  const period = isPeriod(params.period) ? params.period : "6M";
-  const [{ vocabulary, labs, supplements, changelog }, health] =
-    await Promise.all([getCachedDashboard(), getCachedHealth(period)]);
-  const { metrics: healthMetrics, configs: healthConfigs } = health;
+  const { vocabulary, labs, supplements, changelog } =
+    await getCachedDashboard();
 
   const latest = labs.latestPanel;
   const latestDate = latest
@@ -182,11 +174,7 @@ export default async function Home({
           </div>
           <p>Context beyond a single lab result.</p>
         </div>
-        <HealthGrid
-          metrics={healthMetrics}
-          configs={healthConfigs}
-          period={period}
-        />
+        <HealthGrid />
       </section>
 
       <section id="supplements" className="scroll-mt-32 pt-20">
