@@ -1,7 +1,7 @@
-import { revalidatePath } from "next/cache";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { getHealthMetricConfigs } from "@/db/queries";
+import { invalidateHealth } from "@/lib/data-cache";
 
 export async function GET() {
   const { env } = await getCloudflareContext();
@@ -23,7 +23,7 @@ export async function PATCH(request: Request) {
     .bind(body.visible ? 1 : 0, body.metric)
     .run();
 
-  revalidatePath("/");
+  invalidateHealth();
 
   return Response.json({ ok: true });
 }

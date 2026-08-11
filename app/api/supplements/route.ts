@@ -1,7 +1,7 @@
-import { revalidatePath } from "next/cache";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { getActiveSupplements, getSupplementChangelog } from "@/db/queries";
+import { invalidateDashboard } from "@/lib/data-cache";
 
 export async function GET() {
   const { env } = await getCloudflareContext();
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     )
     .run();
 
-  revalidatePath("/");
+  invalidateDashboard();
 
   return Response.json({ ok: true });
 }
@@ -102,7 +102,7 @@ export async function PUT(req: Request) {
       .run();
   }
 
-  revalidatePath("/");
+  invalidateDashboard();
 
   return Response.json({ ok: true });
 }
@@ -139,7 +139,7 @@ export async function DELETE(req: Request) {
     .bind(crypto.randomUUID(), changelogDate, `Removed ${supplement.name}`, now)
     .run();
 
-  revalidatePath("/");
+  invalidateDashboard();
 
   return Response.json({ ok: true });
 }

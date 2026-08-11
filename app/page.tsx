@@ -1,41 +1,26 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { connection } from "next/server";
 
 import { ChangelogList } from "@/components/dashboard/changelog-list";
 import { HealthGrid } from "@/components/dashboard/health-grid";
 import { MetricsSection } from "@/components/dashboard/metrics-section";
 import { SectionNav } from "@/components/dashboard/section-nav";
 import { SupplementTable } from "@/components/dashboard/supplement-table";
-import {
-  getActiveSupplements,
-  getReadingsWithMeasurements,
-  getSupplementChangelog,
-  getVisibleHealthMetrics,
-  getVocabulary,
-} from "@/db/queries";
-import { getCutoffDate, isPeriod } from "@/lib/period";
+import { getCachedDashboard, getCachedHealth } from "@/lib/data-cache";
+import { isPeriod } from "@/lib/period";
 import type { Status } from "@/types/bloodwork";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 3600;
 
 export default async function Home({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { env } = await getCloudflareContext();
-  const db = env.DB;
+  await connection();
 
   const params = await searchParams;
   const period = isPeriod(params.period) ? params.period : "6M";
-  const cutoffDate = getCutoffDate(period);
-
-  const vocabulary = await getVocabulary(db);
-  const readings = await getReadingsWithMeasurements(db);
-  const supplements = await getActiveSupplements(db);
-  const changelog = await getSupplementChangelog(db);
-  const { metrics: healthMetrics, configs: healthConfigs } =
-    await getVisibleHealthMetrics(db, cutoffDate);
+  const [{ vocabulary, readings, supplements, changelog }, health] =
+    await Promise.all([getCachedDashboard(), getCachedHealth(period)]);
+  const { metrics: healthMetrics, configs: healthConfigs } = health;
 
   const latest = readings.at(-1);
   const latestDate = latest

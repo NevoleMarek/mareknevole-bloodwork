@@ -134,15 +134,25 @@ export function mapHealthMetricConfigRow(
 
 // -- Query functions --
 
+function resultsOf<T>(query: string, result: D1Result<T>): T[] {
+  console.info("d1.query", {
+    query,
+    rowsRead: result.meta.rows_read,
+    rowsReturned: result.results.length,
+    durationMs: result.meta.duration,
+  });
+  return result.results;
+}
+
 export async function getVocabulary(
   db: D1Database,
 ): Promise<VocabularyEntry[]> {
-  const { results } = await db
+  const result = await db
     .prepare(
       "SELECT key, label, unit, reference_min, reference_max, description, featured, visible FROM vocabulary ORDER BY label",
     )
     .all<VocabularyRow>();
-  return results.map(mapVocabularyRow);
+  return resultsOf("vocabulary", result).map(mapVocabularyRow);
 }
 
 type ReadingWithMeasurements = ReadingRow & { measurements: Measurement[] };
@@ -162,13 +172,13 @@ export async function getReadingsWithMeasurements(
   ]);
 
   const byReading = new Map<string, Measurement[]>();
-  for (const row of measurements.results) {
+  for (const row of resultsOf("measurements", measurements)) {
     const list = byReading.get(row.reading_id) ?? [];
     list.push(mapMeasurementRow(row));
     byReading.set(row.reading_id, list);
   }
 
-  return readings.results.map((r) => ({
+  return resultsOf("readings", readings).map((r) => ({
     ...mapReadingRow(r),
     measurements: byReading.get(r.id) ?? [],
   }));
@@ -177,19 +187,21 @@ export async function getReadingsWithMeasurements(
 export async function getActiveSupplements(
   db: D1Database,
 ): Promise<Supplement[]> {
-  const { results } = await db
+  const result = await db
     .prepare("SELECT * FROM supplements WHERE stopped_at IS NULL ORDER BY name")
     .all<SupplementRow>();
-  return results.map(mapSupplementRow);
+  return resultsOf("active-supplements", result).map(mapSupplementRow);
 }
 
 export async function getSupplementChangelog(
   db: D1Database,
 ): Promise<SupplementChangelog[]> {
-  const { results } = await db
+  const result = await db
     .prepare("SELECT * FROM supplement_changelog ORDER BY date DESC")
     .all<SupplementChangelogRow>();
-  return results.map(mapSupplementChangelogRow);
+  return resultsOf("supplement-changelog", result).map(
+    mapSupplementChangelogRow,
+  );
 }
 
 export async function getVisibleHealthMetrics(
@@ -223,18 +235,20 @@ export async function getVisibleHealthMetrics(
       .all<HealthMetricConfigRow>(),
   ]);
   return {
-    metrics: metricResults.results,
-    configs: configResults.results.map(mapHealthMetricConfigRow),
+    metrics: resultsOf("visible-health-metrics", metricResults),
+    configs: resultsOf("visible-health-config", configResults).map(
+      mapHealthMetricConfigRow,
+    ),
   };
 }
 
 export async function getHealthMetricConfigs(
   db: D1Database,
 ): Promise<HealthMetricConfig[]> {
-  const { results } = await db
+  const result = await db
     .prepare(
       "SELECT metric, label, unit, aggregation, visible FROM health_metric_config ORDER BY label",
     )
     .all<HealthMetricConfigRow>();
-  return results.map(mapHealthMetricConfigRow);
+  return resultsOf("health-config", result).map(mapHealthMetricConfigRow);
 }
