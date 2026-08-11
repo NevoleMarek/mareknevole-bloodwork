@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { TrendPanel } from "@/components/dashboard/trend-panel";
 
-import type { BloodworkReading, VocabularyEntry } from "@/types/bloodwork";
+import type { VocabularyEntry } from "@/types/bloodwork";
 
 const vocabulary: VocabularyEntry[] = [
   {
@@ -26,33 +26,32 @@ const vocabulary: VocabularyEntry[] = [
   },
 ];
 
-const readings: BloodworkReading[] = [
-  {
-    date: "2025-06-15",
-    source: "test.pdf",
-    measurements: [
-      { vocabularyKey: "glucose", value: 92, unit: "mg/dL", status: "normal" },
-      { vocabularyKey: "ldl", value: 118, unit: "mg/dL", status: "normal" },
+const trends = {
+  glucose: {
+    kind: "ready" as const,
+    points: [
+      { date: "2025-06-15", value: 92 },
+      { date: "2025-09-15", value: 95 },
     ],
   },
-  {
-    date: "2025-09-15",
-    source: "test2.pdf",
-    measurements: [
-      { vocabularyKey: "glucose", value: 95, unit: "mg/dL", status: "normal" },
-      { vocabularyKey: "ldl", value: 142, unit: "mg/dL", status: "high" },
+  ldl: {
+    kind: "ready" as const,
+    points: [
+      { date: "2025-06-15", value: 118 },
+      { date: "2025-09-15", value: 142 },
     ],
   },
-];
+};
 
 describe("TrendPanel", () => {
   it("renders nothing when no keys are selected", () => {
     const { container } = render(
       <TrendPanel
         selectedKeys={[]}
-        readings={readings}
+        trends={{}}
         vocabulary={vocabulary}
         onRemove={() => {}}
+        onRetry={() => {}}
       />,
     );
     expect(container.firstChild).toBeNull();
@@ -62,9 +61,10 @@ describe("TrendPanel", () => {
     render(
       <TrendPanel
         selectedKeys={["glucose"]}
-        readings={readings}
+        trends={trends}
         vocabulary={vocabulary}
         onRemove={() => {}}
+        onRetry={() => {}}
       />,
     );
     // Appears in header and description
@@ -77,12 +77,40 @@ describe("TrendPanel", () => {
     render(
       <TrendPanel
         selectedKeys={["glucose", "ldl"]}
-        readings={readings}
+        trends={trends}
         vocabulary={vocabulary}
         onRemove={() => {}}
+        onRetry={() => {}}
       />,
     );
     expect(screen.getAllByText("Glucose")).toHaveLength(2);
     expect(screen.getAllByText("LDL")).toHaveLength(2);
+  });
+
+  it("shows loading and error states", () => {
+    const { rerender } = render(
+      <TrendPanel
+        selectedKeys={["glucose"]}
+        trends={{ glucose: { kind: "loading" } }}
+        vocabulary={vocabulary}
+        onRemove={() => {}}
+        onRetry={() => {}}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Loading Glucose trend",
+    );
+
+    rerender(
+      <TrendPanel
+        selectedKeys={["glucose"]}
+        trends={{ glucose: { kind: "error" } }}
+        vocabulary={vocabulary}
+        onRemove={() => {}}
+        onRetry={() => {}}
+      />,
+    );
+    expect(screen.getByText("Could not load Glucose.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
 });

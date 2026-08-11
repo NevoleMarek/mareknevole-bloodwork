@@ -41,7 +41,7 @@ for (const reading of readings) {
     const vocabKey = m.vocabularyKey.replace(/'/g, "''");
     const unit = m.unit.replace(/'/g, "''");
     lines.push(
-      `INSERT INTO measurements (id, reading_id, vocabulary_key, value, unit, status) VALUES ('${mId}', '${readingId}', '${vocabKey}', ${m.value}, '${unit}', '${m.status}');`,
+      `INSERT INTO measurements (id, reading_id, vocabulary_key, value, unit, status, reading_date) VALUES ('${mId}', '${readingId}', '${vocabKey}', ${m.value}, '${unit}', '${m.status}', '${reading.date}');`,
     );
   }
 }

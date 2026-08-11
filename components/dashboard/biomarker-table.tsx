@@ -28,10 +28,12 @@ export function BiomarkerTable({
   metrics,
   selected,
   onToggle,
+  onIntent,
 }: {
   metrics: BiomarkerMetric[];
   selected: string[];
   onToggle: (key: string) => void;
+  onIntent: (key: string, pointerType: string) => void;
 }) {
   return (
     <div>
@@ -55,6 +57,9 @@ export function BiomarkerTable({
           {metrics.map((m) => (
             <tr
               key={m.vocabularyKey}
+              onPointerDown={(event) =>
+                onIntent(m.vocabularyKey, event.pointerType)
+              }
               onClick={() => onToggle(m.vocabularyKey)}
               className={`cursor-pointer border-t border-zinc-100 ${
                 selected.includes(m.vocabularyKey)

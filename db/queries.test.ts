@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  getBiomarkerTrend,
+  getLabOverview,
   mapHealthMetricConfigRow,
   mapMeasurementRow,
   mapReadingRow,
@@ -8,6 +10,26 @@ import {
   mapSupplementRow,
   mapVocabularyRow,
 } from "@/db/queries";
+
+function d1Result<T>(results: T[]): D1Result<T> {
+  return {
+    success: true,
+    results,
+    meta: {
+      duration: 1,
+      size_after: 1,
+      rows_read: results.length,
+      rows_written: 0,
+      last_row_id: 0,
+      changed_db: false,
+      changes: 0,
+    },
+  };
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("row mappers", () => {
   it("maps vocabulary row to VocabularyEntry", () => {
@@ -150,5 +172,103 @@ describe("row mappers", () => {
       aggregation: "sum",
       visible: false,
     });
+  });
+});
+
+describe("getLabOverview", () => {
+  it("loads the newest panel metadata and latest value for every marker", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const all = vi
+      .fn()
+      .mockResolvedValueOnce(
+        d1Result([{ id: "newest", date: "2026-01-10", source: "newest.pdf" }]),
+      )
+      .mockResolvedValueOnce(d1Result([{ count: 3 }]))
+      .mockResolvedValueOnce(
+        d1Result([
+          {
+            id: "m1",
+            reading_id: "newest",
+            vocabulary_key: "glucose",
+            value: 107,
+            unit: "mg/dL",
+            status: "borderline",
+          },
+          {
+            id: "m2",
+            reading_id: "older",
+            vocabulary_key: "ferritin",
+            value: 90,
+            unit: "µg/L",
+            status: "normal",
+          },
+        ]),
+      );
+    const prepare = vi.fn(() => ({ all }));
+
+    const result = await getLabOverview({
+      prepare,
+    } as unknown as D1Database);
+
+    expect(prepare).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("ORDER BY date DESC, id DESC LIMIT 1"),
+    );
+    expect(prepare).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining("ORDER BY latest.reading_date DESC"),
+    );
+    expect(result).toEqual({
+      panelCount: 3,
+      latestPanel: {
+        date: "2026-01-10",
+        source: "newest.pdf",
+      },
+      latestMeasurements: [
+        {
+          vocabularyKey: "glucose",
+          value: 107,
+          unit: "mg/dL",
+          status: "borderline",
+        },
+        {
+          vocabularyKey: "ferritin",
+          value: 90,
+          unit: "µg/L",
+          status: "normal",
+        },
+      ],
+    });
+  });
+});
+
+describe("getBiomarkerTrend", () => {
+  it("uses the overview tie-breaker to return one point per reading", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const all = vi.fn().mockResolvedValue(
+      d1Result([
+        { date: "2026-01-01", value: 90 },
+        { date: "2026-02-01", value: 95 },
+      ]),
+    );
+    const bind = vi.fn(() => ({ all }));
+    const prepare = vi.fn(() => ({ bind }));
+
+    const result = await getBiomarkerTrend(
+      { prepare } as unknown as D1Database,
+      "glucose",
+    );
+
+    expect(prepare).toHaveBeenCalledWith(
+      expect.stringContaining("MAX(id) AS measurement_id"),
+    );
+    expect(prepare).toHaveBeenCalledWith(
+      expect.stringContaining("GROUP BY reading_id"),
+    );
+    expect(bind).toHaveBeenCalledWith("glucose");
+    expect(result).toEqual([
+      { date: "2026-01-01", value: 90 },
+      { date: "2026-02-01", value: 95 },
+    ]);
   });
 });

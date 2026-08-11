@@ -25,6 +25,11 @@ export type BloodworkReading = {
   measurements: Measurement[];
 };
 
+export type BiomarkerTrendPoint = {
+  date: string;
+  value: number;
+};
+
 export type Supplement = {
   id: string;
   name: string;

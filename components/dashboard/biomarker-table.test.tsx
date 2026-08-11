@@ -27,7 +27,12 @@ const metrics = [
 describe("BiomarkerTable", () => {
   it("renders all biomarker rows", () => {
     render(
-      <BiomarkerTable metrics={metrics} selected={[]} onToggle={() => {}} />,
+      <BiomarkerTable
+        metrics={metrics}
+        selected={[]}
+        onToggle={() => {}}
+        onIntent={() => {}}
+      />,
     );
     expect(screen.getByText("TSH")).toBeInTheDocument();
     expect(screen.getByText("Vitamin D")).toBeInTheDocument();
@@ -41,6 +46,7 @@ describe("BiomarkerTable", () => {
         metrics={metrics}
         selected={["tsh"]}
         onToggle={() => {}}
+        onIntent={() => {}}
       />,
     );
     const rows = container.querySelectorAll("tbody tr");

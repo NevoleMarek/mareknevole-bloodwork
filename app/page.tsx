@@ -18,11 +18,11 @@ export default async function Home({
 
   const params = await searchParams;
   const period = isPeriod(params.period) ? params.period : "6M";
-  const [{ vocabulary, readings, supplements, changelog }, health] =
+  const [{ vocabulary, labs, supplements, changelog }, health] =
     await Promise.all([getCachedDashboard(), getCachedHealth(period)]);
   const { metrics: healthMetrics, configs: healthConfigs } = health;
 
-  const latest = readings.at(-1);
+  const latest = labs.latestPanel;
   const latestDate = latest
     ? new Date(latest.date).toLocaleDateString("en-US", {
         month: "short",
@@ -31,28 +31,24 @@ export default async function Home({
       })
     : "";
 
-  // For each visible vocabulary entry, find its latest measurement across all readings
   const allMetrics = vocabulary
     .filter((e) => e.visible)
     .flatMap((entry) => {
-      for (let i = readings.length - 1; i >= 0; i--) {
-        const m = readings[i].measurements.find(
-          (m) => m.vocabularyKey === entry.key,
-        );
-        if (m)
-          return [
-            {
-              vocabularyKey: m.vocabularyKey,
-              label: entry.label,
-              value: m.value,
-              unit: m.unit,
-              min: entry.referenceRange.min,
-              max: entry.referenceRange.max,
-              status: m.status as Status,
-            },
-          ];
-      }
-      return [];
+      const measurement = labs.latestMeasurements.find(
+        (candidate) => candidate.vocabularyKey === entry.key,
+      );
+      if (!measurement) return [];
+      return [
+        {
+          vocabularyKey: measurement.vocabularyKey,
+          label: entry.label,
+          value: measurement.value,
+          unit: measurement.unit,
+          min: entry.referenceRange.min,
+          max: entry.referenceRange.max,
+          status: measurement.status as Status,
+        },
+      ];
     });
 
   const featured = allMetrics.filter((m) => {
@@ -125,7 +121,7 @@ export default async function Home({
                   Lab panels
                 </dt>
                 <dd className="data-value mt-1.5 text-lg font-semibold tracking-tight text-zinc-950">
-                  {readings.length}
+                  {labs.panelCount}
                 </dd>
               </div>
               <div className="rounded-2xl bg-white px-4 py-3.5">
@@ -166,7 +162,7 @@ export default async function Home({
       <section id="metrics" className="scroll-mt-32 pt-16">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Latest lab panel</p>
+            <p className="eyebrow">Latest measurements</p>
             <h2 className="mt-2">Blood markers</h2>
           </div>
           <p>{latestDate}</p>
@@ -174,11 +170,6 @@ export default async function Home({
         <MetricsSection
           featured={featured}
           nonFeatured={nonFeatured}
-          readings={readings.map((r) => ({
-            date: r.date,
-            source: r.source,
-            measurements: r.measurements,
-          }))}
           vocabulary={vocabulary}
         />
       </section>

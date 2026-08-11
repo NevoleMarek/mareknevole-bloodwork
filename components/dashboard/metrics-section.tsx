@@ -1,34 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import type { BiomarkerMetric } from "@/components/dashboard/biomarker-table";
 import { BiomarkerTable } from "@/components/dashboard/biomarker-table";
 import { MetricCard } from "@/components/dashboard/metric-card";
+import type { TrendState } from "@/components/dashboard/trend-panel";
 import { TrendPanel } from "@/components/dashboard/trend-panel";
-import type { BloodworkReading, VocabularyEntry } from "@/types/bloodwork";
+import type { BiomarkerTrendPoint, VocabularyEntry } from "@/types/bloodwork";
 
 const MAX_SELECTED = 10;
 
 export function MetricsSection({
   featured,
   nonFeatured,
-  readings,
   vocabulary,
 }: {
   featured: BiomarkerMetric[];
   nonFeatured: BiomarkerMetric[];
-  readings: BloodworkReading[];
   vocabulary: VocabularyEntry[];
 }) {
   const [selected, setSelected] = useState<string[]>([]);
+  const [trends, setTrends] = useState<Record<string, TrendState>>({});
+  const pending = useRef(new Set<string>());
+
+  function loadTrend(key: string) {
+    if (trends[key]?.kind === "ready" || pending.current.has(key)) return;
+    pending.current.add(key);
+    setTrends((current) => ({
+      ...current,
+      [key]: { kind: "loading" },
+    }));
+    fetch(`/api/public/trends/${encodeURIComponent(key)}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Trend request failed");
+        const data = (await response.json()) as {
+          points: BiomarkerTrendPoint[];
+        };
+        if (data.points.length === 0) throw new Error("Trend is empty");
+        setTrends((current) => ({
+          ...current,
+          [key]: { kind: "ready", points: data.points },
+        }));
+      })
+      .catch(() =>
+        setTrends((current) => ({
+          ...current,
+          [key]: { kind: "error" },
+        })),
+      )
+      .finally(() => pending.current.delete(key));
+  }
 
   function toggle(key: string) {
-    setSelected((prev) => {
-      if (prev.includes(key)) return prev.filter((k) => k !== key);
-      if (prev.length >= MAX_SELECTED) return prev;
-      return [...prev, key];
-    });
+    if (selected.includes(key)) {
+      setSelected(selected.filter((candidate) => candidate !== key));
+      return;
+    }
+    if (selected.length >= MAX_SELECTED) return;
+    loadTrend(key);
+    setSelected([...selected, key]);
+  }
+
+  function preloadTrend(key: string, pointerType: string) {
+    if (pointerType === "touch") return;
+    if (selected.includes(key) || selected.length >= MAX_SELECTED) return;
+    loadTrend(key);
   }
 
   return (
@@ -37,6 +74,9 @@ export function MetricsSection({
         {featured.map((m) => (
           <button
             key={m.vocabularyKey}
+            onPointerDown={(event) =>
+              preloadTrend(m.vocabularyKey, event.pointerType)
+            }
             onClick={() => toggle(m.vocabularyKey)}
             type="button"
             aria-pressed={selected.includes(m.vocabularyKey)}
@@ -62,8 +102,9 @@ export function MetricsSection({
       <div className="mt-5">
         <TrendPanel
           selectedKeys={selected}
-          readings={readings}
+          trends={trends}
           vocabulary={vocabulary}
+          onRetry={loadTrend}
           onRemove={(key) =>
             setSelected((prev) => prev.filter((k) => k !== key))
           }
@@ -84,6 +125,7 @@ export function MetricsSection({
             metrics={nonFeatured}
             selected={selected}
             onToggle={toggle}
+            onIntent={preloadTrend}
           />
         </div>
       )}
