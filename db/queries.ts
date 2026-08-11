@@ -282,16 +282,16 @@ export async function getVisibleHealthMetrics(
     ? db
         .prepare(
           `SELECT hm.date, hm.metric, hm.value, hm.unit
-           FROM health_metrics hm
-           JOIN health_metric_config hmc ON hm.metric = hmc.metric
+           FROM health_metric_config hmc
+           JOIN health_metrics hm ON hm.metric = hmc.metric
            WHERE hmc.visible = 1 AND hm.date >= ?
            ORDER BY hm.date`,
         )
         .bind(cutoffDate)
     : db.prepare(
         `SELECT hm.date, hm.metric, hm.value, hm.unit
-         FROM health_metrics hm
-         JOIN health_metric_config hmc ON hm.metric = hmc.metric
+         FROM health_metric_config hmc
+         JOIN health_metrics hm ON hm.metric = hmc.metric
          WHERE hmc.visible = 1
          ORDER BY hm.date`,
       );
