@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import type { VocabularyEntry } from "@/types/bloodwork";
 import type {
@@ -53,60 +53,73 @@ function StepIndicator({
 
 export function UploadWizard() {
   const [state, setState] = useState<WizardState>({ step: "upload" });
-  const [vocabulary, setVocabulary] = useState<VocabularyEntry[]>([]);
   const [fileName, setFileName] = useState("");
-  const didFetchVocab = useRef(false);
+  const vocabulary = useRef<VocabularyEntry[]>([]);
+  const vocabularyRequest = useRef<Promise<VocabularyEntry[]> | null>(null);
 
-  useEffect(() => {
-    if (didFetchVocab.current) return;
-    didFetchVocab.current = true;
-    fetch("/api/data")
-      .then(
-        (r) =>
-          r.json() as Promise<{ vocabulary: { entries: VocabularyEntry[] } }>,
-      )
-      .then((data) => setVocabulary(data.vocabulary.entries));
-  }, []);
-
-  const handleUpload = useCallback(async (file: File) => {
-    const pdfUrl = URL.createObjectURL(file);
-    setFileName(file.name);
-    setState({ step: "extracting", pdfUrl });
-
-    const formData = new FormData();
-    formData.append("pdf", file);
-
-    try {
-      const res = await fetch("/api/extract", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Extraction failed");
-      const data = (await res.json()) as ExtractResponse;
-      setState({
-        step: "review-extraction",
-        pdfUrl,
-        date: data.date,
-        variables: data.variables,
-      });
-    } catch (e) {
-      setState({
-        step: "error",
-        message: e instanceof Error ? e.message : "Extraction failed",
-        returnTo: { step: "upload" },
-      });
+  const loadVocabulary = useCallback(() => {
+    if (!vocabularyRequest.current) {
+      vocabularyRequest.current = fetch("/api/vocabulary")
+        .then(async (response) => {
+          if (!response.ok) throw new Error("Vocabulary request failed");
+          return (await response.json()) as { entries: VocabularyEntry[] };
+        })
+        .then((data) => {
+          vocabulary.current = data.entries;
+          return data.entries;
+        })
+        .catch((error: unknown) => {
+          vocabularyRequest.current = null;
+          throw error;
+        });
     }
+    return vocabularyRequest.current;
   }, []);
+
+  const handleUpload = useCallback(
+    async (file: File) => {
+      void loadVocabulary().catch(() => {});
+      const pdfUrl = URL.createObjectURL(file);
+      setFileName(file.name);
+      setState({ step: "extracting", pdfUrl });
+
+      const formData = new FormData();
+      formData.append("pdf", file);
+
+      try {
+        const res = await fetch("/api/extract", {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) throw new Error("Extraction failed");
+        const data = (await res.json()) as ExtractResponse;
+        setState({
+          step: "review-extraction",
+          pdfUrl,
+          date: data.date,
+          variables: data.variables,
+        });
+      } catch (e) {
+        setState({
+          step: "error",
+          message: e instanceof Error ? e.message : "Extraction failed",
+          returnTo: { step: "upload" },
+        });
+      }
+    },
+    [loadVocabulary],
+  );
 
   const handleMap = useCallback(
     async (date: string, variables: ExtractedVariable[], pdfUrl: string) => {
       setState({ step: "mapping", pdfUrl, date, variables });
 
       try {
+        const entries = await loadVocabulary();
         const res = await fetch("/api/map", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ variables, vocabulary }),
+          body: JSON.stringify({ variables, vocabulary: entries }),
         });
         if (!res.ok) throw new Error("Mapping failed");
         const data = (await res.json()) as MapResponse;
@@ -124,7 +137,7 @@ export function UploadWizard() {
         });
       }
     },
-    [vocabulary],
+    [loadVocabulary],
   );
 
   const handleSave = useCallback(
@@ -157,7 +170,7 @@ export function UploadWizard() {
         });
 
       // Build measurements with derived status
-      const allVocab = [...vocabulary, ...newVocabulary];
+      const allVocab = [...vocabulary.current, ...newVocabulary];
       const measurements: SaveReadingRequest["measurements"] = mappings.map(
         (m) => {
           const entry = allVocab.find((v) => v.key === m.vocabularyKey);
@@ -194,7 +207,7 @@ export function UploadWizard() {
         });
       }
     },
-    [vocabulary, fileName],
+    [fileName],
   );
 
   const handleResearch = useCallback(
@@ -301,7 +314,7 @@ export function UploadWizard() {
               <StepIndicator active={1} hasNewEntries={hasNewEntries} />
               <StepReviewMapping
                 mappings={state.mappings}
-                vocabulary={vocabulary}
+                vocabulary={vocabulary.current}
                 onMappingsChange={(mappings) =>
                   setState({ ...state, mappings })
                 }

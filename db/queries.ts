@@ -5,6 +5,8 @@ import type {
   ChangelogCursor,
   ChangelogPage,
   Measurement,
+  ReadingCursor,
+  ReadingPage,
   Supplement,
   SupplementChangelog,
   VocabularyEntry,
@@ -74,6 +76,10 @@ type HealthMetricConfigRow = {
 
 type ReadingCountRow = {
   count: number;
+};
+
+type ReadingSummaryRow = ReadingRow & {
+  measurement_count: number;
 };
 
 type BiomarkerTrendRow = {
@@ -254,6 +260,50 @@ export async function getReadingsWithMeasurements(
     ...mapReadingRow(r),
     measurements: byReading.get(r.id) ?? [],
   }));
+}
+
+const READING_PAGE_SIZE = 20;
+
+export async function getReadingPage(
+  db: D1Database,
+  cursor: ReadingCursor | null,
+): Promise<ReadingPage> {
+  const statement = cursor
+    ? db
+        .prepare(
+          `SELECT r.id, r.date, r.source,
+                  (SELECT COUNT(*) FROM measurements m WHERE m.reading_id = r.id) AS measurement_count
+           FROM readings r
+           WHERE (r.date, r.id) < (?, ?)
+           ORDER BY r.date DESC, r.id DESC
+           LIMIT ?`,
+        )
+        .bind(cursor.date, cursor.id, READING_PAGE_SIZE + 1)
+    : db
+        .prepare(
+          `SELECT r.id, r.date, r.source,
+                  (SELECT COUNT(*) FROM measurements m WHERE m.reading_id = r.id) AS measurement_count
+           FROM readings r
+           ORDER BY r.date DESC, r.id DESC
+           LIMIT ?`,
+        )
+        .bind(READING_PAGE_SIZE + 1);
+  const result = await statement.all<ReadingSummaryRow>();
+  const rows = resultsOf("reading-page", result);
+  const entries = rows.slice(0, READING_PAGE_SIZE).map((row) => ({
+    id: row.id,
+    date: row.date,
+    source: row.source,
+    measurementCount: row.measurement_count,
+  }));
+  const last = entries.at(-1);
+  return {
+    entries,
+    nextCursor:
+      rows.length > READING_PAGE_SIZE && last
+        ? { date: last.date, id: last.id }
+        : null,
+  };
 }
 
 export async function getActiveSupplements(

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getBiomarkerTrend,
   getLabOverview,
+  getReadingPage,
   getSupplementChangelogPage,
   mapHealthMetricConfigRow,
   mapMeasurementRow,
@@ -326,5 +327,50 @@ describe("getSupplementChangelogPage", () => {
       cursor.id,
       21,
     );
+  });
+});
+
+describe("getReadingPage", () => {
+  it("returns twenty summaries and a stable cursor", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const rows = Array.from({ length: 21 }, (_, index) => ({
+      id: `r${index}`,
+      date: `2026-01-${String(31 - index).padStart(2, "0")}`,
+      source: `panel-${index}.pdf`,
+      measurement_count: 30 + index,
+    }));
+    const all = vi.fn().mockResolvedValue(d1Result(rows));
+    const bind = vi.fn(() => ({ all }));
+    const prepare = vi.fn(() => ({ bind }));
+
+    const page = await getReadingPage(
+      { prepare } as unknown as D1Database,
+      null,
+    );
+
+    expect(bind).toHaveBeenCalledWith(21);
+    expect(page.entries).toHaveLength(20);
+    expect(page.entries[0]).toEqual({
+      id: "r0",
+      date: "2026-01-31",
+      source: "panel-0.pdf",
+      measurementCount: 30,
+    });
+    expect(page.nextCursor).toEqual({ date: "2026-01-12", id: "r19" });
+  });
+
+  it("binds the reading cursor before the page limit", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const all = vi.fn().mockResolvedValue(d1Result([]));
+    const bind = vi.fn(() => ({ all }));
+    const prepare = vi.fn(() => ({ bind }));
+    const cursor = { date: "2026-01-01", id: "r1" };
+
+    await getReadingPage({ prepare } as unknown as D1Database, cursor);
+
+    expect(prepare).toHaveBeenCalledWith(
+      expect.stringContaining("WHERE (r.date, r.id) < (?, ?)"),
+    );
+    expect(bind).toHaveBeenCalledWith(cursor.date, cursor.id, 21);
   });
 });

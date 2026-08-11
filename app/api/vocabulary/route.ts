@@ -1,7 +1,13 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
+import { getVocabulary } from "@/db/queries";
 import { invalidateDashboard } from "@/lib/data-cache";
 import type { VocabularyEntry } from "@/types/bloodwork";
+
+export async function GET() {
+  const { env } = await getCloudflareContext();
+  return Response.json({ entries: await getVocabulary(env.DB) });
+}
 
 export async function POST(req: Request) {
   const { env } = await getCloudflareContext();

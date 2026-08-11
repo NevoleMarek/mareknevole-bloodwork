@@ -1,13 +1,13 @@
 "use client";
 
-import type { BloodworkReading } from "@/types/bloodwork";
+import type { ReadingSummary } from "@/types/bloodwork";
 
 export function ReadingsTable({
   readings,
   onDelete,
 }: {
-  readings: BloodworkReading[];
-  onDelete: (date: string) => void;
+  readings: ReadingSummary[];
+  onDelete: (id: string) => void;
 }) {
   if (readings.length === 0) {
     return <p className="text-xs text-zinc-400">No readings yet.</p>;
@@ -34,19 +34,19 @@ export function ReadingsTable({
           </tr>
         </thead>
         <tbody className="text-zinc-900">
-          {[...readings].reverse().map((r) => (
-            <tr key={r.date} className="border-t border-zinc-900/8">
+          {readings.map((r) => (
+            <tr key={r.id} className="border-t border-zinc-900/8">
               <td className="data-value px-4 py-3 font-medium">{r.date}</td>
               <td className="max-w-64 truncate px-4 py-3 text-zinc-600">
                 {r.source}
               </td>
               <td className="data-value px-4 py-3 text-zinc-600">
-                {r.measurements.length}
+                {r.measurementCount}
               </td>
               <td className="px-4 py-2 text-right">
                 <button
                   type="button"
-                  onClick={() => onDelete(r.date)}
+                  onClick={() => onDelete(r.id)}
                   className="min-h-9 rounded-full px-3 text-xs font-semibold text-red-700"
                   aria-label={`Delete reading from ${r.date}`}
                 >

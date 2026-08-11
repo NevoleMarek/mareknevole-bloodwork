@@ -3,40 +3,99 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ReadingsTable } from "@/components/admin/readings-table";
-import type { BloodworkReading, VocabularyEntry } from "@/types/bloodwork";
+import type {
+  BloodworkReading,
+  ReadingCursor,
+  ReadingPage,
+  ReadingSummary,
+  VocabularyEntry,
+} from "@/types/bloodwork";
+
+type MoreState = { kind: "idle" } | { kind: "loading" } | { kind: "error" };
 
 type DataState =
   | { kind: "loading" }
+  | { kind: "error" }
   | {
       kind: "ready";
-      vocabulary: VocabularyEntry[];
-      readings: BloodworkReading[];
+      readings: ReadingSummary[];
+      nextCursor: ReadingCursor | null;
+      more: MoreState;
     };
 
-async function loadData(): Promise<DataState> {
-  const res = await fetch("/api/data");
-  const json = (await res.json()) as {
-    vocabulary: { entries: VocabularyEntry[] };
-    readings: BloodworkReading[];
-  };
-  return {
-    kind: "ready",
-    vocabulary: json.vocabulary.entries,
-    readings: json.readings,
-  };
+type ExportData = {
+  vocabulary: { entries: VocabularyEntry[] };
+  readings: BloodworkReading[];
+};
+
+function readingsUrl(cursor: ReadingCursor | null) {
+  if (!cursor) return "/api/readings";
+  return `/api/readings?${new URLSearchParams(cursor)}`;
+}
+
+async function loadReadings(cursor: ReadingCursor | null) {
+  const response = await fetch(readingsUrl(cursor));
+  if (!response.ok) throw new Error("Readings request failed");
+  return (await response.json()) as ReadingPage;
+}
+
+function formatExportMarkdown(data: ExportData) {
+  const lines: string[] = [];
+  for (const reading of data.readings) {
+    lines.push(`## ${reading.date} (${reading.source})\n`);
+    lines.push("| Marker | Value | Unit | Status |");
+    lines.push("|---|---|---|---|");
+    for (const measurement of reading.measurements) {
+      const entry = data.vocabulary.entries.find(
+        (candidate) => candidate.key === measurement.vocabularyKey,
+      );
+      lines.push(
+        `| ${entry?.label ?? measurement.vocabularyKey} | ${measurement.value} | ${measurement.unit} | ${measurement.status} |`,
+      );
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
 }
 
 export default function AdminDataPage() {
   const [data, setData] = useState<DataState>({ kind: "loading" });
-  const [copied, setCopied] = useState(false);
-  const didFetch = useRef(false);
+  const [copyState, setCopyState] = useState<"idle" | "copying" | "copied">(
+    "idle",
+  );
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const exportData = useRef<ExportData | null>(null);
+  const exportRequest = useRef<Promise<ExportData> | null>(null);
+  const exportGeneration = useRef(0);
+  const readingsGeneration = useRef(0);
+
+  const loadFirstPage = useCallback(async () => {
+    const generation = ++readingsGeneration.current;
+    setData({ kind: "loading" });
+    try {
+      const page = await loadReadings(null);
+      if (readingsGeneration.current !== generation) return;
+      setData({
+        kind: "ready",
+        readings: page.entries,
+        nextCursor: page.nextCursor,
+        more: { kind: "idle" },
+      });
+    } catch {
+      if (readingsGeneration.current !== generation) return;
+      setData({ kind: "error" });
+    }
+  }, []);
 
   useEffect(() => {
-    if (didFetch.current) return;
-    didFetch.current = true;
-    loadData().then(setData);
-  }, []);
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void loadFirstPage();
+    });
+    return () => {
+      active = false;
+    };
+  }, [loadFirstPage]);
 
   useEffect(
     () => () => {
@@ -45,9 +104,81 @@ export default function AdminDataPage() {
     [],
   );
 
-  const refresh = useCallback(async () => {
-    setData(await loadData());
-  }, []);
+  async function loadMore() {
+    if (data.kind !== "ready" || !data.nextCursor) return;
+    const generation = readingsGeneration.current;
+    setData({ ...data, more: { kind: "loading" } });
+    try {
+      const page = await loadReadings(data.nextCursor);
+      if (readingsGeneration.current !== generation) return;
+      setData((current) => {
+        if (current.kind !== "ready") return current;
+        return {
+          kind: "ready",
+          readings: [...current.readings, ...page.entries],
+          nextCursor: page.nextCursor,
+          more: { kind: "idle" },
+        };
+      });
+    } catch {
+      if (readingsGeneration.current !== generation) return;
+      setData((current) =>
+        current.kind === "ready"
+          ? { ...current, more: { kind: "error" } }
+          : current,
+      );
+    }
+  }
+
+  function loadExportData() {
+    if (exportData.current) return Promise.resolve(exportData.current);
+    if (exportRequest.current) return exportRequest.current;
+
+    const generation = exportGeneration.current;
+    const request = fetch("/api/data")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Export request failed");
+        const result = (await response.json()) as ExportData;
+        if (exportGeneration.current === generation) {
+          exportData.current = result;
+        }
+        return result;
+      })
+      .catch((error: unknown) => {
+        if (exportGeneration.current === generation) {
+          exportRequest.current = null;
+        }
+        throw error;
+      });
+    exportRequest.current = request;
+    return request;
+  }
+
+  async function handleExportMarkdown() {
+    setCopyState("copying");
+    try {
+      const markdown = loadExportData().then(formatExportMarkdown);
+      if (
+        typeof ClipboardItem !== "undefined" &&
+        typeof navigator.clipboard.write === "function"
+      ) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/plain": markdown.then(
+              (text) => new Blob([text], { type: "text/plain" }),
+            ),
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(await markdown);
+      }
+      setCopyState("copied");
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopyState("idle"), 1400);
+    } catch {
+      setCopyState("idle");
+    }
+  }
 
   if (data.kind === "loading") {
     return (
@@ -57,25 +188,19 @@ export default function AdminDataPage() {
     );
   }
 
-  async function handleExportMarkdown() {
-    if (data.kind !== "ready") return;
-    const lines: string[] = [];
-    for (const r of data.readings) {
-      lines.push(`## ${r.date} (${r.source})\n`);
-      lines.push("| Marker | Value | Unit | Status |");
-      lines.push("|---|---|---|---|");
-      for (const m of r.measurements) {
-        const v = data.vocabulary.find((e) => e.key === m.vocabularyKey);
-        lines.push(
-          `| ${v?.label ?? m.vocabularyKey} | ${m.value} | ${m.unit} | ${m.status} |`,
-        );
-      }
-      lines.push("");
-    }
-    await navigator.clipboard.writeText(lines.join("\n"));
-    setCopied(true);
-    if (copiedTimer.current) clearTimeout(copiedTimer.current);
-    copiedTimer.current = setTimeout(() => setCopied(false), 1400);
+  if (data.kind === "error") {
+    return (
+      <div className="admin-state-panel flex flex-col items-start gap-3 text-sm text-zinc-600">
+        <p>Could not load readings.</p>
+        <button
+          type="button"
+          className="button-secondary"
+          onClick={loadFirstPage}
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -88,37 +213,56 @@ export default function AdminDataPage() {
       <section className="admin-panel">
         <div className="mb-5 flex items-center justify-between gap-3">
           <p className="text-sm font-semibold text-zinc-800">
-            {data.readings.length} lab panels
+            {data.readings.length}
+            {data.nextCursor ? "+" : ""} lab panels loaded
           </p>
           <button
             type="button"
             onClick={handleExportMarkdown}
+            disabled={copyState === "copying"}
             aria-label="Copy as Markdown"
-            data-copied={copied}
+            data-copied={copyState === "copied"}
             className="button-secondary copy-markdown-button"
           >
             <span aria-hidden="true" className="copy-label-stack">
               <span className="copy-label copy-label-default">
-                Copy as Markdown
+                {copyState === "copying" ? "Preparing" : "Copy as Markdown"}
               </span>
               <span className="copy-label copy-label-confirmed">Copied</span>
             </span>
           </button>
           <span role="status" aria-live="polite" className="sr-only">
-            {copied ? "Markdown copied to clipboard." : ""}
+            {copyState === "copied" ? "Markdown copied to clipboard." : ""}
           </span>
         </div>
         <ReadingsTable
           readings={data.readings}
-          onDelete={async (date) => {
+          onDelete={async (id) => {
             await fetch("/api/readings", {
               method: "DELETE",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ date }),
+              body: JSON.stringify({ id }),
             });
-            await refresh();
+            exportGeneration.current += 1;
+            exportData.current = null;
+            exportRequest.current = null;
+            await loadFirstPage();
           }}
         />
+        {data.nextCursor && (
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={data.more.kind === "loading"}
+            className="button-secondary mt-4"
+          >
+            {data.more.kind === "loading"
+              ? "Loading…"
+              : data.more.kind === "error"
+                ? "Retry"
+                : "Load more"}
+          </button>
+        )}
       </section>
     </>
   );

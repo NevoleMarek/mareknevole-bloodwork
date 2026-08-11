@@ -25,6 +25,20 @@ export type BloodworkReading = {
   measurements: Measurement[];
 };
 
+export type ReadingSummary = {
+  id: string;
+  date: string;
+  source: string;
+  measurementCount: number;
+};
+
+export type ReadingCursor = Pick<ReadingSummary, "date" | "id">;
+
+export type ReadingPage = {
+  entries: ReadingSummary[];
+  nextCursor: ReadingCursor | null;
+};
+
 export type BiomarkerTrendPoint = {
   date: string;
   value: number;
