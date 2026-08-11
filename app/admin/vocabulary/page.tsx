@@ -6,11 +6,10 @@ import { VocabularyEditor } from "@/components/admin/vocabulary-editor";
 import type { VocabularyEntry } from "@/types/bloodwork";
 
 async function loadEntries(): Promise<VocabularyEntry[]> {
-  const res = await fetch("/api/data");
-  const json = (await res.json()) as {
-    vocabulary: { entries: VocabularyEntry[] };
-  };
-  return json.vocabulary.entries;
+  const res = await fetch("/api/vocabulary");
+  if (!res.ok) throw new Error("Vocabulary request failed");
+  const json = (await res.json()) as { entries: VocabularyEntry[] };
+  return json.entries;
 }
 
 export default function AdminVocabularyPage() {
