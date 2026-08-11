@@ -2,6 +2,8 @@
 
 import type {
   BiomarkerTrendPoint,
+  ChangelogCursor,
+  ChangelogPage,
   Measurement,
   Supplement,
   SupplementChangelog,
@@ -267,11 +269,52 @@ export async function getSupplementChangelog(
   db: D1Database,
 ): Promise<SupplementChangelog[]> {
   const result = await db
-    .prepare("SELECT * FROM supplement_changelog ORDER BY date DESC")
+    .prepare(
+      "SELECT * FROM supplement_changelog ORDER BY date DESC, created_at DESC, id DESC",
+    )
     .all<SupplementChangelogRow>();
   return resultsOf("supplement-changelog", result).map(
     mapSupplementChangelogRow,
   );
+}
+
+const CHANGELOG_PAGE_SIZE = 20;
+
+export async function getSupplementChangelogPage(
+  db: D1Database,
+  cursor: ChangelogCursor | null,
+): Promise<ChangelogPage> {
+  const statement = cursor
+    ? db
+        .prepare(
+          `SELECT id, date, description, created_at
+           FROM supplement_changelog
+           WHERE (date, created_at, id) < (?, ?, ?)
+           ORDER BY date DESC, created_at DESC, id DESC
+           LIMIT ?`,
+        )
+        .bind(cursor.date, cursor.createdAt, cursor.id, CHANGELOG_PAGE_SIZE + 1)
+    : db
+        .prepare(
+          `SELECT id, date, description, created_at
+           FROM supplement_changelog
+           ORDER BY date DESC, created_at DESC, id DESC
+           LIMIT ?`,
+        )
+        .bind(CHANGELOG_PAGE_SIZE + 1);
+  const result = await statement.all<SupplementChangelogRow>();
+  const rows = resultsOf("supplement-changelog-page", result);
+  const entries = rows
+    .slice(0, CHANGELOG_PAGE_SIZE)
+    .map(mapSupplementChangelogRow);
+  const last = entries.at(-1);
+  return {
+    entries,
+    nextCursor:
+      rows.length > CHANGELOG_PAGE_SIZE && last
+        ? { date: last.date, createdAt: last.createdAt, id: last.id }
+        : null,
+  };
 }
 
 export async function getVisibleHealthMetrics(

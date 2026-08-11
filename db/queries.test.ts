@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getBiomarkerTrend,
   getLabOverview,
+  getSupplementChangelogPage,
   mapHealthMetricConfigRow,
   mapMeasurementRow,
   mapReadingRow,
@@ -270,5 +271,60 @@ describe("getBiomarkerTrend", () => {
       { date: "2026-01-01", value: 90 },
       { date: "2026-02-01", value: 95 },
     ]);
+  });
+});
+
+describe("getSupplementChangelogPage", () => {
+  it("returns twenty rows and a stable cursor", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const rows = Array.from({ length: 21 }, (_, index) => ({
+      id: `c${index}`,
+      date: "2026-01-01",
+      description: `Entry ${index}`,
+      created_at: `2026-01-01T10:00:${String(59 - index).padStart(2, "0")}Z`,
+    }));
+    const all = vi.fn().mockResolvedValue(d1Result(rows));
+    const bind = vi.fn(() => ({ all }));
+    const prepare = vi.fn(() => ({ bind }));
+
+    const page = await getSupplementChangelogPage(
+      { prepare } as unknown as D1Database,
+      null,
+    );
+
+    expect(bind).toHaveBeenCalledWith(21);
+    expect(page.entries).toHaveLength(20);
+    expect(page.nextCursor).toEqual({
+      id: "c19",
+      date: "2026-01-01",
+      createdAt: "2026-01-01T10:00:40Z",
+    });
+  });
+
+  it("binds every cursor field before the page limit", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const all = vi.fn().mockResolvedValue(d1Result([]));
+    const bind = vi.fn(() => ({ all }));
+    const prepare = vi.fn(() => ({ bind }));
+    const cursor = {
+      date: "2026-01-01",
+      createdAt: "2026-01-01T10:00:00Z",
+      id: "c1",
+    };
+
+    await getSupplementChangelogPage(
+      { prepare } as unknown as D1Database,
+      cursor,
+    );
+
+    expect(prepare).toHaveBeenCalledWith(
+      expect.stringContaining("WHERE (date, created_at, id) < (?, ?, ?)"),
+    );
+    expect(bind).toHaveBeenCalledWith(
+      cursor.date,
+      cursor.createdAt,
+      cursor.id,
+      21,
+    );
   });
 });

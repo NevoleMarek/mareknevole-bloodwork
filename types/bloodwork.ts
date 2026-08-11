@@ -47,3 +47,13 @@ export type SupplementChangelog = {
   description: string;
   createdAt: string;
 };
+
+export type ChangelogCursor = Pick<
+  SupplementChangelog,
+  "date" | "createdAt" | "id"
+>;
+
+export type ChangelogPage = {
+  entries: SupplementChangelog[];
+  nextCursor: ChangelogCursor | null;
+};
