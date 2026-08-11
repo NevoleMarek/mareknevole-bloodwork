@@ -1,6 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import type {
+  BiomarkerTrendPoint,
   Measurement,
   Supplement,
   SupplementChangelog,
@@ -67,6 +68,15 @@ type HealthMetricConfigRow = {
   unit: string;
   aggregation: string;
   visible: number;
+};
+
+type ReadingCountRow = {
+  count: number;
+};
+
+type BiomarkerTrendRow = {
+  date: string;
+  value: number;
 };
 
 // -- Row mappers --
@@ -156,6 +166,66 @@ export async function getVocabulary(
 }
 
 type ReadingWithMeasurements = ReadingRow & { measurements: Measurement[] };
+
+export async function getLabOverview(db: D1Database): Promise<{
+  latestPanel: { date: string; source: string } | null;
+  latestMeasurements: Measurement[];
+  panelCount: number;
+}> {
+  const [latestResult, countResult, measurementResult] = await Promise.all([
+    db
+      .prepare(
+        "SELECT id, date, source FROM readings ORDER BY date DESC, id DESC LIMIT 1",
+      )
+      .all<ReadingRow>(),
+    db.prepare("SELECT COUNT(*) AS count FROM readings").all<ReadingCountRow>(),
+    db
+      .prepare(
+        `SELECT m.id, m.reading_id, m.vocabulary_key, m.value, m.unit, m.status
+         FROM vocabulary v
+         JOIN measurements m ON m.id = (
+           SELECT latest.id
+           FROM measurements latest
+           WHERE latest.vocabulary_key = v.key
+           ORDER BY latest.reading_date DESC, latest.reading_id DESC, latest.id DESC
+           LIMIT 1
+         )
+         WHERE v.visible = 1`,
+      )
+      .all<MeasurementRow>(),
+  ]);
+  const latest = resultsOf("latest-reading", latestResult)[0];
+  const panelCount = resultsOf("reading-count", countResult)[0].count;
+  return {
+    latestPanel: latest ? { date: latest.date, source: latest.source } : null,
+    latestMeasurements: resultsOf("latest-measurements", measurementResult).map(
+      mapMeasurementRow,
+    ),
+    panelCount,
+  };
+}
+
+export async function getBiomarkerTrend(
+  db: D1Database,
+  key: string,
+): Promise<BiomarkerTrendPoint[]> {
+  const result = await db
+    .prepare(
+      `SELECT r.date, m.value
+       FROM (
+         SELECT reading_id, MAX(id) AS measurement_id
+         FROM measurements
+         WHERE vocabulary_key = ?
+         GROUP BY reading_id
+       ) selected
+       JOIN measurements m ON m.id = selected.measurement_id
+       JOIN readings r ON r.id = selected.reading_id
+       ORDER BY r.date, r.id`,
+    )
+    .bind(key)
+    .all<BiomarkerTrendRow>();
+  return resultsOf("biomarker-trend", result);
+}
 
 export async function getReadingsWithMeasurements(
   db: D1Database,

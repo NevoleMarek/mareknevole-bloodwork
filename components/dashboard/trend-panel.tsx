@@ -10,50 +10,36 @@ import {
   YAxis,
 } from "recharts";
 
-import type { BloodworkReading, VocabularyEntry } from "@/types/bloodwork";
+import type { BiomarkerTrendPoint, VocabularyEntry } from "@/types/bloodwork";
+
+export type TrendState =
+  | { kind: "loading" }
+  | { kind: "ready"; points: BiomarkerTrendPoint[] }
+  | { kind: "error" };
 
 function buildChartData(
-  key: string,
-  readings: BloodworkReading[],
+  points: BiomarkerTrendPoint[],
 ): { date: string; value: number }[] {
-  const points: { date: string; value: number }[] = [];
-  for (const r of readings) {
-    const m = r.measurements.find((m) => m.vocabularyKey === key);
-    if (m) {
-      points.push({
-        date: new Date(r.date).toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
-        }),
-        value: m.value,
-      });
-    }
-  }
-  return points;
-}
-
-function latestValue(key: string, readings: BloodworkReading[]): number | null {
-  for (let i = readings.length - 1; i >= 0; i--) {
-    const m = readings[i].measurements.find((m) => m.vocabularyKey === key);
-    if (m) return m.value;
-  }
-  return null;
+  return points.map((point) => ({
+    date: new Date(point.date).toLocaleDateString("en-US", {
+      month: "short",
+      year: "2-digit",
+    }),
+    value: point.value,
+  }));
 }
 
 function BiomarkerTrend({
   entry,
-  readings,
+  points,
   onRemove,
 }: {
   entry: VocabularyEntry;
-  readings: BloodworkReading[];
+  points: BiomarkerTrendPoint[];
   onRemove: () => void;
 }) {
-  const chartData = useMemo(
-    () => buildChartData(entry.key, readings),
-    [entry.key, readings],
-  );
-  const latest = latestValue(entry.key, readings);
+  const chartData = useMemo(() => buildChartData(points), [points]);
+  const latest = points.at(-1)?.value ?? null;
   const { min, max } = entry.referenceRange;
 
   const allValues = chartData.map((d) => d.value);
@@ -131,14 +117,16 @@ function BiomarkerTrend({
 
 export function TrendPanel({
   selectedKeys,
-  readings,
+  trends,
   vocabulary,
   onRemove,
+  onRetry,
 }: {
   selectedKeys: string[];
-  readings: BloodworkReading[];
+  trends: Record<string, TrendState>;
   vocabulary: VocabularyEntry[];
   onRemove: (key: string) => void;
+  onRetry: (key: string) => void;
 }) {
   const vocabMap = useMemo(() => {
     const map = new Map<string, VocabularyEntry>();
@@ -153,6 +141,7 @@ export function TrendPanel({
       {selectedKeys.map((key, i) => {
         const entry = vocabMap.get(key);
         if (!entry) return null;
+        const trend = trends[key];
         return (
           <div
             key={key}
@@ -160,11 +149,28 @@ export function TrendPanel({
               i < selectedKeys.length - 1 ? "border-b border-zinc-900/8" : ""
             }
           >
-            <BiomarkerTrend
-              entry={entry}
-              readings={readings}
-              onRemove={() => onRemove(key)}
-            />
+            {!trend || trend.kind === "loading" ? (
+              <div className="px-5 py-8 text-sm text-zinc-500" role="status">
+                Loading {entry.label} trend…
+              </div>
+            ) : trend.kind === "error" ? (
+              <div className="flex items-center justify-between gap-4 px-5 py-6 text-sm text-zinc-600">
+                <span>Could not load {entry.label}.</span>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => onRetry(key)}
+                >
+                  Retry
+                </button>
+              </div>
+            ) : (
+              <BiomarkerTrend
+                entry={entry}
+                points={trend.points}
+                onRemove={() => onRemove(key)}
+              />
+            )}
           </div>
         );
       })}

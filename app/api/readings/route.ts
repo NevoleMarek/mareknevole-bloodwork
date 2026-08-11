@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     statements.push(
       db
         .prepare(
-          "INSERT INTO measurements (id, reading_id, vocabulary_key, value, unit, status) VALUES (?, ?, ?, ?, ?, ?)",
+          "INSERT INTO measurements (id, reading_id, vocabulary_key, value, unit, status, reading_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(
           crypto.randomUUID(),
@@ -74,6 +74,7 @@ export async function POST(request: Request) {
           m.value,
           m.unit,
           m.status,
+          body.date,
         ),
     );
   }
