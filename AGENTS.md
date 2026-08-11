@@ -35,18 +35,6 @@ Make the added code in my branch beautiful by following these rules:
 - Use `Vitest` and Testing Library for unit and component tests.
 - Use `ESLint` and `Prettier` for code quality and formatting.
 
-## Visual style
-
-Before writing any UI code, read `specs/style.md`. It defines the typography-driven design, monospace font, and zinc palette that all components must follow.
-
-- Update `specs/style.md` whenever the visual language, spacing system, or component aesthetic changes.
-
-## Specs maintenance
-
-- Update `specs/application-purpose.md` whenever the app purpose, target workflow, or intended audience changes.
-- Update `specs/architecture.md` whenever the architecture, major dependencies, project structure, or verification workflow changes.
-- If a task changes both intent and implementation, update both specs in the same task.
-
 ## Verification workflow
 
 - Use the fast validation loop during iteration: `bun run check`.

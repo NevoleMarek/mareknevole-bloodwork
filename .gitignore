@@ -41,8 +41,11 @@ yarn-error.log*
 next-env.d.ts
 
 # Local planning documents
+/.audit/
 .superpowers/
 /docs/
+/plans/
+/specs/
 
 # OpenNext build output
 .open-next/
