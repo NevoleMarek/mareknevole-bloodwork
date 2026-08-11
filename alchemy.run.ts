@@ -21,10 +21,10 @@ export default Alchemy.Stack(
   },
   Effect.gen(function* () {
     const isProduction = (yield* Alchemy.Stack).stage === "prod";
-    const database = yield* Cloudflare.D1.Database(
-      "BloodworkDatabase",
-      isProduction ? { name: production.databaseName } : {},
-    );
+    const database = yield* Cloudflare.D1.Database("BloodworkDatabase", {
+      ...(isProduction ? { name: production.databaseName } : {}),
+      migrationsDir: "db/migrations",
+    });
     const incrementalCache = yield* Cloudflare.KV.Namespace(
       "NextIncrementalCache",
       isProduction ? { title: production.kvTitle } : {},
