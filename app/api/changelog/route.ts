@@ -1,8 +1,8 @@
 import assert from "node:assert";
 
-import { revalidatePath } from "next/cache";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
+import { invalidateDashboard } from "@/lib/data-cache";
 export async function PUT(request: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
@@ -20,7 +20,7 @@ export async function PUT(request: Request) {
   if (result.meta.changes === 0)
     return Response.json({ error: "Not found" }, { status: 404 });
 
-  revalidatePath("/");
+  invalidateDashboard();
 
   return Response.json({ ok: true });
 }
@@ -35,7 +35,7 @@ export async function DELETE(request: Request) {
     .bind(id)
     .run();
 
-  revalidatePath("/");
+  invalidateDashboard();
 
   return Response.json({ ok: true });
 }

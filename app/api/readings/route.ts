@@ -1,8 +1,8 @@
 import assert from "node:assert";
 
-import { revalidatePath } from "next/cache";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
+import { invalidateDashboard } from "@/lib/data-cache";
 import type { SaveReadingRequest, SaveReadingResponse } from "@/types/wizard";
 
 export async function DELETE(request: Request) {
@@ -20,7 +20,7 @@ export async function DELETE(request: Request) {
   // CASCADE handles measurements
   await db.prepare("DELETE FROM readings WHERE id = ?").bind(reading.id).run();
 
-  revalidatePath("/");
+  invalidateDashboard();
 
   return Response.json({ ok: true });
 }
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
 
   await db.batch(statements);
 
-  revalidatePath("/");
+  invalidateDashboard();
 
   return Response.json({ readingId } satisfies SaveReadingResponse);
 }
