@@ -63,3 +63,25 @@ CREATE TABLE IF NOT EXISTS revalidations (
   revalidatedAt INTEGER NOT NULL,
   UNIQUE(tag) ON CONFLICT REPLACE
 );
+
+CREATE INDEX IF NOT EXISTS idx_readings_date
+  ON readings(date DESC, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_measurements_reading
+  ON measurements(reading_id, vocabulary_key);
+
+CREATE INDEX IF NOT EXISTS idx_measurements_vocabulary
+  ON measurements(vocabulary_key, reading_id);
+
+CREATE INDEX IF NOT EXISTS idx_active_supplements_name
+  ON supplements(name)
+  WHERE stopped_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_supplement_changelog_date
+  ON supplement_changelog(date DESC, created_at DESC, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_visible_health_config
+  ON health_metric_config(visible, metric);
+
+CREATE INDEX IF NOT EXISTS idx_health_metrics_metric_date
+  ON health_metrics(metric, date);

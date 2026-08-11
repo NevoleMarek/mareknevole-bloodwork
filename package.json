@@ -17,7 +17,7 @@
     "build:worker": "opennextjs-cloudflare build --skipWranglerConfigCheck",
     "build:production-worker": "bun run scripts/build-production-opennext.ts",
     "check:full": "bun run check && bun run build:worker && bun run verify:deployment",
-    "db:migrate": "wrangler d1 execute bloodwork-db --local --config wrangler.dev.jsonc --file=db/schema.sql",
+    "db:migrate": "wrangler d1 migrations apply DB --local --config wrangler.dev.jsonc",
     "db:seed": "bun run db/migrate.ts",
     "plan:production": "bun run build:worker && bun run verify:deployment && bun alchemy plan --stage prod",
     "seed:opennext-cache": "bun run scripts/seed-opennext-cache.ts",
