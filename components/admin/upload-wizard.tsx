@@ -54,7 +54,7 @@ function StepIndicator({
 export function UploadWizard() {
   const [state, setState] = useState<WizardState>({ step: "upload" });
   const [fileName, setFileName] = useState("");
-  const vocabulary = useRef<VocabularyEntry[]>([]);
+  const [vocabulary, setVocabulary] = useState<VocabularyEntry[]>([]);
   const vocabularyRequest = useRef<Promise<VocabularyEntry[]> | null>(null);
 
   const loadVocabulary = useCallback(() => {
@@ -65,7 +65,7 @@ export function UploadWizard() {
           return (await response.json()) as { entries: VocabularyEntry[] };
         })
         .then((data) => {
-          vocabulary.current = data.entries;
+          setVocabulary(data.entries);
           return data.entries;
         })
         .catch((error: unknown) => {
@@ -170,7 +170,7 @@ export function UploadWizard() {
         });
 
       // Build measurements with derived status
-      const allVocab = [...vocabulary.current, ...newVocabulary];
+      const allVocab = [...vocabulary, ...newVocabulary];
       const measurements: SaveReadingRequest["measurements"] = mappings.map(
         (m) => {
           const entry = allVocab.find((v) => v.key === m.vocabularyKey);
@@ -207,7 +207,7 @@ export function UploadWizard() {
         });
       }
     },
-    [fileName],
+    [fileName, vocabulary],
   );
 
   const handleResearch = useCallback(
@@ -314,7 +314,7 @@ export function UploadWizard() {
               <StepIndicator active={1} hasNewEntries={hasNewEntries} />
               <StepReviewMapping
                 mappings={state.mappings}
-                vocabulary={vocabulary.current}
+                vocabulary={vocabulary}
                 onMappingsChange={(mappings) =>
                   setState({ ...state, mappings })
                 }

@@ -12,8 +12,10 @@ function Controls() {
         Disabled
       </button>
       <nav>
+        {/* oxlint-disable-next-line nextjs/no-html-link-for-pages -- the anchor is the test fixture */}
         <a href="/admin">Admin</a>
       </nav>
+      {/* oxlint-disable-next-line nextjs/no-html-link-for-pages -- the anchor is the test fixture */}
       <a href="/export" className="button-secondary">
         Export
       </a>
