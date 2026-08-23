@@ -1,20 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GET } from "@/app/api/data/route";
-import { getReadingsWithMeasurements, getVocabulary } from "@/db/queries";
+import { createDataHandler } from "@/app/api/data/handler";
+import type { BloodworkReading, VocabularyEntry } from "@/types/bloodwork";
 
-vi.mock("@opennextjs/cloudflare", () => ({
-  getCloudflareContext: vi.fn().mockResolvedValue({ env: { DB: {} } }),
-}));
-
-vi.mock("@/db/queries", () => ({
-  getVocabulary: vi.fn(),
-  getReadingsWithMeasurements: vi.fn(),
-}));
+const database = { kind: "test-database" } as const;
+const getDatabase = vi.fn(async () => database);
+const getVocabulary = vi.fn(
+  async (_database: typeof database): Promise<VocabularyEntry[]> => [],
+);
+const getReadings = vi.fn(
+  async (
+    _database: typeof database,
+  ): Promise<Array<BloodworkReading & { id: string }>> => [],
+);
+const GET = createDataHandler({ getDatabase, getReadings, getVocabulary });
 
 beforeEach(() => {
-  vi.mocked(getVocabulary).mockReset().mockResolvedValue([]);
-  vi.mocked(getReadingsWithMeasurements).mockReset().mockResolvedValue([]);
+  getDatabase.mockClear();
+  getVocabulary.mockReset().mockResolvedValue([]);
+  getReadings.mockReset().mockResolvedValue([]);
 });
 
 describe("admin export data", () => {
@@ -25,6 +29,6 @@ describe("admin export data", () => {
       readings: [],
     });
     expect(getVocabulary).toHaveBeenCalledOnce();
-    expect(getReadingsWithMeasurements).toHaveBeenCalledOnce();
+    expect(getReadings).toHaveBeenCalledOnce();
   });
 });

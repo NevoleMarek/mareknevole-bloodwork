@@ -1,19 +1,23 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import * as Schema from "effect/Schema";
 
 import type { VocabularyEntry } from "@/types/bloodwork";
 import type {
-  ExtractResponse,
   ExtractedVariable,
-  MapResponse,
   MappedVariable,
-  ResearchResponse,
   ResearchedEntry,
   SaveReadingRequest,
   WizardState,
 } from "@/types/wizard";
 import { deriveStatus } from "@/lib/status";
+import {
+  ExtractResponseSchema,
+  MapResponseSchema,
+  ResearchResponseSchema,
+  VocabularyResponseSchema,
+} from "@/lib/domain-schemas";
 
 import { StepUpload } from "@/components/admin/step-upload";
 import { StepReviewExtraction } from "@/components/admin/step-review-extraction";
@@ -59,19 +63,20 @@ export function UploadWizard() {
 
   const loadVocabulary = useCallback(() => {
     if (!vocabularyRequest.current) {
-      vocabularyRequest.current = fetch("/api/vocabulary")
-        .then(async (response) => {
+      vocabularyRequest.current = (async () => {
+        try {
+          const response = await fetch("/api/vocabulary");
           if (!response.ok) throw new Error("Vocabulary request failed");
-          return (await response.json()) as { entries: VocabularyEntry[] };
-        })
-        .then((data) => {
+          const data = Schema.decodeUnknownSync(VocabularyResponseSchema)(
+            await response.json(),
+          );
           setVocabulary(data.entries);
           return data.entries;
-        })
-        .catch((error: unknown) => {
+        } catch (error) {
           vocabularyRequest.current = null;
           throw error;
-        });
+        }
+      })();
     }
     return vocabularyRequest.current;
   }, []);
@@ -92,7 +97,9 @@ export function UploadWizard() {
           body: formData,
         });
         if (!res.ok) throw new Error("Extraction failed");
-        const data = (await res.json()) as ExtractResponse;
+        const data = Schema.decodeUnknownSync(ExtractResponseSchema)(
+          await res.json(),
+        );
         setState({
           step: "review-extraction",
           pdfUrl,
@@ -122,7 +129,9 @@ export function UploadWizard() {
           body: JSON.stringify({ variables, vocabulary: entries }),
         });
         if (!res.ok) throw new Error("Mapping failed");
-        const data = (await res.json()) as MapResponse;
+        const data = Schema.decodeUnknownSync(MapResponseSchema)(
+          await res.json(),
+        );
         setState({
           step: "review-mapping",
           pdfUrl,
@@ -235,7 +244,9 @@ export function UploadWizard() {
           body: JSON.stringify({ newEntries }),
         });
         if (!res.ok) throw new Error("Research failed");
-        const data = (await res.json()) as ResearchResponse;
+        const data = Schema.decodeUnknownSync(ResearchResponseSchema)(
+          await res.json(),
+        );
         setState({
           step: "review-research",
           pdfUrl,
@@ -259,7 +270,7 @@ export function UploadWizard() {
     state.step !== "upload" && state.step !== "done" && state.step !== "error"
       ? state.pdfUrl
       : state.step === "error" && "pdfUrl" in state.returnTo
-        ? (state.returnTo as { pdfUrl: string }).pdfUrl
+        ? state.returnTo.pdfUrl
         : null;
 
   const hasNewEntries =

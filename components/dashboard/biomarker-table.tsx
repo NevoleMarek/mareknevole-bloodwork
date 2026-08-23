@@ -1,18 +1,18 @@
 import type { Status } from "@/types/bloodwork";
 
-const statusColor: Record<Status, string> = {
+const statusColor = {
   normal: "bg-emerald-600",
   borderline: "bg-amber-500",
   high: "bg-rose-500",
   low: "bg-sky-500",
-};
+} satisfies Record<Status, string>;
 
-const statusLabel: Record<Status, string> = {
+const statusLabel = {
   normal: "In range",
   borderline: "Borderline",
   high: "High",
   low: "Low",
-};
+} satisfies Record<Status, string>;
 
 export type BiomarkerMetric = {
   vocabularyKey: string;

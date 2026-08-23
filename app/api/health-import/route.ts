@@ -1,15 +1,21 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import * as Schema from "effect/Schema";
 
 import { invalidateHealth } from "@/lib/data-cache";
-import type { HealthImportRequest } from "@/types/health";
+import { HealthImportRequestSchema } from "@/lib/domain-schemas";
+
+type HealthImportRequest = (typeof HealthImportRequestSchema)["Type"];
 
 export async function POST(request: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
 
-  const body = (await request.json()) as HealthImportRequest;
-
-  if (!Array.isArray(body.metrics) || !Array.isArray(body.configs)) {
+  let body: HealthImportRequest;
+  try {
+    body = Schema.decodeUnknownSync(HealthImportRequestSchema)(
+      await request.json(),
+    );
+  } catch {
     return Response.json({ error: "Invalid request" }, { status: 400 });
   }
 

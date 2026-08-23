@@ -6,7 +6,6 @@ import { MetricsSection } from "@/components/dashboard/metrics-section";
 import { SectionNav } from "@/components/dashboard/section-nav";
 import { SupplementTable } from "@/components/dashboard/supplement-table";
 import { getCachedDashboard } from "@/lib/data-cache";
-import type { Status } from "@/types/bloodwork";
 
 export default async function Home() {
   await connection();
@@ -37,7 +36,7 @@ export default async function Home() {
           unit: measurement.unit,
           min: entry.referenceRange.min,
           max: entry.referenceRange.max,
-          status: measurement.status as Status,
+          status: measurement.status,
         },
       ];
     });

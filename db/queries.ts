@@ -1,5 +1,8 @@
 /// <reference types="@cloudflare/workers-types" />
 
+import * as Schema from "effect/Schema";
+
+import { HealthAggregationSchema, StatusSchema } from "@/lib/domain-schemas";
 import type {
   BiomarkerTrendPoint,
   ChangelogCursor,
@@ -110,7 +113,7 @@ export function mapMeasurementRow(row: MeasurementRow): Measurement {
     vocabularyKey: row.vocabulary_key,
     value: row.value,
     unit: row.unit,
-    status: row.status as Measurement["status"],
+    status: Schema.decodeUnknownSync(StatusSchema)(row.status),
   };
 }
 
@@ -145,7 +148,9 @@ export function mapHealthMetricConfigRow(
     metric: row.metric,
     label: row.label,
     unit: row.unit,
-    aggregation: row.aggregation as HealthMetricConfig["aggregation"],
+    aggregation: Schema.decodeUnknownSync(HealthAggregationSchema)(
+      row.aggregation,
+    ),
     visible: row.visible === 1,
   };
 }

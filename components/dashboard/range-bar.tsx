@@ -1,17 +1,13 @@
 import type { Status } from "@/types/bloodwork";
 
-const statusMarkerColor: Record<Status, string> = {
+const statusMarkerColor = {
   normal: "bg-emerald-700",
   borderline: "bg-amber-600",
   high: "bg-rose-600",
   low: "bg-sky-600",
-};
+} satisfies Record<Status, string>;
 
-function computePositions(
-  value: number,
-  min: number,
-  max: number,
-): { zoneLeft: number; zoneWidth: number; valuePos: number } {
+function computePositions(value: number, min: number, max: number) {
   const range = max - min;
   if (range === 0) return { zoneLeft: 20, zoneWidth: 60, valuePos: 50 };
   const pad = range * 0.25;

@@ -2,17 +2,9 @@ import {
   getCachedBiomarkerTrend,
   getCachedVisibleVocabularyKeys,
 } from "@/lib/data-cache";
+import { createTrendHandler } from "@/app/api/public/trends/[key]/handler";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ key: string }> },
-) {
-  const { key } = await params;
-  const visibleKeys = await getCachedVisibleVocabularyKeys();
-  if (!visibleKeys.includes(key)) {
-    return Response.json({ error: "Unknown biomarker" }, { status: 404 });
-  }
-
-  const points = await getCachedBiomarkerTrend(key);
-  return Response.json({ points });
-}
+export const GET = createTrendHandler({
+  getTrend: getCachedBiomarkerTrend,
+  getVisibleKeys: getCachedVisibleVocabularyKeys,
+});

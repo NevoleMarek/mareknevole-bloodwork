@@ -1,7 +1,16 @@
+import * as Schema from "effect/Schema";
+
 import {
   readOpenNextCacheEntries,
   OPENNEXT_TAG_CACHE_SCHEMA,
 } from "@/lib/opennext-cache";
+
+const CloudflareResultSchema = Schema.Struct({
+  errors: Schema.optional(
+    Schema.Array(Schema.Struct({ message: Schema.optional(Schema.String) })),
+  ),
+  success: Schema.optional(Schema.Boolean),
+});
 
 const config = {
   accountId: required("OPENNEXT_CACHE_ACCOUNT_ID"),
@@ -27,7 +36,7 @@ for (const chunk of chunks(entries, 25)) {
 
 console.log(`Seeded ${entries.length} OpenNext KV cache entries.`);
 
-async function cloudflare(path: string, method: string, body: unknown) {
+async function cloudflare(path: string, method: string, body: Schema.Json) {
   const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
     body: JSON.stringify(body),
     headers: {
@@ -36,10 +45,9 @@ async function cloudflare(path: string, method: string, body: unknown) {
     },
     method,
   });
-  const result = (await response.json()) as {
-    errors?: { message?: string }[];
-    success?: boolean;
-  };
+  const result = Schema.decodeUnknownSync(CloudflareResultSchema)(
+    await response.json(),
+  );
   if (!response.ok || !result.success) {
     throw new Error(
       result.errors?.map((error) => error.message).join(", ") ??

@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import * as Schema from "effect/Schema";
 
 import { SupplementEditor } from "@/components/admin/supplement-editor";
+import { SupplementsResponseSchema } from "@/lib/domain-schemas";
 import type { Supplement, SupplementChangelog } from "@/types/bloodwork";
 
 type SupplementsResponse = {
@@ -16,7 +18,7 @@ type EditingState =
 
 async function loadData(): Promise<SupplementsResponse> {
   const res = await fetch("/api/supplements");
-  return (await res.json()) as SupplementsResponse;
+  return Schema.decodeUnknownSync(SupplementsResponseSchema)(await res.json());
 }
 
 export default function AdminSupplementsPage() {

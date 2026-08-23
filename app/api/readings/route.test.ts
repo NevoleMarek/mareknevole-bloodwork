@@ -1,23 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GET } from "@/app/api/readings/route";
-import { getReadingPage } from "@/db/queries";
+import { createReadingsGetHandler } from "@/app/api/readings/get-handler";
+import type { ReadingCursor, ReadingPage } from "@/types/bloodwork";
 
-vi.mock("@opennextjs/cloudflare", () => ({
-  getCloudflareContext: vi.fn().mockResolvedValue({ env: { DB: {} } }),
-}));
-
-vi.mock("@/db/queries", () => ({
-  getReadingPage: vi.fn(),
-}));
-
-vi.mock("@/lib/data-cache", () => ({
-  invalidateDashboard: vi.fn(),
-}));
+const database = { kind: "test-database" } as const;
+const getDatabase = vi.fn(async () => database);
+const getPage = vi.fn(
+  async (
+    _database: typeof database,
+    _cursor: ReadingCursor | null,
+  ): Promise<ReadingPage> => ({ entries: [], nextCursor: null }),
+);
+const GET = createReadingsGetHandler({ getDatabase, getPage });
 
 beforeEach(() => {
-  vi.mocked(getReadingPage).mockReset();
-  vi.mocked(getReadingPage).mockResolvedValue({
+  getDatabase.mockClear();
+  getPage.mockReset();
+  getPage.mockResolvedValue({
     entries: [],
     nextCursor: null,
   });
@@ -30,7 +29,7 @@ describe("readings route", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(getReadingPage).toHaveBeenCalledWith({}, null);
+    expect(getPage).toHaveBeenCalledWith(database, null);
   });
 
   it("rejects a partial cursor", async () => {
@@ -39,7 +38,7 @@ describe("readings route", () => {
     );
 
     expect(response.status).toBe(400);
-    expect(getReadingPage).not.toHaveBeenCalled();
+    expect(getPage).not.toHaveBeenCalled();
   });
 
   it("loads a complete cursor", async () => {
@@ -48,10 +47,10 @@ describe("readings route", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(getReadingPage).toHaveBeenCalledWith(
-      {},
-      { date: "2026-01-01", id: "r1" },
-    );
+    expect(getPage).toHaveBeenCalledWith(database, {
+      date: "2026-01-01",
+      id: "r1",
+    });
   });
 
   it("loads a server cursor with an empty persisted date", async () => {
@@ -60,6 +59,6 @@ describe("readings route", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(getReadingPage).toHaveBeenCalledWith({}, { date: "", id: "r1" });
+    expect(getPage).toHaveBeenCalledWith(database, { date: "", id: "r1" });
   });
 });
