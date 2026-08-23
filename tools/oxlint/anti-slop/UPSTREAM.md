@@ -1,0 +1,5 @@
+# Upstream
+
+- Repository: https://github.com/dmmulroy/anti-slop
+- Commit: `6d538555cb151d4121ed51a27db81890eacf8ae9`
+- Vendored from: `skills/install-anti-slop/assets/anti-slop/`

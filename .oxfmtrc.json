@@ -3,5 +3,11 @@
   "printWidth": 80,
   "sortPackageJson": false,
   "sortTailwindcss": {},
-  "ignorePatterns": [".next", "coverage", "node_modules", "bun.lock"]
+  "ignorePatterns": [
+    ".next",
+    "coverage",
+    "node_modules",
+    "bun.lock",
+    "tools/oxlint/anti-slop"
+  ]
 }
