@@ -13,7 +13,10 @@ import {
   ApiServiceUnavailable,
   toApiError,
 } from "@/lib/effect/api-errors";
-import { makeApiWebHandler } from "@/lib/effect/api-server";
+import {
+  handleApiRequestWith,
+  makeApiWebHandler,
+} from "@/lib/effect/api-server";
 import {
   ConflictError,
   NotFoundError,
@@ -24,6 +27,7 @@ import {
   Auth,
   Bloodwork,
   Dashboard,
+  type DashboardContract,
   Health,
   ProviderWorkflows,
   Supplements,
@@ -31,22 +35,21 @@ import {
 
 const unused = () => Effect.die("unused service operation");
 
-const services = Layer.mergeAll(
-  Layer.succeed(
-    Dashboard,
-    Dashboard.of({
-      getDashboard: unused,
-      getData: () =>
-        Effect.succeed({ vocabulary: { entries: [] }, readings: [] }),
-      getTrend: () => Effect.succeed([]),
-      getVisibleKeys: () => Effect.succeed(["glucose"]),
-      getHealth: () => Effect.succeed({ metrics: [], configs: [] }),
-      getFirstChangelogPage: () =>
-        Effect.succeed({ entries: [], nextCursor: null }),
-      getChangelogPage: () => Effect.succeed({ entries: [], nextCursor: null }),
-      getReadingPage: () => Effect.succeed({ entries: [], nextCursor: null }),
-    }),
-  ),
+const makeDashboard = (
+  getData: DashboardContract["getData"],
+): DashboardContract => ({
+  getDashboard: unused,
+  getData,
+  getTrend: () => Effect.succeed([]),
+  getVisibleKeys: () => Effect.succeed(["glucose"]),
+  getHealth: () => Effect.succeed({ metrics: [], configs: [] }),
+  getFirstChangelogPage: () =>
+    Effect.succeed({ entries: [], nextCursor: null }),
+  getChangelogPage: () => Effect.succeed({ entries: [], nextCursor: null }),
+  getReadingPage: () => Effect.succeed({ entries: [], nextCursor: null }),
+});
+
+const sharedServices = Layer.mergeAll(
   Layer.succeed(
     Bloodwork,
     Bloodwork.of({
@@ -91,6 +94,18 @@ const services = Layer.mergeAll(
       map: unused,
       research: unused,
     }),
+  ),
+);
+
+const services = Layer.merge(
+  sharedServices,
+  Layer.succeed(
+    Dashboard,
+    Dashboard.of(
+      makeDashboard(() =>
+        Effect.succeed({ vocabulary: { entries: [] }, readings: [] }),
+      ),
+    ),
   ),
 );
 
@@ -250,5 +265,59 @@ describe("HttpApi error projection", () => {
 
     expect(error).toBeInstanceOf(ApiNotFound);
     expect(error.error).toBe("Unknown biomarker");
+  });
+});
+
+describe("Next request lifetime", () => {
+  it("acquires and disposes application services for every request", async () => {
+    let acquired = 0;
+    let disposed = 0;
+    const requestDashboard = Layer.effect(
+      Dashboard,
+      Effect.acquireRelease(
+        Effect.sync(() => {
+          const requestId = ++acquired;
+          return Dashboard.of(
+            makeDashboard(() =>
+              Effect.succeed({
+                vocabulary: { entries: [] },
+                readings: [
+                  {
+                    date: "2026-08-24",
+                    source: `request-${requestId}`,
+                    measurements: [],
+                  },
+                ],
+              }),
+            ),
+          );
+        }),
+        () =>
+          Effect.sync(() => {
+            disposed += 1;
+          }),
+      ),
+    );
+    const requestServices = Layer.merge(sharedServices, requestDashboard);
+
+    const first = await handleApiRequestWith(
+      new Request("https://bloodwork.test/api/data"),
+      requestServices,
+    );
+    const second = await handleApiRequestWith(
+      new Request("https://bloodwork.test/api/data"),
+      requestServices,
+    );
+
+    await expect(first.json()).resolves.toHaveProperty(
+      "readings.0.source",
+      "request-1",
+    );
+    await expect(second.json()).resolves.toHaveProperty(
+      "readings.0.source",
+      "request-2",
+    );
+    expect(acquired).toBe(2);
+    expect(disposed).toBe(2);
   });
 });

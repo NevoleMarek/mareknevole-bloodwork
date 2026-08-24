@@ -370,5 +370,18 @@ export const makeApiLayer = <E>(services: Layer.Layer<ApiServices, E>) =>
 export const makeApiWebHandler = <E>(services: Layer.Layer<ApiServices, E>) =>
   HttpRouter.toWebHandler(makeApiLayer(services), { disableLogger: true });
 
-export const { dispose: disposeApi, handler: handleApiRequest } =
-  makeApiWebHandler(appLayer);
+export const handleApiRequestWith = async <E>(
+  request: Request,
+  services: Layer.Layer<ApiServices, E>,
+): Promise<Response> => {
+  const { dispose, handler } = makeApiWebHandler(services);
+  try {
+    return await handler(request);
+  } finally {
+    await dispose();
+  }
+};
+
+/** Keep OpenNext bindings request-scoped instead of caching the first ALS store. */
+export const handleApiRequest = (request: Request): Promise<Response> =>
+  handleApiRequestWith(request, appLayer);
