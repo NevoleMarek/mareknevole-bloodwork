@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from "react";
 
+import { runApi } from "@/lib/effect/client";
+
 import type { HealthMetricConfig } from "@/types/health";
 
 export function HealthVisibility({
@@ -17,11 +19,12 @@ export function HealthVisibility({
     setItems((prev) =>
       prev.map((c) => (c.metric === metric ? { ...c, visible } : c)),
     );
-    await fetch("/api/health-config", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ metric, visible }),
-    });
+    await runApi((client) =>
+      client.health.updateVisibility({
+        params: { metric },
+        payload: { visible },
+      }),
+    );
   }, []);
 
   return (

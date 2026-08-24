@@ -40,6 +40,7 @@ for (const text of [
   "directory: build.outdir",
   'date: "2025-12-01"',
   '"nodejs_compat"',
+  'NEXTJS_ENV: isProduction ? "production" : "development"',
   "return { url: worker.url }",
 ]) {
   assert(stack.includes(text), `missing ${text}`);

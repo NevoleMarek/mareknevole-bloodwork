@@ -1,73 +1,42 @@
-export type VocabularyEntry = {
-  key: string;
-  label: string;
-  unit: string;
-  referenceRange: { min: number; max: number };
-  description: string | null;
-  featured: boolean;
-  visible: boolean;
-};
-
-export type Vocabulary = { entries: VocabularyEntry[] };
-
-export type Status = "normal" | "borderline" | "high" | "low";
-
-export type Measurement = {
-  vocabularyKey: string;
-  value: number;
-  unit: string;
-  status: Status;
-};
-
-export type BloodworkReading = {
-  date: string;
-  source: string;
-  measurements: Measurement[];
-};
-
-export type ReadingSummary = {
-  id: string;
-  date: string;
-  source: string;
-  measurementCount: number;
-};
-
-export type ReadingCursor = Pick<ReadingSummary, "date" | "id">;
-
-export type ReadingPage = {
-  entries: ReadingSummary[];
-  nextCursor: ReadingCursor | null;
-};
-
-export type BiomarkerTrendPoint = {
-  date: string;
-  value: number;
-};
-
-export type Supplement = {
-  id: string;
-  name: string;
-  dose: string;
-  frequency: string;
-  startedAt: string;
-  stoppedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type SupplementChangelog = {
-  id: string;
-  date: string;
-  description: string;
-  createdAt: string;
-};
-
-export type ChangelogCursor = Pick<
+export type {
+  BiomarkerTrendPoint,
+  BloodworkReading,
+  ChangelogCursor,
+  ChangelogPage,
+  DashboardSnapshot,
+  LabOverview,
+  LatestPanel,
+  Measurement,
+  ReadingCursor,
+  ReadingPage,
+  ReadingWithMeasurements,
+  ReadingSummary,
+  ReferenceRange,
+  Status,
+  Supplement,
   SupplementChangelog,
-  "date" | "createdAt" | "id"
->;
+  VocabularyEntry,
+} from "@/lib/schemas/domain";
 
-export type ChangelogPage = {
-  entries: SupplementChangelog[];
-  nextCursor: ChangelogCursor | null;
+export type {
+  ExportData,
+  HealthImportConfig,
+  HealthImportSummary,
+  SupplementsResponse,
+  VocabularyResponse as Vocabulary,
+} from "@/lib/effect/api";
+
+import type {
+  SupplementCreateRequest,
+  SupplementDeleteQuery,
+  SupplementUpdateRequest,
+} from "@/lib/effect/api";
+
+/** Service inputs add the resource identity supplied by the URL path. */
+export type SupplementCreateInput = SupplementCreateRequest;
+export type SupplementUpdateInput = SupplementUpdateRequest & {
+  readonly id: string;
+};
+export type SupplementDeleteInput = SupplementDeleteQuery & {
+  readonly id: string;
 };

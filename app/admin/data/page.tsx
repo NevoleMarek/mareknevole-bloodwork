@@ -1,16 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as Schema from "effect/Schema";
 
 import { ReadingsTable } from "@/components/admin/readings-table";
-import { ExportDataSchema, ReadingPageSchema } from "@/lib/domain-schemas";
-import type {
-  BloodworkReading,
-  ReadingCursor,
-  ReadingSummary,
-  VocabularyEntry,
-} from "@/types/bloodwork";
+import { makeReadingId, type ExportData } from "@/lib/effect/api";
+import { runApi } from "@/lib/effect/client";
+import type { ReadingCursor, ReadingSummary } from "@/types/bloodwork";
 
 type MoreState = { kind: "idle" } | { kind: "loading" } | { kind: "error" };
 
@@ -24,21 +19,10 @@ type DataState =
       more: MoreState;
     };
 
-type ExportData = {
-  vocabulary: { entries: VocabularyEntry[] };
-  readings: BloodworkReading[];
-};
-
-function readingsUrl(cursor: ReadingCursor | null) {
-  if (!cursor) return "/api/readings";
-  return `/api/readings?${new URLSearchParams(cursor)}`;
-}
-
-async function loadReadings(cursor: ReadingCursor | null) {
-  const response = await fetch(readingsUrl(cursor));
-  if (!response.ok) throw new Error("Readings request failed");
-  return Schema.decodeUnknownSync(ReadingPageSchema)(await response.json());
-}
+const loadReadings = (cursor: ReadingCursor | null) =>
+  runApi((client) =>
+    client.readings.list({ query: cursor === null ? {} : cursor }),
+  );
 
 function formatExportMarkdown(data: ExportData) {
   const lines: string[] = [];
@@ -138,11 +122,7 @@ export default function AdminDataPage() {
     const generation = exportGeneration.current;
     const request = (async () => {
       try {
-        const response = await fetch("/api/data");
-        if (!response.ok) throw new Error("Export request failed");
-        const result = Schema.decodeUnknownSync(ExportDataSchema)(
-          await response.json(),
-        );
+        const result = await runApi((client) => client.readings.export({}));
         if (exportGeneration.current === generation) {
           exportData.current = result;
         }
@@ -239,11 +219,9 @@ export default function AdminDataPage() {
         <ReadingsTable
           readings={data.readings}
           onDelete={async (id) => {
-            await fetch("/api/readings", {
-              method: "DELETE",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id }),
-            });
+            await runApi((client) =>
+              client.readings.delete({ params: { id: makeReadingId(id) } }),
+            );
             exportGeneration.current += 1;
             exportData.current = null;
             exportRequest.current = null;

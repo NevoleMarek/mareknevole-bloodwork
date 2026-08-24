@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as Schema from "effect/Schema";
 
-import { ChangelogPageSchema } from "@/lib/domain-schemas";
+import { apiUrls, runApi } from "@/lib/effect/client";
 import type {
   ChangelogCursor,
   ChangelogPage,
@@ -23,21 +22,13 @@ type ChangelogState =
       more: MoreState;
     };
 
-function pageUrl(cursor: ChangelogCursor | null) {
-  if (!cursor) return "/api/public/changelog";
-  const params = new URLSearchParams({
-    date: cursor.date,
-    createdAt: cursor.createdAt,
-    id: cursor.id,
-  });
-  return `/api/public/changelog?${params}`;
-}
+const pageUrl = (cursor: ChangelogCursor | null) =>
+  apiUrls.changelog.list({ query: cursor === null ? {} : cursor });
 
-async function fetchPage(cursor: ChangelogCursor | null) {
-  const response = await fetch(pageUrl(cursor));
-  if (!response.ok) throw new Error("Changelog request failed");
-  return Schema.decodeUnknownSync(ChangelogPageSchema)(await response.json());
-}
+const fetchPage = (cursor: ChangelogCursor | null) =>
+  runApi((client) =>
+    client.changelog.list({ query: cursor === null ? {} : cursor }),
+  );
 
 export function ChangelogList() {
   const [state, setState] = useState<ChangelogState>({ kind: "idle" });

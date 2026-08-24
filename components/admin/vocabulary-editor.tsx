@@ -1,12 +1,24 @@
 "use client";
 
 import { useState } from "react";
+
+import { runApi } from "@/lib/effect/client";
+import { makeVocabularyKey } from "@/lib/effect/api";
 import type { VocabularyEntry } from "@/types/bloodwork";
 
 type EditingState =
   | { kind: "none" }
   | { kind: "editing"; entry: VocabularyEntry }
   | { kind: "adding" };
+
+const updatePayload = (entry: VocabularyEntry) => ({
+  label: entry.label,
+  unit: entry.unit,
+  referenceRange: entry.referenceRange,
+  description: entry.description,
+  featured: entry.featured,
+  visible: entry.visible,
+});
 
 export function VocabularyEditor({
   entries,
@@ -41,24 +53,22 @@ export function VocabularyEditor({
   }
 
   async function toggleVisible(entry: VocabularyEntry) {
-    await fetch("/api/vocabulary", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        entry: { ...entry, visible: !entry.visible },
+    await runApi((client) =>
+      client.vocabulary.update({
+        params: { key: makeVocabularyKey(entry.key) },
+        payload: updatePayload({ ...entry, visible: !entry.visible }),
       }),
-    });
+    );
     onRefresh();
   }
 
   async function toggleFeatured(entry: VocabularyEntry) {
-    await fetch("/api/vocabulary", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        entry: { ...entry, featured: !entry.featured },
+    await runApi((client) =>
+      client.vocabulary.update({
+        params: { key: makeVocabularyKey(entry.key) },
+        payload: updatePayload({ ...entry, featured: !entry.featured }),
       }),
-    });
+    );
     onRefresh();
   }
 
@@ -73,22 +83,22 @@ export function VocabularyEditor({
       featured: editing.kind === "editing" ? editing.entry.featured : false,
       visible: editing.kind === "editing" ? editing.entry.visible : true,
     };
-    const method = editing.kind === "adding" ? "POST" : "PUT";
-    await fetch("/api/vocabulary", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entry }),
-    });
+    await runApi((client) =>
+      editing.kind === "adding"
+        ? client.vocabulary.create({ payload: entry })
+        : client.vocabulary.update({
+            params: { key: makeVocabularyKey(entry.key) },
+            payload: updatePayload(entry),
+          }),
+    );
     setEditing({ kind: "none" });
     onRefresh();
   }
 
   async function handleDelete(key: string) {
-    await fetch("/api/vocabulary", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key }),
-    });
+    await runApi((client) =>
+      client.vocabulary.delete({ params: { key: makeVocabularyKey(key) } }),
+    );
     onRefresh();
   }
 

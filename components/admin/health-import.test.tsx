@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HealthImport } from "@/components/admin/health-import";
+import { jsonResponse } from "@/test/http";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -10,11 +11,12 @@ afterEach(() => {
 });
 
 function healthFile() {
-  const file = new File(["{}"], "health-data.json", {
+  const body = JSON.stringify({ metrics: [], configs: [] });
+  const file = new File([body], "health-data.json", {
     type: "application/json",
   });
   Object.defineProperty(file, "text", {
-    value: vi.fn().mockResolvedValue("{}"),
+    value: vi.fn().mockResolvedValue(body),
   });
   return file;
 }
@@ -41,10 +43,9 @@ describe("HealthImport", () => {
     const onImported = vi.fn();
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue({ saved: 12, metrics: 4, days: 3 }),
-      }),
+      vi
+        .fn()
+        .mockResolvedValue(jsonResponse({ saved: 12, metrics: 4, days: 3 })),
     );
 
     render(<HealthImport onImported={onImported} />);
@@ -77,10 +78,9 @@ describe("HealthImport", () => {
     vi.useFakeTimers();
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue({ metrics: 4, days: 3 }),
-      }),
+      vi
+        .fn()
+        .mockResolvedValue(jsonResponse({ saved: 12, metrics: 4, days: 3 })),
     );
     const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
     const { unmount } = render(<HealthImport onImported={vi.fn()} />);
@@ -100,10 +100,15 @@ describe("HealthImport", () => {
   it("keeps an accessible native file input available after an error", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        json: vi.fn().mockResolvedValue({ error: "Invalid export" }),
-      }),
+      vi.fn().mockResolvedValue(
+        jsonResponse(
+          {
+            _tag: "Bloodwork.ApiBadRequest",
+            error: "Invalid export",
+          },
+          400,
+        ),
+      ),
     );
     render(<HealthImport onImported={vi.fn()} />);
 

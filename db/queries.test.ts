@@ -1,5 +1,8 @@
+import * as Effect from "effect/Effect";
 import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 
+import { PersistenceError } from "@/lib/effect/errors";
+import { makeRepository } from "@/lib/effect/repository";
 import {
   getBiomarkerTrend,
   getLabOverview,
@@ -171,7 +174,7 @@ describe("row mappers", () => {
       vocabulary_key: "glucose",
       value: 92,
       unit: "mg/dL",
-      status: "normal",
+      status: "normal" as const,
     };
     expect(mapMeasurementRow(row)).toEqual({
       vocabularyKey: "glucose",
@@ -224,7 +227,7 @@ describe("row mappers", () => {
       metric: "heart_rate",
       label: "Heart Rate",
       unit: "bpm",
-      aggregation: "avg",
+      aggregation: "avg" as const,
       visible: 1,
     };
     expect(mapHealthMetricConfigRow(row)).toEqual({
@@ -241,7 +244,7 @@ describe("row mappers", () => {
       metric: "steps",
       label: "Steps",
       unit: "count",
-      aggregation: "sum",
+      aggregation: "sum" as const,
       visible: 0,
     };
     expect(mapHealthMetricConfigRow(row)).toEqual({
@@ -314,6 +317,57 @@ describe("getLabOverview", () => {
   });
 });
 
+describe("persisted enum boundaries", () => {
+  it("maps an invalid measurement status to typed repository persistence failure", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const database = new TestDatabase([
+      d1Result([{ id: "newest", date: "2026-01-10", source: "newest.pdf" }]),
+      d1Result([{ count: 1 }]),
+      d1Result([
+        {
+          id: "m1",
+          reading_id: "newest",
+          vocabulary_key: "glucose",
+          value: 107,
+          unit: "mg/dL",
+          status: "invalid-status",
+        },
+      ]),
+    ]);
+
+    const repository = makeRepository(database);
+    const failure = Effect.runPromise(repository.getLabOverview());
+
+    await expect(failure).rejects.toBeInstanceOf(PersistenceError);
+    await expect(failure).rejects.toMatchObject({
+      operation: "Repository.getLabOverview",
+    });
+  });
+
+  it("maps an invalid health aggregation to typed repository persistence failure", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const database = new TestDatabase([
+      d1Result([
+        {
+          metric: "heart_rate",
+          label: "Heart Rate",
+          unit: "bpm",
+          aggregation: "invalid-aggregation",
+          visible: 1,
+        },
+      ]),
+    ]);
+
+    const repository = makeRepository(database);
+    const failure = Effect.runPromise(repository.getHealthMetricConfigs());
+
+    await expect(failure).rejects.toBeInstanceOf(PersistenceError);
+    await expect(failure).rejects.toMatchObject({
+      operation: "Repository.getHealthMetricConfigs",
+    });
+  });
+});
+
 describe("getBiomarkerTrend", () => {
   it("uses the overview tie-breaker to return one point per reading", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
@@ -324,15 +378,18 @@ describe("getBiomarkerTrend", () => {
       ]),
     ]);
 
-    const result = await getBiomarkerTrend(database, "glucose");
+    const result = await getBiomarkerTrend(database, "glucose", "2025-08-01");
 
     expect(database.prepareMock).toHaveBeenCalledWith(
-      expect.stringContaining("MAX(id) AS measurement_id"),
+      expect.stringContaining("MAX(m.id) AS measurement_id"),
     );
     expect(database.prepareMock).toHaveBeenCalledWith(
-      expect.stringContaining("GROUP BY reading_id"),
+      expect.stringContaining("GROUP BY m.reading_id"),
     );
-    expect(database.bindMock).toHaveBeenCalledWith("glucose");
+    expect(database.prepareMock).toHaveBeenCalledWith(
+      expect.stringContaining("filtered_readings.date >= ?"),
+    );
+    expect(database.bindMock).toHaveBeenCalledWith("glucose", "2025-08-01");
     expect(result).toEqual([
       { date: "2026-01-01", value: 90 },
       { date: "2026-02-01", value: 95 },

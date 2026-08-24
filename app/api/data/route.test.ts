@@ -1,34 +1,48 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import { describe, expect, it } from "vitest";
 
-import { createDataHandler } from "@/app/api/data/handler";
-import type { BloodworkReading, VocabularyEntry } from "@/types/bloodwork";
+import { PersistenceError } from "@/lib/effect/errors";
+import { Dashboard } from "@/lib/effect/services";
+import { dataEffect } from "@/lib/effect/workflows";
 
-const database = { kind: "test-database" } as const;
-const getDatabase = vi.fn(async () => database);
-const getVocabulary = vi.fn(
-  async (_database: typeof database): Promise<VocabularyEntry[]> => [],
-);
-const getReadings = vi.fn(
-  async (
-    _database: typeof database,
-  ): Promise<Array<BloodworkReading & { id: string }>> => [],
-);
-const GET = createDataHandler({ getDatabase, getReadings, getVocabulary });
+const unused = () => Effect.die("unused dashboard operation");
 
-beforeEach(() => {
-  getDatabase.mockClear();
-  getVocabulary.mockReset().mockResolvedValue([]);
-  getReadings.mockReset().mockResolvedValue([]);
-});
+const dashboard = (getData: Dashboard["Service"]["getData"]) =>
+  Dashboard.of({
+    getDashboard: unused,
+    getData,
+    getTrend: unused,
+    getVisibleKeys: unused,
+    getHealth: unused,
+    getFirstChangelogPage: unused,
+    getChangelogPage: unused,
+    getReadingPage: unused,
+  });
 
-describe("admin export data", () => {
-  it("returns vocabulary and readings without querying health", async () => {
-    const response = await GET();
-    expect(await response.json()).toEqual({
-      vocabulary: { entries: [] },
-      readings: [],
+const runData = (service: Dashboard["Service"]) =>
+  Effect.runPromise(
+    dataEffect().pipe(Effect.provide(Layer.succeed(Dashboard, service))),
+  );
+
+describe("admin export data Effect workflow", () => {
+  it("returns vocabulary and readings from Dashboard", async () => {
+    await expect(
+      runData(
+        dashboard(() =>
+          Effect.succeed({ vocabulary: { entries: [] }, readings: [] }),
+        ),
+      ),
+    ).resolves.toEqual({ vocabulary: { entries: [] }, readings: [] });
+  });
+
+  it("preserves a Dashboard persistence failure", async () => {
+    const failure = new PersistenceError({
+      operation: "Dashboard.getData",
+      cause: new Error("d1 unavailable"),
     });
-    expect(getVocabulary).toHaveBeenCalledOnce();
-    expect(getReadings).toHaveBeenCalledOnce();
+    await expect(runData(dashboard(() => Effect.fail(failure)))).rejects.toBe(
+      failure,
+    );
   });
 });

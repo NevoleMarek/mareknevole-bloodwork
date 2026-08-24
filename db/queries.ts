@@ -1,94 +1,32 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import * as Schema from "effect/Schema";
-
-import { HealthAggregationSchema, StatusSchema } from "@/lib/domain-schemas";
+import {
+  BiomarkerTrendRow,
+  HealthMetricConfigRow,
+  HealthMetricRow,
+  MeasurementRow,
+  ReadingCountRow,
+  ReadingRow,
+  ReadingSummaryRow,
+  SupplementChangelogRow,
+  SupplementRow,
+  VocabularyRow,
+} from "@/lib/schemas/rows";
 import type {
   BiomarkerTrendPoint,
   ChangelogCursor,
   ChangelogPage,
+  LabOverview,
   Measurement,
   ReadingCursor,
   ReadingPage,
+  ReadingWithMeasurements,
   Supplement,
   SupplementChangelog,
   VocabularyEntry,
 } from "@/types/bloodwork";
-import type { HealthMetric, HealthMetricConfig } from "@/types/health";
-
-// -- Row types (snake_case, matching D1 columns) --
-
-type VocabularyRow = {
-  key: string;
-  label: string;
-  unit: string;
-  reference_min: number;
-  reference_max: number;
-  description: string | null;
-  featured: number;
-  visible: number;
-};
-
-type ReadingRow = {
-  id: string;
-  date: string;
-  source: string;
-};
-
-type MeasurementRow = {
-  id: string;
-  reading_id: string;
-  vocabulary_key: string;
-  value: number;
-  unit: string;
-  status: string;
-};
-
-type SupplementRow = {
-  id: string;
-  name: string;
-  dose: string;
-  frequency: string;
-  started_at: string;
-  stopped_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-type SupplementChangelogRow = {
-  id: string;
-  date: string;
-  description: string;
-  created_at: string;
-};
-
-type HealthMetricRow = {
-  date: string;
-  metric: string;
-  value: number;
-  unit: string;
-};
-
-type HealthMetricConfigRow = {
-  metric: string;
-  label: string;
-  unit: string;
-  aggregation: string;
-  visible: number;
-};
-
-type ReadingCountRow = {
-  count: number;
-};
-
-type ReadingSummaryRow = ReadingRow & {
-  measurement_count: number;
-};
-
-type BiomarkerTrendRow = {
-  date: string;
-  value: number;
-};
+import type { HealthData, HealthMetricConfig } from "@/types/health";
 
 // -- Row mappers --
 
@@ -113,7 +51,7 @@ export function mapMeasurementRow(row: MeasurementRow): Measurement {
     vocabularyKey: row.vocabulary_key,
     value: row.value,
     unit: row.unit,
-    status: Schema.decodeUnknownSync(StatusSchema)(row.status),
+    status: row.status,
   };
 }
 
@@ -148,9 +86,7 @@ export function mapHealthMetricConfigRow(
     metric: row.metric,
     label: row.label,
     unit: row.unit,
-    aggregation: Schema.decodeUnknownSync(HealthAggregationSchema)(
-      row.aggregation,
-    ),
+    aggregation: row.aggregation,
     visible: row.visible === 1,
   };
 }
@@ -167,6 +103,15 @@ function resultsOf<T>(query: string, result: D1Result<T>): T[] {
   return result.results;
 }
 
+async function decodeRows<S extends Schema.ConstraintDecoder<unknown, never>>(
+  schema: S,
+  rows: readonly unknown[],
+): Promise<S["Type"][]> {
+  return Promise.all(
+    rows.map((row) => Schema.decodeUnknownPromise(schema)(row)),
+  );
+}
+
 export async function getVocabulary(
   db: D1Database,
 ): Promise<VocabularyEntry[]> {
@@ -175,16 +120,11 @@ export async function getVocabulary(
       "SELECT key, label, unit, reference_min, reference_max, description, featured, visible FROM vocabulary ORDER BY label",
     )
     .all<VocabularyRow>();
-  return resultsOf("vocabulary", result).map(mapVocabularyRow);
+  const rows = await decodeRows(VocabularyRow, resultsOf("vocabulary", result));
+  return rows.map(mapVocabularyRow);
 }
 
-type ReadingWithMeasurements = ReadingRow & { measurements: Measurement[] };
-
-export async function getLabOverview(db: D1Database): Promise<{
-  latestPanel: { date: string; source: string } | null;
-  latestMeasurements: Measurement[];
-  panelCount: number;
-}> {
+export async function getLabOverview(db: D1Database): Promise<LabOverview> {
   const [latestResult, countResult, measurementResult] = await Promise.all([
     db
       .prepare(
@@ -207,13 +147,19 @@ export async function getLabOverview(db: D1Database): Promise<{
       )
       .all<MeasurementRow>(),
   ]);
-  const latest = resultsOf("latest-reading", latestResult)[0];
-  const panelCount = resultsOf("reading-count", countResult)[0].count;
+  const latest = (
+    await decodeRows(ReadingRow, resultsOf("latest-reading", latestResult))
+  )[0];
+  const panelCount = (
+    await decodeRows(ReadingCountRow, resultsOf("reading-count", countResult))
+  )[0].count;
+  const latestMeasurements = await decodeRows(
+    MeasurementRow,
+    resultsOf("latest-measurements", measurementResult),
+  );
   return {
     latestPanel: latest ? { date: latest.date, source: latest.source } : null,
-    latestMeasurements: resultsOf("latest-measurements", measurementResult).map(
-      mapMeasurementRow,
-    ),
+    latestMeasurements: latestMeasurements.map(mapMeasurementRow),
     panelCount,
   };
 }
@@ -221,23 +167,28 @@ export async function getLabOverview(db: D1Database): Promise<{
 export async function getBiomarkerTrend(
   db: D1Database,
   key: string,
+  cutoffDate: string,
 ): Promise<BiomarkerTrendPoint[]> {
   const result = await db
     .prepare(
       `SELECT r.date, m.value
        FROM (
-         SELECT reading_id, MAX(id) AS measurement_id
-         FROM measurements
-         WHERE vocabulary_key = ?
-         GROUP BY reading_id
+         SELECT m.reading_id, MAX(m.id) AS measurement_id
+         FROM measurements m
+         JOIN readings filtered_readings ON filtered_readings.id = m.reading_id
+         WHERE m.vocabulary_key = ? AND filtered_readings.date >= ?
+         GROUP BY m.reading_id
        ) selected
        JOIN measurements m ON m.id = selected.measurement_id
        JOIN readings r ON r.id = selected.reading_id
        ORDER BY r.date, r.id`,
     )
-    .bind(key)
+    .bind(key, cutoffDate)
     .all<BiomarkerTrendRow>();
-  return resultsOf("biomarker-trend", result);
+  return await decodeRows(
+    BiomarkerTrendRow,
+    resultsOf("biomarker-trend", result),
+  );
 }
 
 export async function getReadingsWithMeasurements(
@@ -255,13 +206,21 @@ export async function getReadingsWithMeasurements(
   ]);
 
   const byReading = new Map<string, Measurement[]>();
-  for (const row of resultsOf("measurements", measurements)) {
+  const decodedMeasurements = await decodeRows(
+    MeasurementRow,
+    resultsOf("measurements", measurements),
+  );
+  for (const row of decodedMeasurements) {
     const list = byReading.get(row.reading_id) ?? [];
     list.push(mapMeasurementRow(row));
     byReading.set(row.reading_id, list);
   }
 
-  return resultsOf("readings", readings).map((r) => ({
+  const decodedReadings = await decodeRows(
+    ReadingRow,
+    resultsOf("readings", readings),
+  );
+  return decodedReadings.map((r) => ({
     ...mapReadingRow(r),
     measurements: byReading.get(r.id) ?? [],
   }));
@@ -294,7 +253,10 @@ export async function getReadingPage(
         )
         .bind(READING_PAGE_SIZE + 1);
   const result = await statement.all<ReadingSummaryRow>();
-  const rows = resultsOf("reading-page", result);
+  const rows = await decodeRows(
+    ReadingSummaryRow,
+    resultsOf("reading-page", result),
+  );
   const entries = rows.slice(0, READING_PAGE_SIZE).map((row) => ({
     id: row.id,
     date: row.date,
@@ -317,20 +279,11 @@ export async function getActiveSupplements(
   const result = await db
     .prepare("SELECT * FROM supplements WHERE stopped_at IS NULL ORDER BY name")
     .all<SupplementRow>();
-  return resultsOf("active-supplements", result).map(mapSupplementRow);
-}
-
-export async function getSupplementChangelog(
-  db: D1Database,
-): Promise<SupplementChangelog[]> {
-  const result = await db
-    .prepare(
-      "SELECT * FROM supplement_changelog ORDER BY date DESC, created_at DESC, id DESC",
-    )
-    .all<SupplementChangelogRow>();
-  return resultsOf("supplement-changelog", result).map(
-    mapSupplementChangelogRow,
+  const rows = await decodeRows(
+    SupplementRow,
+    resultsOf("active-supplements", result),
   );
+  return rows.map(mapSupplementRow);
 }
 
 const CHANGELOG_PAGE_SIZE = 20;
@@ -358,7 +311,10 @@ export async function getSupplementChangelogPage(
         )
         .bind(CHANGELOG_PAGE_SIZE + 1);
   const result = await statement.all<SupplementChangelogRow>();
-  const rows = resultsOf("supplement-changelog-page", result);
+  const rows = await decodeRows(
+    SupplementChangelogRow,
+    resultsOf("supplement-changelog-page", result),
+  );
   const entries = rows
     .slice(0, CHANGELOG_PAGE_SIZE)
     .map(mapSupplementChangelogRow);
@@ -375,7 +331,7 @@ export async function getSupplementChangelogPage(
 export async function getVisibleHealthMetrics(
   db: D1Database,
   cutoffDate: string | null,
-): Promise<{ metrics: HealthMetric[]; configs: HealthMetricConfig[] }> {
+): Promise<HealthData> {
   const metricsQuery = cutoffDate
     ? db
         .prepare(
@@ -403,10 +359,16 @@ export async function getVisibleHealthMetrics(
       .all<HealthMetricConfigRow>(),
   ]);
   return {
-    metrics: resultsOf("visible-health-metrics", metricResults),
-    configs: resultsOf("visible-health-config", configResults).map(
-      mapHealthMetricConfigRow,
+    metrics: await decodeRows(
+      HealthMetricRow,
+      resultsOf("visible-health-metrics", metricResults),
     ),
+    configs: (
+      await decodeRows(
+        HealthMetricConfigRow,
+        resultsOf("visible-health-config", configResults),
+      )
+    ).map(mapHealthMetricConfigRow),
   };
 }
 
@@ -418,5 +380,9 @@ export async function getHealthMetricConfigs(
       "SELECT metric, label, unit, aggregation, visible FROM health_metric_config ORDER BY label",
     )
     .all<HealthMetricConfigRow>();
-  return resultsOf("health-config", result).map(mapHealthMetricConfigRow);
+  const rows = await decodeRows(
+    HealthMetricConfigRow,
+    resultsOf("health-config", result),
+  );
+  return rows.map(mapHealthMetricConfigRow);
 }

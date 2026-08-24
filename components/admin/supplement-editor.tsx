@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+
+import { runApi } from "@/lib/effect/client";
+import { makeSupplementId } from "@/lib/effect/api";
 import type { Supplement } from "@/types/bloodwork";
 
 type RowState =
@@ -53,18 +56,18 @@ export function SupplementEditor({
     const state = getRowState(id);
     if (state.kind !== "editing") return;
 
-    await fetch("/api/supplements", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id,
-        name: state.name,
-        dose: state.dose,
-        frequency: state.frequency,
-        startedAt: state.startedAt,
-        changelogDate: state.changelogDate,
+    await runApi((client) =>
+      client.supplements.update({
+        params: { id: makeSupplementId(id) },
+        payload: {
+          name: state.name,
+          dose: state.dose,
+          frequency: state.frequency,
+          startedAt: state.startedAt,
+          changelogDate: state.changelogDate,
+        },
       }),
-    });
+    );
     setRowState(id, { kind: "display" });
     onRefresh();
   }
@@ -73,20 +76,17 @@ export function SupplementEditor({
     const state = getRowState(id);
     if (state.kind !== "removing") return;
 
-    await fetch("/api/supplements", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, changelogDate: state.changelogDate }),
-    });
+    await runApi((client) =>
+      client.supplements.delete({
+        params: { id: makeSupplementId(id) },
+        query: { changelogDate: state.changelogDate },
+      }),
+    );
     onRefresh();
   }
 
   async function handleAdd() {
-    await fetch("/api/supplements", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    await runApi((client) => client.supplements.create({ payload: form }));
     setForm({
       name: "",
       dose: "",

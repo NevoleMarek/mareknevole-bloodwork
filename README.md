@@ -52,6 +52,71 @@ bun install
 bun run dev
 ```
 
+## Application architecture
+
+The API is declared once in the client-safe `lib/effect/api.ts` contract with
+Effect v4's `effect/unstable/httpapi`. Its endpoint schemas drive request
+decoding, response encoding, typed failures, OpenAPI at `/api/openapi.json`,
+URL builders, and the generated browser client. Groups follow user goals and
+resources (`dashboard`, `readings`, `vocabulary`, `supplements`, `changelog`,
+`session`, `health`, and `import`) rather than database/provider adapters.
+Handler groups invoke named Effect workflows and services; one optional Next
+catch-all route adapts the resulting Fetch handler instead of maintaining a
+route file per endpoint. `lib/effect/runtime.ts` remains the sole OpenNext
+context adapter and supplies D1 and secret bindings to the live graph.
+Configuration is read from a binding-backed `ConfigProvider`: `Config.redacted`
+keeps the admin password and Gemini key as `Redacted` values until the trusted
+Auth or Gemini adapter needs them.
+
+The live graph is intentionally topological:
+
+```text
+CloudflareRuntime -> ApplicationConfig -> Gemini -> ProviderWorkflows
+CloudflareRuntime -> Repository
+Repository + DataCache -> Dashboard, Bloodwork, Health, Supplements
+ApplicationConfig -> Auth
+```
+
+`Repository` is the D1 boundary and decodes persisted rows—including status
+and aggregation enums—before mapping them to canonical domain schemas.
+`Gemini` is the only SDK boundary; its layer acquires one redacted-key client
+and the finite flash/pro model handles, while each request remains
+interruptible. `DataCache` preserves Next/OpenNext `unstable_cache` and tag
+invalidation semantics; it is not an in-memory cache substitute.
+`lib/effect/api-server.ts` composes the contract, handler groups, platform
+services, and application layer into the Fetch handler consumed by Next.
+`lib/effect/client.ts` uses `HttpApiClient` so browser calls share the same URL,
+payload, success, and error schemas. Server components cross their Effect
+boundary through `lib/effect/run.ts`.
+
+The beta.102 test package does not register a compatible `it.effect` Vitest
+adapter, so Effect service tests use an explicit `Effect.runPromise` bridge in
+the test files. Production `Effect.runPromise` is limited to server-component
+and generated-client boundaries; the HttpApi runtime owns the Next Fetch
+boundary.
+
+Expected failures are tagged schema errors: malformed requests and validation
+failures are `400`, missing resources are `404`, conflicts are `409`, provider
+failures are `502`, and missing configuration or D1 failures are `503`. Defects
+and interruption (including framework route-parameter failures) are not
+converted into application responses.
+
+Readings and public changelog use cursor pagination with a `nextCursor`; health
+requests are bounded by the selected period, while biomarker trend requests use
+one of the bounded `1M`, `6M`, or `1Y` windows (the chart currently requests
+`1Y`, with no unbounded `ALL` trend). The vocabulary is a small
+administrator-maintained dictionary and active supplements are bounded current
+state, so they remain ordinary list resources. Full data export is a separate
+explicit `/api/readings/export` operation because it is expensive and not needed
+for the summaries view. API authentication is enforced by the shared HttpApi
+cookie-security middleware with signed, expiring session tokens; Next middleware
+only performs page redirects. This is a private, same-origin, single-user
+frontend API: idempotency-key plumbing, automated retries, client rate-limit
+metadata, and a per-client kill switch are intentionally omitted. Mutations are
+not automatically retried, and the browser only retries explicit user actions;
+adding those controls would add no meaningful protection for this deployment
+while obscuring the resource contract.
+
 ## Verification
 
 ```sh

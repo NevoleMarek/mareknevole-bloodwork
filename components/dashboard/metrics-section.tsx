@@ -1,14 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
-import * as Schema from "effect/Schema";
-
 import type { BiomarkerMetric } from "@/components/dashboard/biomarker-table";
 import { BiomarkerTable } from "@/components/dashboard/biomarker-table";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import type { TrendState } from "@/components/dashboard/trend-panel";
 import { TrendPanel } from "@/components/dashboard/trend-panel";
-import { BiomarkerTrendResponseSchema } from "@/lib/domain-schemas";
+import { runApi } from "@/lib/effect/client";
+import { makeBiomarkerKey } from "@/lib/effect/api";
 import type { VocabularyEntry } from "@/types/bloodwork";
 
 const MAX_SELECTED = 10;
@@ -33,12 +32,13 @@ export function MetricsSection({
       ...current,
       [key]: { kind: "loading" },
     }));
-    fetch(`/api/public/trends/${encodeURIComponent(key)}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Trend request failed");
-        const data = Schema.decodeUnknownSync(BiomarkerTrendResponseSchema)(
-          await response.json(),
-        );
+    runApi((client) =>
+      client.dashboard.trend({
+        params: { key: makeBiomarkerKey(key) },
+        query: { period: "1Y" },
+      }),
+    )
+      .then((data) => {
         if (data.points.length === 0) throw new Error("Trend is empty");
         setTrends((current) => ({
           ...current,

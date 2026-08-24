@@ -5,10 +5,10 @@ const SESSION_COOKIE = "bloodwork-session";
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Skip the login page itself and the auth API
-  if (pathname === "/admin" || pathname.startsWith("/api/auth")) {
-    return NextResponse.next();
-  }
+  // This middleware only controls page navigation. API authentication is
+  // performed by the shared HttpApi security middleware, which verifies the
+  // signed session token rather than trusting cookie presence.
+  if (pathname === "/admin") return NextResponse.next();
 
   const session = req.cookies.get(SESSION_COOKIE);
   if (!session?.value) {
@@ -19,17 +19,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/admin/:path+",
-    "/api/extract/:path*",
-    "/api/map/:path*",
-    "/api/readings/:path*",
-    "/api/vocabulary/:path*",
-    "/api/supplements/:path*",
-    "/api/changelog/:path*",
-    "/api/health-import/:path*",
-    "/api/health-config/:path*",
-    "/api/research/:path*",
-    "/api/data/:path*",
-  ],
+  matcher: ["/admin/:path*"],
 };

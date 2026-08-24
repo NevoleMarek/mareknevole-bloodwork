@@ -1,5 +1,5 @@
 import { revalidateTag, unstable_cache } from "next/cache";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { readCloudflareEnv } from "@/lib/effect/runtime";
 
 import {
   getActiveSupplements,
@@ -10,7 +10,11 @@ import {
   getVocabulary,
 } from "@/db/queries";
 import { getCutoffDate } from "@/lib/period";
-import type { Period } from "@/lib/period";
+import type { Period, TrendPeriod } from "@/lib/period";
+import type {
+  BiomarkerTrendPoint,
+  DashboardSnapshot,
+} from "@/lib/schemas/domain";
 
 const DASHBOARD_TAG = "dashboard-core";
 const HEALTH_TAG = "health";
@@ -19,8 +23,8 @@ const CHANGELOG_TAG = "changelog";
 const DAY = 86_400;
 
 export const getCachedDashboard = unstable_cache(
-  async () => {
-    const { env } = await getCloudflareContext();
+  async (): Promise<DashboardSnapshot> => {
+    const env = await readCloudflareEnv();
     const [vocabulary, labs, supplements] = await Promise.all([
       getVocabulary(env.DB),
       getLabOverview(env.DB),
@@ -34,7 +38,7 @@ export const getCachedDashboard = unstable_cache(
 
 export const getCachedFirstChangelogPage = unstable_cache(
   async () => {
-    const { env } = await getCloudflareContext();
+    const env = await readCloudflareEnv();
     return getSupplementChangelogPage(env.DB, null);
   },
   [CHANGELOG_TAG],
@@ -42,9 +46,9 @@ export const getCachedFirstChangelogPage = unstable_cache(
 );
 
 export const getCachedBiomarkerTrend = unstable_cache(
-  async (key: string) => {
-    const { env } = await getCloudflareContext();
-    return getBiomarkerTrend(env.DB, key);
+  async (key: string, period: TrendPeriod): Promise<BiomarkerTrendPoint[]> => {
+    const env = await readCloudflareEnv();
+    return getBiomarkerTrend(env.DB, key, getCutoffDate(period));
   },
   [TREND_TAG],
   { tags: [DASHBOARD_TAG, TREND_TAG], revalidate: DAY },
@@ -52,7 +56,7 @@ export const getCachedBiomarkerTrend = unstable_cache(
 
 export const getCachedVisibleVocabularyKeys = unstable_cache(
   async () => {
-    const { env } = await getCloudflareContext();
+    const env = await readCloudflareEnv();
     const vocabulary = await getVocabulary(env.DB);
     return vocabulary
       .filter((entry) => entry.visible)
@@ -64,7 +68,7 @@ export const getCachedVisibleVocabularyKeys = unstable_cache(
 
 export const getCachedHealth = unstable_cache(
   async (period: Period) => {
-    const { env } = await getCloudflareContext();
+    const env = await readCloudflareEnv();
     return getVisibleHealthMetrics(env.DB, getCutoffDate(period));
   },
   [HEALTH_TAG],

@@ -1,28 +1,30 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as Schema from "effect/Schema";
 
 import { SupplementEditor } from "@/components/admin/supplement-editor";
-import { SupplementsResponseSchema } from "@/lib/domain-schemas";
-import type { Supplement, SupplementChangelog } from "@/types/bloodwork";
-
-type SupplementsResponse = {
-  supplements: Supplement[];
-  changelog: SupplementChangelog[];
-};
+import { makeChangelogId, type SupplementsResponse } from "@/lib/effect/api";
+import { runApi } from "@/lib/effect/client";
+import type { SupplementChangelog } from "@/types/bloodwork";
 
 type EditingState =
   | { kind: "none" }
   | { kind: "editing"; id: string; description: string };
 
-async function loadData(): Promise<SupplementsResponse> {
-  const res = await fetch("/api/supplements");
-  return Schema.decodeUnknownSync(SupplementsResponseSchema)(await res.json());
+type SupplementsData = SupplementsResponse & {
+  changelog: SupplementChangelog[];
+};
+
+async function loadData(): Promise<SupplementsData> {
+  const [supplements, changelog] = await Promise.all([
+    runApi((client) => client.supplements.list({})),
+    runApi((client) => client.changelog.list({ query: {} })),
+  ]);
+  return { ...supplements, changelog: changelog.entries };
 }
 
 export default function AdminSupplementsPage() {
-  const [data, setData] = useState<SupplementsResponse | null>(null);
+  const [data, setData] = useState<SupplementsData | null>(null);
   const [editing, setEditing] = useState<EditingState>({ kind: "none" });
   const didFetch = useRef(false);
 
@@ -37,21 +39,20 @@ export default function AdminSupplementsPage() {
   }, []);
 
   async function handleSaveEdit(id: string, description: string) {
-    await fetch("/api/changelog", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, description }),
-    });
+    await runApi((client) =>
+      client.changelog.update({
+        params: { id: makeChangelogId(id) },
+        payload: { description },
+      }),
+    );
     setEditing({ kind: "none" });
     await refresh();
   }
 
   async function handleDelete(id: string) {
-    await fetch("/api/changelog", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
+    await runApi((client) =>
+      client.changelog.delete({ params: { id: makeChangelogId(id) } }),
+    );
     await refresh();
   }
 

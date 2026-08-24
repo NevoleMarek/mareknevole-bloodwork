@@ -1,42 +1,101 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import { describe, expect, it } from "vitest";
 
-import { createTrendHandler } from "@/app/api/public/trends/[key]/handler";
+import {
+  NotFoundError,
+  PersistenceError,
+  RequestDecodeError,
+} from "@/lib/effect/errors";
+import { Dashboard } from "@/lib/effect/services";
+import { trendEffect } from "@/lib/effect/workflows";
 import type { BiomarkerTrendPoint } from "@/types/bloodwork";
 
-const getTrend = vi.fn(
-  async (_key: string): Promise<BiomarkerTrendPoint[]> => [],
-);
-const getVisibleKeys = vi.fn(async (): Promise<string[]> => []);
-const GET = createTrendHandler({ getTrend, getVisibleKeys });
+const unused = () => Effect.die("unused dashboard operation");
 
-beforeEach(() => {
-  getTrend.mockReset();
-  getVisibleKeys.mockReset();
-});
+const dashboard = (
+  getVisibleKeys: Dashboard["Service"]["getVisibleKeys"],
+  getTrend: Dashboard["Service"]["getTrend"],
+) =>
+  Dashboard.of({
+    getDashboard: unused,
+    getData: unused,
+    getTrend,
+    getVisibleKeys,
+    getHealth: unused,
+    getFirstChangelogPage: unused,
+    getChangelogPage: unused,
+    getReadingPage: unused,
+  });
 
-describe("public biomarker trend route", () => {
-  it("rejects unknown keys before creating a trend cache entry", async () => {
-    getVisibleKeys.mockResolvedValue(["glucose"]);
+const run = (key: string, service: Dashboard["Service"]) =>
+  Effect.runPromise(
+    trendEffect(key, "1Y").pipe(
+      Effect.provide(Layer.succeed(Dashboard, service)),
+    ),
+  );
 
-    const response = await GET(new Request("https://bloodwork.test"), {
-      params: Promise.resolve({ key: "random-cache-key" }),
-    });
-
-    expect(response.status).toBe(404);
-    expect(getTrend).not.toHaveBeenCalled();
+describe("public biomarker trend Effect workflow", () => {
+  it("rejects unknown keys before loading a trend", async () => {
+    let trendCalls = 0;
+    await expect(
+      run(
+        "random-cache-key",
+        dashboard(
+          () => Effect.succeed(["glucose"]),
+          () => {
+            trendCalls += 1;
+            return Effect.succeed([]);
+          },
+        ),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(trendCalls).toBe(0);
   });
 
   it("returns points for a visible biomarker", async () => {
-    getVisibleKeys.mockResolvedValue(["glucose"]);
-    getTrend.mockResolvedValue([{ date: "2026-01-01", value: 90 }]);
+    const points: BiomarkerTrendPoint[] = [{ date: "2026-01-01", value: 90 }];
+    let requestedKey: string | undefined;
+    const result = await run(
+      "glucose",
+      dashboard(
+        () => Effect.succeed(["glucose"]),
+        (key) => {
+          requestedKey = key;
+          return Effect.succeed(points);
+        },
+      ),
+    );
 
-    const response = await GET(new Request("https://bloodwork.test"), {
-      params: Promise.resolve({ key: "glucose" }),
-    });
+    expect(result).toEqual({ points });
+    expect(requestedKey).toBe("glucose");
+  });
 
-    expect(await response.json()).toEqual({
-      points: [{ date: "2026-01-01", value: 90 }],
+  it("classifies an empty key as a typed request failure", async () => {
+    await expect(
+      run(
+        "",
+        dashboard(
+          () => Effect.die("Dashboard must not be called"),
+          () => Effect.die("Dashboard must not be called"),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(RequestDecodeError);
+  });
+
+  it("preserves persistence failures", async () => {
+    const failure = new PersistenceError({
+      operation: "Dashboard.getTrend",
+      cause: new Error("d1 unavailable"),
     });
-    expect(getTrend).toHaveBeenCalledWith("glucose");
+    await expect(
+      run(
+        "glucose",
+        dashboard(
+          () => Effect.succeed(["glucose"]),
+          () => Effect.fail(failure),
+        ),
+      ),
+    ).rejects.toBe(failure);
   });
 });

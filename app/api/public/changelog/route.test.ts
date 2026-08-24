@@ -1,87 +1,99 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import { describe, expect, it } from "vitest";
 
-import { createChangelogHandler } from "@/app/api/public/changelog/handler";
+import { PersistenceError, RequestDecodeError } from "@/lib/effect/errors";
+import { changelogCursor } from "@/lib/effect/query";
+import { Dashboard } from "@/lib/effect/services";
+import { changelogEffect } from "@/lib/effect/workflows";
 import type { ChangelogCursor, ChangelogPage } from "@/types/bloodwork";
 
-const database = { kind: "test-database" } as const;
-const getDatabase = vi.fn(async () => database);
-const getFirstPage = vi.fn(async (): Promise<ChangelogPage> => ({
-  entries: [],
-  nextCursor: null,
-}));
-const getPage = vi.fn(
-  async (
-    _database: typeof database,
-    _cursor: ChangelogCursor | null,
-  ): Promise<ChangelogPage> => ({ entries: [], nextCursor: null }),
-);
-const GET = createChangelogHandler({ getDatabase, getFirstPage, getPage });
+const unused = () => Effect.die("unused dashboard operation");
 
-beforeEach(() => {
-  getDatabase.mockClear();
-  getFirstPage.mockReset();
-  getPage.mockReset();
-});
+const dashboard = (
+  getFirstChangelogPage: Dashboard["Service"]["getFirstChangelogPage"],
+  getChangelogPage: Dashboard["Service"]["getChangelogPage"],
+) =>
+  Dashboard.of({
+    getDashboard: unused,
+    getData: unused,
+    getTrend: unused,
+    getVisibleKeys: unused,
+    getHealth: unused,
+    getFirstChangelogPage,
+    getChangelogPage,
+    getReadingPage: unused,
+  });
 
-describe("public changelog route", () => {
+const page: ChangelogPage = { entries: [], nextCursor: null };
+
+const run = (cursor: ChangelogCursor | null, service: Dashboard["Service"]) =>
+  Effect.runPromise(
+    changelogEffect(cursor).pipe(
+      Effect.provide(Layer.succeed(Dashboard, service)),
+    ),
+  );
+
+describe("public changelog Effect workflow", () => {
   it("loads the first page without a cursor", async () => {
-    getFirstPage.mockResolvedValue({
-      entries: [],
-      nextCursor: null,
-    });
-    const response = await GET(
-      new Request("https://bloodwork.test/api/public/changelog"),
-    );
-    expect(response.status).toBe(200);
-    expect(getFirstPage).toHaveBeenCalledOnce();
-    expect(getPage).not.toHaveBeenCalled();
-  });
-
-  it("rejects a partial cursor", async () => {
-    const response = await GET(
-      new Request(
-        "https://bloodwork.test/api/public/changelog?date=2026-01-01",
+    let firstPageCalls = 0;
+    const result = await run(
+      null,
+      dashboard(
+        () => {
+          firstPageCalls += 1;
+          return Effect.succeed(page);
+        },
+        () => Effect.die("cursor page must not be called"),
       ),
     );
-    expect(response.status).toBe(400);
-    expect(getFirstPage).not.toHaveBeenCalled();
-    expect(getPage).not.toHaveBeenCalled();
+
+    expect(result).toEqual(page);
+    expect(firstPageCalls).toBe(1);
   });
 
-  it("loads a complete cursor without creating a persistent cache key", async () => {
-    getPage.mockResolvedValue({
-      entries: [],
-      nextCursor: null,
-    });
-    const response = await GET(
-      new Request(
-        "https://bloodwork.test/api/public/changelog?date=2026-01-01&createdAt=2026-01-01T10%3A00%3A00Z&id=c1",
-      ),
-    );
-    expect(response.status).toBe(200);
-    expect(getFirstPage).not.toHaveBeenCalled();
-    expect(getPage).toHaveBeenCalledWith(database, {
-      date: "2026-01-01",
-      createdAt: "2026-01-01T10:00:00Z",
-      id: "c1",
-    });
+  it("rejects a partial cursor before calling Dashboard", async () => {
+    await expect(
+      Effect.runPromise(changelogCursor({ date: "2026-01-01" })),
+    ).rejects.toBeInstanceOf(RequestDecodeError);
   });
 
-  it("loads a server cursor with an empty persisted date", async () => {
-    getPage.mockResolvedValue({
-      entries: [],
-      nextCursor: null,
-    });
-    const response = await GET(
-      new Request(
-        "https://bloodwork.test/api/public/changelog?date=&createdAt=2026-01-01T10%3A00%3A00Z&id=c1",
+  it("keeps an empty persisted cursor date", async () => {
+    const cursor = await Effect.runPromise(
+      changelogCursor({
+        date: "",
+        createdAt: "2026-01-01T10:00:00Z",
+        id: "c1",
+      }),
+    );
+    let cursorDate: string | undefined;
+    await run(
+      cursor,
+      dashboard(
+        () => Effect.die("first page must not be called"),
+        (received) => {
+          cursorDate = received?.date;
+          return Effect.succeed(page);
+        },
       ),
     );
-    expect(response.status).toBe(200);
-    expect(getPage).toHaveBeenCalledWith(database, {
-      date: "",
-      createdAt: "2026-01-01T10:00:00Z",
-      id: "c1",
+
+    expect(cursorDate).toBe("");
+  });
+
+  it("preserves persistence failures", async () => {
+    const failure = new PersistenceError({
+      operation: "Dashboard.getFirstChangelogPage",
+      cause: new Error("d1 unavailable"),
     });
+    await expect(
+      run(
+        null,
+        dashboard(
+          () => Effect.fail(failure),
+          () => Effect.die("cursor page must not be called"),
+        ),
+      ),
+    ).rejects.toBe(failure);
   });
 });

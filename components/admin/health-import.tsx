@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
-import { HealthImportResponseSchema } from "@/lib/domain-schemas";
+import { apiErrorMessage, runApi } from "@/lib/effect/client";
+import { HealthImportRequest } from "@/lib/effect/api";
 
 type ImportState =
   | { kind: "idle" }
@@ -63,21 +65,19 @@ export function HealthImport({ onImported }: { onImported: () => void }) {
 
       try {
         const body = await file.text();
-        const res = await fetch("/api/health-import", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body,
-        });
-        const data = Schema.decodeUnknownSync(HealthImportResponseSchema)(
-          await res.json(),
+        const payload = await Effect.runPromise(
+          Effect.try({
+            try: () => JSON.parse(body),
+            catch: () => new Error("Invalid health import JSON"),
+          }).pipe(
+            Effect.flatMap((value) =>
+              Schema.decodeUnknownEffect(HealthImportRequest)(value),
+            ),
+          ),
         );
-        if (!res.ok) {
-          transitionTo({
-            kind: "error",
-            message: `Error: ${data.error ?? "Import failed"}`,
-          });
-          return;
-        }
+        const data = await runApi((client) =>
+          client.health.import({ payload }),
+        );
 
         transitionTo({
           kind: "success",
@@ -89,9 +89,15 @@ export function HealthImport({ onImported }: { onImported: () => void }) {
           3000,
         );
       } catch (error) {
+        const transportMessage = apiErrorMessage(error);
         transitionTo({
           kind: "error",
-          message: error instanceof Error ? error.message : "Import failed",
+          message:
+            transportMessage === undefined
+              ? error instanceof Error
+                ? error.message
+                : "Import failed"
+              : `Error: ${transportMessage}`,
         });
       }
     },
