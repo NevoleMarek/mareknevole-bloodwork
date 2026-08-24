@@ -1,8 +1,12 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import * as Schema from "effect/Schema";
 
 import { getVocabulary } from "@/db/queries";
 import { invalidateDashboard } from "@/lib/data-cache";
-import type { VocabularyEntry } from "@/types/bloodwork";
+import {
+  KeyRequestSchema,
+  VocabularyEntryRequestSchema,
+} from "@/lib/domain-schemas";
 
 export async function GET() {
   const { env } = await getCloudflareContext();
@@ -12,7 +16,9 @@ export async function GET() {
 export async function POST(req: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
-  const { entry } = (await req.json()) as { entry: VocabularyEntry };
+  const { entry } = Schema.decodeUnknownSync(VocabularyEntryRequestSchema)(
+    await req.json(),
+  );
 
   await db
     .prepare(
@@ -38,7 +44,9 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
-  const { entry } = (await req.json()) as { entry: VocabularyEntry };
+  const { entry } = Schema.decodeUnknownSync(VocabularyEntryRequestSchema)(
+    await req.json(),
+  );
 
   const result = await db
     .prepare(
@@ -67,7 +75,7 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
-  const { key } = (await req.json()) as { key: string };
+  const { key } = Schema.decodeUnknownSync(KeyRequestSchema)(await req.json());
 
   await db.prepare("DELETE FROM vocabulary WHERE key = ?").bind(key).run();
 

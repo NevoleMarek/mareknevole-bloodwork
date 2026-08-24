@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import {
   getBiomarkerTrend,
@@ -27,6 +27,83 @@ function d1Result<T>(results: T[]): D1Result<T> {
       changes: 0,
     },
   };
+}
+
+class TestPreparedStatement implements D1PreparedStatement {
+  constructor(
+    private readonly results: D1Result<object>[],
+    private readonly bindMock: Mock<
+      (...values: Parameters<D1PreparedStatement["bind"]>) => void
+    >,
+  ) {}
+
+  bind(...values: Parameters<D1PreparedStatement["bind"]>) {
+    this.bindMock(...values);
+    return this;
+  }
+
+  first<T = unknown>(_columnName: string): Promise<T | null>;
+  first<T = object>(): Promise<T | null>;
+  first(): never {
+    throw new Error("TestPreparedStatement.first was not expected");
+  }
+
+  run<T = object>(): Promise<D1Result<T>> {
+    throw new Error("TestPreparedStatement.run was not expected");
+  }
+
+  async all<T = object>(): Promise<D1Result<T>> {
+    const result = this.results.shift();
+    if (!result) throw new Error("No D1 result fixture remains");
+    // SAFETY: Each test queues row fixtures in the same order as its query's
+    // explicit `.all<Row>()` calls, which is the unchecked contract of D1 itself.
+    return result as D1Result<T>;
+  }
+
+  raw<T = unknown[]>(_options: {
+    columnNames: true;
+  }): Promise<[string[], ...T[]]>;
+  raw<T = unknown[]>(_options?: { columnNames?: false }): Promise<T[]>;
+  raw(): never {
+    throw new Error("TestPreparedStatement.raw was not expected");
+  }
+}
+
+class TestDatabase implements D1Database {
+  readonly bindMock =
+    vi.fn<(...values: Parameters<D1PreparedStatement["bind"]>) => void>();
+  readonly prepareMock: Mock<(query: string) => D1PreparedStatement>;
+
+  constructor(private readonly results: D1Result<object>[]) {
+    this.prepareMock = vi.fn(
+      (_query: string) =>
+        new TestPreparedStatement(this.results, this.bindMock),
+    );
+  }
+
+  prepare(query: string) {
+    return this.prepareMock(query);
+  }
+
+  batch<T = unknown>(
+    _statements: D1PreparedStatement[],
+  ): Promise<D1Result<T>[]> {
+    throw new Error("TestDatabase.batch was not expected");
+  }
+
+  exec(_query: string): Promise<D1ExecResult> {
+    throw new Error("TestDatabase.exec was not expected");
+  }
+
+  withSession(
+    _constraintOrBookmark?: D1SessionBookmark | D1SessionConstraint,
+  ): D1DatabaseSession {
+    throw new Error("TestDatabase.withSession was not expected");
+  }
+
+  dump(): Promise<ArrayBuffer> {
+    throw new Error("TestDatabase.dump was not expected");
+  }
 }
 
 afterEach(() => {
@@ -180,43 +257,36 @@ describe("row mappers", () => {
 describe("getLabOverview", () => {
   it("loads the newest panel metadata and latest value for every marker", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
-    const all = vi
-      .fn()
-      .mockResolvedValueOnce(
-        d1Result([{ id: "newest", date: "2026-01-10", source: "newest.pdf" }]),
-      )
-      .mockResolvedValueOnce(d1Result([{ count: 3 }]))
-      .mockResolvedValueOnce(
-        d1Result([
-          {
-            id: "m1",
-            reading_id: "newest",
-            vocabulary_key: "glucose",
-            value: 107,
-            unit: "mg/dL",
-            status: "borderline",
-          },
-          {
-            id: "m2",
-            reading_id: "older",
-            vocabulary_key: "ferritin",
-            value: 90,
-            unit: "µg/L",
-            status: "normal",
-          },
-        ]),
-      );
-    const prepare = vi.fn(() => ({ all }));
+    const database = new TestDatabase([
+      d1Result([{ id: "newest", date: "2026-01-10", source: "newest.pdf" }]),
+      d1Result([{ count: 3 }]),
+      d1Result([
+        {
+          id: "m1",
+          reading_id: "newest",
+          vocabulary_key: "glucose",
+          value: 107,
+          unit: "mg/dL",
+          status: "borderline",
+        },
+        {
+          id: "m2",
+          reading_id: "older",
+          vocabulary_key: "ferritin",
+          value: 90,
+          unit: "µg/L",
+          status: "normal",
+        },
+      ]),
+    ]);
 
-    const result = await getLabOverview({
-      prepare,
-    } as unknown as D1Database);
+    const result = await getLabOverview(database);
 
-    expect(prepare).toHaveBeenNthCalledWith(
+    expect(database.prepareMock).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("ORDER BY date DESC, id DESC LIMIT 1"),
     );
-    expect(prepare).toHaveBeenNthCalledWith(
+    expect(database.prepareMock).toHaveBeenNthCalledWith(
       3,
       expect.stringContaining("ORDER BY latest.reading_date DESC"),
     );
@@ -247,27 +317,22 @@ describe("getLabOverview", () => {
 describe("getBiomarkerTrend", () => {
   it("uses the overview tie-breaker to return one point per reading", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
-    const all = vi.fn().mockResolvedValue(
+    const database = new TestDatabase([
       d1Result([
         { date: "2026-01-01", value: 90 },
         { date: "2026-02-01", value: 95 },
       ]),
-    );
-    const bind = vi.fn(() => ({ all }));
-    const prepare = vi.fn(() => ({ bind }));
+    ]);
 
-    const result = await getBiomarkerTrend(
-      { prepare } as unknown as D1Database,
-      "glucose",
-    );
+    const result = await getBiomarkerTrend(database, "glucose");
 
-    expect(prepare).toHaveBeenCalledWith(
+    expect(database.prepareMock).toHaveBeenCalledWith(
       expect.stringContaining("MAX(id) AS measurement_id"),
     );
-    expect(prepare).toHaveBeenCalledWith(
+    expect(database.prepareMock).toHaveBeenCalledWith(
       expect.stringContaining("GROUP BY reading_id"),
     );
-    expect(bind).toHaveBeenCalledWith("glucose");
+    expect(database.bindMock).toHaveBeenCalledWith("glucose");
     expect(result).toEqual([
       { date: "2026-01-01", value: 90 },
       { date: "2026-02-01", value: 95 },
@@ -284,16 +349,11 @@ describe("getSupplementChangelogPage", () => {
       description: `Entry ${index}`,
       created_at: `2026-01-01T10:00:${String(59 - index).padStart(2, "0")}Z`,
     }));
-    const all = vi.fn().mockResolvedValue(d1Result(rows));
-    const bind = vi.fn(() => ({ all }));
-    const prepare = vi.fn(() => ({ bind }));
+    const database = new TestDatabase([d1Result(rows)]);
 
-    const page = await getSupplementChangelogPage(
-      { prepare } as unknown as D1Database,
-      null,
-    );
+    const page = await getSupplementChangelogPage(database, null);
 
-    expect(bind).toHaveBeenCalledWith(21);
+    expect(database.bindMock).toHaveBeenCalledWith(21);
     expect(page.entries).toHaveLength(20);
     expect(page.nextCursor).toEqual({
       id: "c19",
@@ -304,24 +364,19 @@ describe("getSupplementChangelogPage", () => {
 
   it("binds every cursor field before the page limit", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
-    const all = vi.fn().mockResolvedValue(d1Result([]));
-    const bind = vi.fn(() => ({ all }));
-    const prepare = vi.fn(() => ({ bind }));
+    const database = new TestDatabase([d1Result([])]);
     const cursor = {
       date: "2026-01-01",
       createdAt: "2026-01-01T10:00:00Z",
       id: "c1",
     };
 
-    await getSupplementChangelogPage(
-      { prepare } as unknown as D1Database,
-      cursor,
-    );
+    await getSupplementChangelogPage(database, cursor);
 
-    expect(prepare).toHaveBeenCalledWith(
+    expect(database.prepareMock).toHaveBeenCalledWith(
       expect.stringContaining("WHERE (date, created_at, id) < (?, ?, ?)"),
     );
-    expect(bind).toHaveBeenCalledWith(
+    expect(database.bindMock).toHaveBeenCalledWith(
       cursor.date,
       cursor.createdAt,
       cursor.id,
@@ -339,16 +394,11 @@ describe("getReadingPage", () => {
       source: `panel-${index}.pdf`,
       measurement_count: 30 + index,
     }));
-    const all = vi.fn().mockResolvedValue(d1Result(rows));
-    const bind = vi.fn(() => ({ all }));
-    const prepare = vi.fn(() => ({ bind }));
+    const database = new TestDatabase([d1Result(rows)]);
 
-    const page = await getReadingPage(
-      { prepare } as unknown as D1Database,
-      null,
-    );
+    const page = await getReadingPage(database, null);
 
-    expect(bind).toHaveBeenCalledWith(21);
+    expect(database.bindMock).toHaveBeenCalledWith(21);
     expect(page.entries).toHaveLength(20);
     expect(page.entries[0]).toEqual({
       id: "r0",
@@ -361,16 +411,14 @@ describe("getReadingPage", () => {
 
   it("binds the reading cursor before the page limit", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
-    const all = vi.fn().mockResolvedValue(d1Result([]));
-    const bind = vi.fn(() => ({ all }));
-    const prepare = vi.fn(() => ({ bind }));
+    const database = new TestDatabase([d1Result([])]);
     const cursor = { date: "2026-01-01", id: "r1" };
 
-    await getReadingPage({ prepare } as unknown as D1Database, cursor);
+    await getReadingPage(database, cursor);
 
-    expect(prepare).toHaveBeenCalledWith(
+    expect(database.prepareMock).toHaveBeenCalledWith(
       expect.stringContaining("WHERE (r.date, r.id) < (?, ?)"),
     );
-    expect(bind).toHaveBeenCalledWith(cursor.date, cursor.id, 21);
+    expect(database.bindMock).toHaveBeenCalledWith(cursor.date, cursor.id, 21);
   });
 });

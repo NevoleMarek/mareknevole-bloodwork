@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GET } from "@/app/api/public/health/route";
-import { getCachedHealth } from "@/lib/data-cache";
+import { createHealthHandler } from "@/app/api/public/health/handler";
+import type { Period } from "@/lib/period";
+import type { HealthData } from "@/types/health";
 
-vi.mock("@/lib/data-cache", () => ({
-  getCachedHealth: vi.fn(),
+const getHealth = vi.fn(async (_period: Period): Promise<HealthData> => ({
+  metrics: [],
+  configs: [],
 }));
+const GET = createHealthHandler({ getHealth });
 
 beforeEach(() => {
-  vi.mocked(getCachedHealth).mockReset();
+  getHealth.mockReset();
 });
 
 describe("public health route", () => {
@@ -17,11 +20,11 @@ describe("public health route", () => {
       new Request("https://bloodwork.test/api/public/health?period=forever"),
     );
     expect(response.status).toBe(400);
-    expect(getCachedHealth).not.toHaveBeenCalled();
+    expect(getHealth).not.toHaveBeenCalled();
   });
 
   it("returns the cached period", async () => {
-    vi.mocked(getCachedHealth).mockResolvedValue({
+    getHealth.mockResolvedValue({
       metrics: [],
       configs: [],
     });
@@ -29,6 +32,6 @@ describe("public health route", () => {
       new Request("https://bloodwork.test/api/public/health?period=1Y"),
     );
     expect(await response.json()).toEqual({ metrics: [], configs: [] });
-    expect(getCachedHealth).toHaveBeenCalledWith("1Y");
+    expect(getHealth).toHaveBeenCalledWith("1Y");
   });
 });

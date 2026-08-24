@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import * as Schema from "effect/Schema";
 
 import { ReadingsTable } from "@/components/admin/readings-table";
+import { ExportDataSchema, ReadingPageSchema } from "@/lib/domain-schemas";
 import type {
   BloodworkReading,
   ReadingCursor,
-  ReadingPage,
   ReadingSummary,
   VocabularyEntry,
 } from "@/types/bloodwork";
@@ -36,7 +37,7 @@ function readingsUrl(cursor: ReadingCursor | null) {
 async function loadReadings(cursor: ReadingCursor | null) {
   const response = await fetch(readingsUrl(cursor));
   if (!response.ok) throw new Error("Readings request failed");
-  return (await response.json()) as ReadingPage;
+  return Schema.decodeUnknownSync(ReadingPageSchema)(await response.json());
 }
 
 function formatExportMarkdown(data: ExportData) {
@@ -135,21 +136,24 @@ export default function AdminDataPage() {
     if (exportRequest.current) return exportRequest.current;
 
     const generation = exportGeneration.current;
-    const request = fetch("/api/data")
-      .then(async (response) => {
+    const request = (async () => {
+      try {
+        const response = await fetch("/api/data");
         if (!response.ok) throw new Error("Export request failed");
-        const result = (await response.json()) as ExportData;
+        const result = Schema.decodeUnknownSync(ExportDataSchema)(
+          await response.json(),
+        );
         if (exportGeneration.current === generation) {
           exportData.current = result;
         }
         return result;
-      })
-      .catch((error: unknown) => {
+      } catch (error) {
         if (exportGeneration.current === generation) {
           exportRequest.current = null;
         }
         throw error;
-      });
+      }
+    })();
     exportRequest.current = request;
     return request;
   }
@@ -158,10 +162,7 @@ export default function AdminDataPage() {
     setCopyState("copying");
     try {
       const markdown = loadExportData().then(formatExportMarkdown);
-      if (
-        typeof ClipboardItem !== "undefined" &&
-        typeof navigator.clipboard.write === "function"
-      ) {
+      if ("ClipboardItem" in globalThis && "write" in navigator.clipboard) {
         await navigator.clipboard.write([
           new ClipboardItem({
             "text/plain": markdown.then(

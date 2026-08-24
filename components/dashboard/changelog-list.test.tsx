@@ -20,7 +20,18 @@ function makeEntries(count: number, offset = 0): SupplementChangelog[] {
 let enterViewport: () => void;
 
 beforeEach(() => {
-  let callback: IntersectionObserverCallback;
+  let callback: IntersectionObserverCallback = () => {};
+  const observer: IntersectionObserver = {
+    root: null,
+    rootMargin: "1000px 0px",
+    thresholds: [0],
+    disconnect() {},
+    observe() {},
+    takeRecords() {
+      return [];
+    },
+    unobserve() {},
+  };
   class TestIntersectionObserver implements IntersectionObserver {
     readonly root = null;
     readonly rootMargin = "1000px 0px";
@@ -39,11 +50,18 @@ beforeEach(() => {
   }
   vi.stubGlobal("IntersectionObserver", TestIntersectionObserver);
   enterViewport = () => {
+    const rectangle = new DOMRect();
+    const entry: IntersectionObserverEntry = {
+      boundingClientRect: rectangle,
+      intersectionRatio: 1,
+      intersectionRect: rectangle,
+      isIntersecting: true,
+      rootBounds: null,
+      target: document.body,
+      time: 0,
+    };
     act(() => {
-      callback(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
-        {} as IntersectionObserver,
-      );
+      callback([entry], observer);
     });
   };
 });

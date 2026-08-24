@@ -21,10 +21,15 @@ export default Alchemy.Stack(
   },
   Effect.gen(function* () {
     const isProduction = (yield* Alchemy.Stack).stage === "prod";
-    const database = yield* Cloudflare.D1.Database("BloodworkDatabase", {
-      ...(isProduction ? { name: production.databaseName } : {}),
+    const databaseConfig = {
       migrationsDir: "db/migrations",
-    });
+    };
+    const database = yield* Cloudflare.D1.Database(
+      "BloodworkDatabase",
+      isProduction
+        ? { ...databaseConfig, name: production.databaseName }
+        : databaseConfig,
+    );
     const incrementalCache = yield* Cloudflare.KV.Namespace(
       "NextIncrementalCache",
       isProduction ? { title: production.kvTitle } : {},
@@ -52,9 +57,25 @@ export default Alchemy.Stack(
         outdir: ".open-next/assets",
       });
 
+      if (isProduction) {
+        return yield* Cloudflare.Worker("Worker", {
+          assets: cast({
+            directory: build.outdir,
+            hash: build.hash.output,
+          }),
+          bundle: true,
+          compatibility: {
+            date: "2025-12-01",
+            flags: ["nodejs_compat"],
+          },
+          domain: production.domain,
+          env: workerEnv,
+          main: ".open-next/worker.js",
+          name: production.workerName,
+        });
+      }
+
       return yield* Cloudflare.Worker("Worker", {
-        ...(isProduction ? { domain: production.domain } : {}),
-        ...(isProduction ? { name: production.workerName } : {}),
         assets: cast({
           directory: build.outdir,
           hash: build.hash.output,

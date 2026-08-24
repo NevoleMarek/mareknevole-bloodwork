@@ -1,29 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GET } from "@/app/api/public/changelog/route";
-import { getSupplementChangelogPage } from "@/db/queries";
-import { getCachedFirstChangelogPage } from "@/lib/data-cache";
+import { createChangelogHandler } from "@/app/api/public/changelog/handler";
+import type { ChangelogCursor, ChangelogPage } from "@/types/bloodwork";
 
-vi.mock("@opennextjs/cloudflare", () => ({
-  getCloudflareContext: vi.fn().mockResolvedValue({ env: { DB: {} } }),
+const database = { kind: "test-database" } as const;
+const getDatabase = vi.fn(async () => database);
+const getFirstPage = vi.fn(async (): Promise<ChangelogPage> => ({
+  entries: [],
+  nextCursor: null,
 }));
-
-vi.mock("@/db/queries", () => ({
-  getSupplementChangelogPage: vi.fn(),
-}));
-
-vi.mock("@/lib/data-cache", () => ({
-  getCachedFirstChangelogPage: vi.fn(),
-}));
+const getPage = vi.fn(
+  async (
+    _database: typeof database,
+    _cursor: ChangelogCursor | null,
+  ): Promise<ChangelogPage> => ({ entries: [], nextCursor: null }),
+);
+const GET = createChangelogHandler({ getDatabase, getFirstPage, getPage });
 
 beforeEach(() => {
-  vi.mocked(getCachedFirstChangelogPage).mockReset();
-  vi.mocked(getSupplementChangelogPage).mockReset();
+  getDatabase.mockClear();
+  getFirstPage.mockReset();
+  getPage.mockReset();
 });
 
 describe("public changelog route", () => {
   it("loads the first page without a cursor", async () => {
-    vi.mocked(getCachedFirstChangelogPage).mockResolvedValue({
+    getFirstPage.mockResolvedValue({
       entries: [],
       nextCursor: null,
     });
@@ -31,8 +33,8 @@ describe("public changelog route", () => {
       new Request("https://bloodwork.test/api/public/changelog"),
     );
     expect(response.status).toBe(200);
-    expect(getCachedFirstChangelogPage).toHaveBeenCalledOnce();
-    expect(getSupplementChangelogPage).not.toHaveBeenCalled();
+    expect(getFirstPage).toHaveBeenCalledOnce();
+    expect(getPage).not.toHaveBeenCalled();
   });
 
   it("rejects a partial cursor", async () => {
@@ -42,12 +44,12 @@ describe("public changelog route", () => {
       ),
     );
     expect(response.status).toBe(400);
-    expect(getCachedFirstChangelogPage).not.toHaveBeenCalled();
-    expect(getSupplementChangelogPage).not.toHaveBeenCalled();
+    expect(getFirstPage).not.toHaveBeenCalled();
+    expect(getPage).not.toHaveBeenCalled();
   });
 
   it("loads a complete cursor without creating a persistent cache key", async () => {
-    vi.mocked(getSupplementChangelogPage).mockResolvedValue({
+    getPage.mockResolvedValue({
       entries: [],
       nextCursor: null,
     });
@@ -57,19 +59,16 @@ describe("public changelog route", () => {
       ),
     );
     expect(response.status).toBe(200);
-    expect(getCachedFirstChangelogPage).not.toHaveBeenCalled();
-    expect(getSupplementChangelogPage).toHaveBeenCalledWith(
-      {},
-      {
-        date: "2026-01-01",
-        createdAt: "2026-01-01T10:00:00Z",
-        id: "c1",
-      },
-    );
+    expect(getFirstPage).not.toHaveBeenCalled();
+    expect(getPage).toHaveBeenCalledWith(database, {
+      date: "2026-01-01",
+      createdAt: "2026-01-01T10:00:00Z",
+      id: "c1",
+    });
   });
 
   it("loads a server cursor with an empty persisted date", async () => {
-    vi.mocked(getSupplementChangelogPage).mockResolvedValue({
+    getPage.mockResolvedValue({
       entries: [],
       nextCursor: null,
     });
@@ -79,13 +78,10 @@ describe("public changelog route", () => {
       ),
     );
     expect(response.status).toBe(200);
-    expect(getSupplementChangelogPage).toHaveBeenCalledWith(
-      {},
-      {
-        date: "",
-        createdAt: "2026-01-01T10:00:00Z",
-        id: "c1",
-      },
-    );
+    expect(getPage).toHaveBeenCalledWith(database, {
+      date: "",
+      createdAt: "2026-01-01T10:00:00Z",
+      id: "c1",
+    });
   });
 });

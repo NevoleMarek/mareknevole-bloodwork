@@ -1,9 +1,6 @@
 type Point = { x: number; y: number };
 
-export function linearRegression(points: Point[]): {
-  slope: number;
-  intercept: number;
-} {
+export function linearRegression(points: Point[]) {
   if (points.length === 0) return { slope: 0, intercept: 0 };
   if (points.length === 1) return { slope: 0, intercept: points[0].y };
 

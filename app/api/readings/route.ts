@@ -1,36 +1,28 @@
 import assert from "node:assert";
+import * as Schema from "effect/Schema";
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
+import { createReadingsGetHandler } from "@/app/api/readings/get-handler";
 import { getReadingPage } from "@/db/queries";
 import { invalidateDashboard } from "@/lib/data-cache";
-import type { ReadingCursor } from "@/types/bloodwork";
-import type { SaveReadingRequest, SaveReadingResponse } from "@/types/wizard";
+import {
+  IdRequestSchema,
+  SaveReadingRequestSchema,
+} from "@/lib/domain-schemas";
+import type { SaveReadingResponse } from "@/types/wizard";
 
-export async function GET(request: Request) {
-  const params = new URL(request.url).searchParams;
-  const date = params.get("date");
-  const id = params.get("id");
-  const hasDate = params.has("date");
-  const hasId = params.has("id");
-  const hasCursor = hasDate || hasId;
-  if (hasCursor && !(hasDate && hasId)) {
-    return Response.json({ error: "Invalid cursor" }, { status: 400 });
-  }
-
-  let cursor: ReadingCursor | null = null;
-  if (hasCursor) {
-    assert(date !== null && id !== null);
-    cursor = { date, id };
-  }
-  const { env } = await getCloudflareContext();
-  return Response.json(await getReadingPage(env.DB, cursor));
-}
+export const GET = createReadingsGetHandler({
+  getDatabase: async () => (await getCloudflareContext()).env.DB,
+  getPage: getReadingPage,
+});
 
 export async function DELETE(request: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
-  const { id } = (await request.json()) as { id: string };
+  const { id } = Schema.decodeUnknownSync(IdRequestSchema)(
+    await request.json(),
+  );
   const result = await db
     .prepare("DELETE FROM readings WHERE id = ?")
     .bind(id)
@@ -47,7 +39,9 @@ export async function DELETE(request: Request) {
 export async function POST(request: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
-  const body = (await request.json()) as SaveReadingRequest;
+  const body = Schema.decodeUnknownSync(SaveReadingRequestSchema)(
+    await request.json(),
+  );
 
   assert(body.measurements.length > 0, "No measurements");
 

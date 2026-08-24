@@ -2,19 +2,19 @@ import type { Status } from "@/types/bloodwork";
 
 import { RangeBar } from "@/components/dashboard/range-bar";
 
-const statusLabel: Record<Status, string> = {
+const statusLabel = {
   normal: "In range",
   borderline: "Borderline",
   high: "High",
   low: "Low",
-};
+} satisfies Record<Status, string>;
 
-const statusStyle: Record<Status, string> = {
+const statusStyle = {
   normal: "bg-emerald-50 text-emerald-800",
   borderline: "bg-amber-50 text-amber-800",
   high: "bg-rose-50 text-rose-800",
   low: "bg-sky-50 text-sky-800",
-};
+} satisfies Record<Status, string>;
 
 export function MetricCard({
   label,

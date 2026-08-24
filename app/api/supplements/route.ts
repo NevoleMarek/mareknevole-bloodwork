@@ -1,7 +1,13 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import * as Schema from "effect/Schema";
 
 import { getActiveSupplements, getSupplementChangelog } from "@/db/queries";
 import { invalidateDashboard } from "@/lib/data-cache";
+import {
+  SupplementCreateRequestSchema,
+  SupplementDeleteRequestSchema,
+  SupplementUpdateRequestSchema,
+} from "@/lib/domain-schemas";
 
 export async function GET() {
   const { env } = await getCloudflareContext();
@@ -16,13 +22,9 @@ export async function GET() {
 export async function POST(req: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
-  const body = (await req.json()) as {
-    name: string;
-    dose: string;
-    frequency: string;
-    startedAt: string;
-    changelogDate: string;
-  };
+  const body = Schema.decodeUnknownSync(SupplementCreateRequestSchema)(
+    await req.json(),
+  );
 
   const now = new Date().toISOString();
   const id = crypto.randomUUID();
@@ -54,14 +56,9 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
-  const body = (await req.json()) as {
-    id: string;
-    name: string;
-    dose: string;
-    frequency: string;
-    startedAt: string;
-    changelogDate: string;
-  };
+  const body = Schema.decodeUnknownSync(SupplementUpdateRequestSchema)(
+    await req.json(),
+  );
 
   const old = await db
     .prepare("SELECT * FROM supplements WHERE id = ?")
@@ -110,10 +107,9 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   const { env } = await getCloudflareContext();
   const db = env.DB;
-  const { id, changelogDate } = (await req.json()) as {
-    id: string;
-    changelogDate: string;
-  };
+  const { id, changelogDate } = Schema.decodeUnknownSync(
+    SupplementDeleteRequestSchema,
+  )(await req.json());
 
   const supplement = await db
     .prepare("SELECT name FROM supplements WHERE id = ?")

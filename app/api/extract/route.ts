@@ -1,14 +1,15 @@
 import assert from "node:assert";
+import * as Schema from "effect/Schema";
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { callGemini, parseGeminiJson } from "@/lib/gemini";
+import { ExtractResponseSchema } from "@/lib/domain-schemas";
 import { extractVariablesPrompt } from "@/prompts/extract-variables";
-import type { ExtractResponse } from "@/types/wizard";
 
 export async function POST(request: Request) {
   const { env } = await getCloudflareContext();
-  const apiKey = env.GEMINI_API_KEY as string;
+  const apiKey = env.GEMINI_API_KEY;
   assert(apiKey, "GEMINI_API_KEY is required");
 
   const formData = await request.formData();
@@ -24,7 +25,9 @@ export async function POST(request: Request) {
     extractVariablesPrompt,
     base64,
   );
-  const result = parseGeminiJson<ExtractResponse>(text);
+  const result = Schema.decodeUnknownSync(ExtractResponseSchema)(
+    parseGeminiJson(text),
+  );
 
   assert(result.date, "No date extracted");
   assert(result.variables.length > 0, "No variables extracted");

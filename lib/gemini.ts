@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
 import assert from "node:assert";
+import * as Schema from "effect/Schema";
 
 export async function callGemini(
   apiKey: string,
@@ -26,10 +27,10 @@ export async function callGemini(
   return text;
 }
 
-export function parseGeminiJson<T>(text: string): T {
+export function parseGeminiJson(text: string): Schema.Json {
   const cleaned = text
     .replace(/^```(?:json)?\n?/, "")
     .replace(/\n?```$/, "")
     .trim();
-  return JSON.parse(cleaned) as T;
+  return Schema.decodeUnknownSync(Schema.Json)(JSON.parse(cleaned));
 }

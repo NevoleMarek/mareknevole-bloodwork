@@ -3,6 +3,21 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import AdminDataPage from "@/app/admin/data/page";
+import type {
+  BloodworkReading,
+  ReadingPage,
+  VocabularyEntry,
+} from "@/types/bloodwork";
+
+type ExportData = {
+  vocabulary: { entries: VocabularyEntry[] };
+  readings: BloodworkReading[];
+};
+
+type TestResponse<Data> = {
+  ok: boolean;
+  json: () => Promise<Data>;
+};
 
 afterEach(() => {
   vi.useRealTimers();
@@ -126,14 +141,8 @@ describe("AdminDataPage", () => {
   });
 
   it("invokes the promised clipboard write before export data arrives", async () => {
-    let resolveExport!: (value: {
-      ok: boolean;
-      json: () => Promise<unknown>;
-    }) => void;
-    const pendingExport = new Promise<{
-      ok: boolean;
-      json: () => Promise<unknown>;
-    }>((resolve) => {
+    let resolveExport!: (value: TestResponse<ExportData>) => void;
+    const pendingExport = new Promise<TestResponse<ExportData>>((resolve) => {
       resolveExport = resolve;
     });
     class TestClipboardItem {
@@ -185,14 +194,8 @@ describe("AdminDataPage", () => {
   });
 
   it("discards a load-more result after deletion refreshes the first page", async () => {
-    let resolveMore!: (value: {
-      ok: boolean;
-      json: () => Promise<unknown>;
-    }) => void;
-    const pendingMore = new Promise<{
-      ok: boolean;
-      json: () => Promise<unknown>;
-    }>((resolve) => {
+    let resolveMore!: (value: TestResponse<ReadingPage>) => void;
+    const pendingMore = new Promise<TestResponse<ReadingPage>>((resolve) => {
       resolveMore = resolve;
     });
     let firstPageRequests = 0;
@@ -263,14 +266,8 @@ describe("AdminDataPage", () => {
   });
 
   it("does not cache an export that resolves after a deletion", async () => {
-    let resolveExport!: (value: {
-      ok: boolean;
-      json: () => Promise<unknown>;
-    }) => void;
-    const pendingExport = new Promise<{
-      ok: boolean;
-      json: () => Promise<unknown>;
-    }>((resolve) => {
+    let resolveExport!: (value: TestResponse<ExportData>) => void;
+    const pendingExport = new Promise<TestResponse<ExportData>>((resolve) => {
       resolveExport = resolve;
     });
     const writeText = vi.fn().mockResolvedValue(undefined);

@@ -2,12 +2,8 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HealthGrid } from "@/components/dashboard/health-grid";
+import { HealthGridContent } from "@/components/dashboard/health-grid";
 import type { HealthData } from "@/types/health";
-
-vi.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams(window.location.search),
-}));
 
 const health: HealthData = {
   metrics: [
@@ -55,7 +51,18 @@ let enterViewport: () => void;
 
 beforeEach(() => {
   window.history.replaceState(null, "", "/");
-  let callback: IntersectionObserverCallback;
+  let callback: IntersectionObserverCallback = () => {};
+  const observer: IntersectionObserver = {
+    root: null,
+    rootMargin: "1000px 0px",
+    thresholds: [0],
+    disconnect() {},
+    observe() {},
+    takeRecords() {
+      return [];
+    },
+    unobserve() {},
+  };
   class TestIntersectionObserver implements IntersectionObserver {
     readonly root = null;
     readonly rootMargin = "1000px 0px";
@@ -74,11 +81,18 @@ beforeEach(() => {
   }
   vi.stubGlobal("IntersectionObserver", TestIntersectionObserver);
   enterViewport = () => {
+    const rectangle = new DOMRect();
+    const entry: IntersectionObserverEntry = {
+      boundingClientRect: rectangle,
+      intersectionRatio: 1,
+      intersectionRect: rectangle,
+      isIntersecting: true,
+      rootBounds: null,
+      target: document.body,
+      time: 0,
+    };
     act(() => {
-      callback(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
-        {} as IntersectionObserver,
-      );
+      callback([entry], observer);
     });
   };
 });
@@ -96,7 +110,7 @@ describe("HealthGrid", () => {
     });
     vi.stubGlobal("fetch", fetch);
 
-    render(<HealthGrid />);
+    render(<HealthGridContent requestedPeriod={null} />);
     expect(fetch).not.toHaveBeenCalled();
     expect(screen.getByText("1M")).toBeInTheDocument();
     expect(screen.getByText("6M")).toBeInTheDocument();
@@ -117,7 +131,7 @@ describe("HealthGrid", () => {
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
 
-    render(<HealthGrid />);
+    render(<HealthGridContent requestedPeriod={null} />);
     enterViewport();
     expect(await screen.findByText("Weight")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "1M" }));
@@ -137,7 +151,7 @@ describe("HealthGrid", () => {
     });
     vi.stubGlobal("fetch", fetch);
 
-    render(<HealthGrid />);
+    render(<HealthGridContent requestedPeriod={null} />);
     enterViewport();
     expect(await screen.findByText("Weight")).toBeInTheDocument();
 
@@ -160,7 +174,7 @@ describe("HealthGrid", () => {
     });
     vi.stubGlobal("fetch", fetch);
 
-    render(<HealthGrid />);
+    render(<HealthGridContent requestedPeriod={null} />);
     const all = screen.getByRole("button", { name: "ALL" });
     fireEvent.pointerDown(all, { pointerType: "touch" });
     expect(fetch).not.toHaveBeenCalled();

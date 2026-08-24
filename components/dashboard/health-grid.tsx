@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import * as Schema from "effect/Schema";
 
 import { BloodPressureChart } from "@/components/dashboard/blood-pressure-chart";
 import { HealthChart } from "@/components/dashboard/health-chart";
+import { HealthDataSchema } from "@/lib/domain-schemas";
 import { getCutoffDate, isPeriod } from "@/lib/period";
 import type { Period } from "@/lib/period";
 import { PERIODS } from "@/lib/period";
@@ -18,7 +20,14 @@ type HealthState =
 
 export function HealthGrid() {
   const searchParams = useSearchParams();
-  const requestedPeriod = searchParams.get("period");
+  return <HealthGridContent requestedPeriod={searchParams.get("period")} />;
+}
+
+export function HealthGridContent({
+  requestedPeriod,
+}: {
+  requestedPeriod: string | null;
+}) {
   const initialPeriod = isPeriod(requestedPeriod) ? requestedPeriod : "6M";
   const [period, setPeriod] = useState<Period>(initialPeriod);
   const [state, setState] = useState<HealthState>({ kind: "idle" });
@@ -56,7 +65,9 @@ export function HealthGrid() {
       requests.current.get(requested) ??
       fetch(`/api/public/health?period=${requested}`).then(async (response) => {
         if (!response.ok) throw new Error("Health request failed");
-        return (await response.json()) as HealthData;
+        return Schema.decodeUnknownSync(HealthDataSchema)(
+          await response.json(),
+        );
       });
     requests.current.set(requested, pending);
     pending
