@@ -3,16 +3,8 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import AdminDataPage from "@/app/admin/data/page";
-import type {
-  BloodworkReading,
-  ReadingPage,
-  VocabularyEntry,
-} from "@/types/bloodwork";
-
-type ExportData = {
-  vocabulary: { entries: VocabularyEntry[] };
-  readings: BloodworkReading[];
-};
+import type { ExportData } from "@/lib/schemas/wire";
+import type { ReadingPage } from "@/types/bloodwork";
 
 type TestResponse<Data> = {
   ok: boolean;

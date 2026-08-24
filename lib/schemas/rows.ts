@@ -1,5 +1,7 @@
 import * as Schema from "effect/Schema";
 
+import { HealthAggregationSchema, StatusSchema } from "@/lib/schemas/domain";
+
 export const VocabularyRow = Schema.Struct({
   key: Schema.String,
   label: Schema.String,
@@ -31,7 +33,7 @@ export const MeasurementRow = Schema.Struct({
   vocabulary_key: Schema.String,
   value: Schema.Number,
   unit: Schema.String,
-  status: Schema.String,
+  status: StatusSchema,
 });
 export interface MeasurementRow extends Schema.Schema.Type<
   typeof MeasurementRow
@@ -83,7 +85,7 @@ export const HealthMetricConfigRow = Schema.Struct({
   metric: Schema.String,
   label: Schema.String,
   unit: Schema.String,
-  aggregation: Schema.String,
+  aggregation: HealthAggregationSchema,
   visible: Schema.Number,
 });
 export interface HealthMetricConfigRow extends Schema.Schema.Type<

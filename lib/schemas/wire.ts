@@ -5,6 +5,7 @@ import {
   BiomarkerTrendPoint,
   ChangelogPage,
   ExtractedVariable,
+  HealthAggregationSchema,
   HealthData,
   HealthMetricConfig,
   HealthMetric,
@@ -66,7 +67,7 @@ export const HealthImportConfig = Schema.Struct({
   metric: Schema.String,
   label: Schema.String,
   unit: Schema.String,
-  aggregation: Schema.String,
+  aggregation: HealthAggregationSchema,
 });
 export interface HealthImportConfig extends Schema.Schema.Type<
   typeof HealthImportConfig
@@ -91,6 +92,17 @@ export const HealthImportResponse = Schema.Struct({
 });
 export interface HealthImportResponse extends Schema.Schema.Type<
   typeof HealthImportResponse
+> {
+  readonly _schemaModel?: never;
+}
+
+export const HealthImportSummary = Schema.Struct({
+  saved: Schema.Number,
+  metrics: Schema.Number,
+  days: Schema.Number,
+});
+export interface HealthImportSummary extends Schema.Schema.Type<
+  typeof HealthImportSummary
 > {
   readonly _schemaModel?: never;
 }
@@ -237,6 +249,14 @@ export interface SupplementDeleteRequest extends Schema.Schema.Type<
 
 export const LoginRequest = Schema.Struct({ password: Schema.String });
 export interface LoginRequest extends Schema.Schema.Type<typeof LoginRequest> {
+  readonly _schemaModel?: never;
+}
+
+export const AuthSession = Schema.Struct({
+  token: Schema.String,
+  secure: Schema.Boolean,
+});
+export interface AuthSession extends Schema.Schema.Type<typeof AuthSession> {
   readonly _schemaModel?: never;
 }
 

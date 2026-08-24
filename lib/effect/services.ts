@@ -18,28 +18,36 @@ import {
 } from "@/lib/effect/errors";
 import { ApplicationConfig } from "@/lib/effect/config";
 import { DataCache } from "@/lib/effect/cache";
-import { Gemini, requireNonEmpty } from "@/lib/effect/provider";
 import {
-  Repository,
-  type SupplementCreateInput,
-  type SupplementDeleteInput,
-  type SupplementUpdateInput,
-} from "@/lib/effect/repository";
+  FLASH_MODEL,
+  Gemini,
+  PRO_MODEL,
+  requireNonEmpty,
+} from "@/lib/effect/provider";
+import { Repository } from "@/lib/effect/repository";
 import {
   ExtractResponse,
   MapResponse,
   ResearchResponse,
   type ExtractResponse as ExtractResponseType,
+  type AuthSession,
+  type ExportData,
+  type HealthImportSummary as HealthImportSummaryType,
+  type HealthVisibilityRequest,
   type MapResponse as MapResponseType,
   type ResearchResponse as ResearchResponseType,
+  type SupplementsResponse,
 } from "@/lib/schemas/wire";
 import type {
+  BiomarkerTrendPoint,
   ChangelogCursor,
   ChangelogPage,
+  DashboardSnapshot,
   ReadingCursor,
   ReadingPage,
-  Supplement,
-  SupplementChangelog,
+  SupplementCreateInput,
+  SupplementDeleteInput,
+  SupplementUpdateInput,
   VocabularyEntry,
 } from "@/types/bloodwork";
 import type {
@@ -60,26 +68,13 @@ type PersistenceFailure = PersistenceError | NotFoundError | ConflictError;
 
 export interface DashboardContract {
   readonly getDashboard: () => Effect.Effect<
-    Awaited<ReturnType<typeof import("@/lib/data-cache").getCachedDashboard>>,
+    DashboardSnapshot,
     PersistenceError
   >;
-  readonly getData: () => Effect.Effect<
-    {
-      readonly vocabulary: { readonly entries: VocabularyEntry[] };
-      readonly readings: Array<{
-        readonly date: string;
-        readonly source: string;
-        readonly measurements: import("@/types/bloodwork").Measurement[];
-      }>;
-    },
-    PersistenceError
-  >;
+  readonly getData: () => Effect.Effect<ExportData, PersistenceError>;
   readonly getTrend: (
     key: string,
-  ) => Effect.Effect<
-    ReadonlyArray<{ date: string; value: number }>,
-    PersistenceError
-  >;
+  ) => Effect.Effect<BiomarkerTrendPoint[], PersistenceError>;
   readonly getVisibleKeys: () => Effect.Effect<string[], PersistenceError>;
   readonly getHealth: (
     period: Period,
@@ -240,16 +235,12 @@ export interface HealthContract {
     HealthMetricConfig[],
     PersistenceError
   >;
-  readonly updateVisibility: (request: {
-    readonly metric: string;
-    readonly visible: boolean;
-  }) => Effect.Effect<void, PersistenceError>;
+  readonly updateVisibility: (
+    request: HealthVisibilityRequest,
+  ) => Effect.Effect<void, PersistenceError>;
   readonly import: (
     request: HealthImportRequest,
-  ) => Effect.Effect<
-    { readonly saved: number; readonly metrics: number; readonly days: number },
-    PersistenceError
-  >;
+  ) => Effect.Effect<HealthImportSummaryType, PersistenceError>;
 }
 
 export class Health extends Context.Service<Health, HealthContract>()(
@@ -264,18 +255,12 @@ export const healthLayer = Layer.effect(
     const getConfigs = Effect.fn("Health.getConfigs")(function* () {
       return yield* repository.getHealthMetricConfigs();
     });
-    const updateVisibility = Effect.fn("Health.updateVisibility")(
-      function* (request: {
-        readonly metric: string;
-        readonly visible: boolean;
-      }) {
-        yield* repository.updateHealthVisibility(
-          request.metric,
-          request.visible,
-        );
-        yield* cache.invalidateHealth();
-      },
-    );
+    const updateVisibility = Effect.fn("Health.updateVisibility")(function* (
+      request: HealthVisibilityRequest,
+    ) {
+      yield* repository.updateHealthVisibility(request.metric, request.visible);
+      yield* cache.invalidateHealth();
+    });
     const importHealth = Effect.fn("Health.import")(function* (
       request: HealthImportRequest,
     ) {
@@ -292,13 +277,7 @@ export const healthLayer = Layer.effect(
 );
 
 export interface SupplementsContract {
-  readonly get: () => Effect.Effect<
-    {
-      readonly supplements: Supplement[];
-      readonly changelog: SupplementChangelog[];
-    },
-    PersistenceError
-  >;
+  readonly get: () => Effect.Effect<SupplementsResponse, PersistenceError>;
   readonly create: (
     input: SupplementCreateInput,
   ) => Effect.Effect<void, PersistenceFailure>;
@@ -382,10 +361,7 @@ export const supplementsLayer = Layer.effect(
 export interface AuthContract {
   readonly authenticate: (
     password: string,
-  ) => Effect.Effect<
-    { readonly token: string; readonly secure: boolean },
-    ConfigurationError | AuthenticationError
-  >;
+  ) => Effect.Effect<AuthSession, ConfigurationError | AuthenticationError>;
 }
 
 export class Auth extends Context.Service<Auth, AuthContract>()(
@@ -493,7 +469,7 @@ export const providerWorkflowsLayer = Layer.effect(
       });
       const base64 = Buffer.from(bytes).toString("base64");
       const text = yield* gemini.generate(
-        "gemini-3-flash-preview",
+        FLASH_MODEL,
         extractVariablesPrompt,
         base64,
       );
@@ -521,7 +497,7 @@ export const providerWorkflowsLayer = Layer.effect(
         JSON.stringify(request.vocabulary, null, 2),
         JSON.stringify(request.variables, null, 2),
       );
-      const text = yield* gemini.generate("gemini-3-flash-preview", prompt);
+      const text = yield* gemini.generate(FLASH_MODEL, prompt);
       const result = yield* gemini.decodeJson(
         MapResponse,
         text,
@@ -537,7 +513,7 @@ export const providerWorkflowsLayer = Layer.effect(
       const prompt = researchVariablesPrompt(
         JSON.stringify(request.newEntries, null, 2),
       );
-      const text = yield* gemini.generate("gemini-3.1-pro-preview", prompt);
+      const text = yield* gemini.generate(PRO_MODEL, prompt);
       const result = yield* gemini.decodeJson(
         ResearchResponse,
         text,

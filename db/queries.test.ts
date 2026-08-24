@@ -1,5 +1,8 @@
+import * as Effect from "effect/Effect";
 import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 
+import { PersistenceError } from "@/lib/effect/errors";
+import { makeRepository } from "@/lib/effect/repository";
 import {
   getBiomarkerTrend,
   getLabOverview,
@@ -171,7 +174,7 @@ describe("row mappers", () => {
       vocabulary_key: "glucose",
       value: 92,
       unit: "mg/dL",
-      status: "normal",
+      status: "normal" as const,
     };
     expect(mapMeasurementRow(row)).toEqual({
       vocabularyKey: "glucose",
@@ -224,7 +227,7 @@ describe("row mappers", () => {
       metric: "heart_rate",
       label: "Heart Rate",
       unit: "bpm",
-      aggregation: "avg",
+      aggregation: "avg" as const,
       visible: 1,
     };
     expect(mapHealthMetricConfigRow(row)).toEqual({
@@ -241,7 +244,7 @@ describe("row mappers", () => {
       metric: "steps",
       label: "Steps",
       unit: "count",
-      aggregation: "sum",
+      aggregation: "sum" as const,
       visible: 0,
     };
     expect(mapHealthMetricConfigRow(row)).toEqual({
@@ -310,6 +313,57 @@ describe("getLabOverview", () => {
           status: "normal",
         },
       ],
+    });
+  });
+});
+
+describe("persisted enum boundaries", () => {
+  it("maps an invalid measurement status to typed repository persistence failure", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const database = new TestDatabase([
+      d1Result([{ id: "newest", date: "2026-01-10", source: "newest.pdf" }]),
+      d1Result([{ count: 1 }]),
+      d1Result([
+        {
+          id: "m1",
+          reading_id: "newest",
+          vocabulary_key: "glucose",
+          value: 107,
+          unit: "mg/dL",
+          status: "invalid-status",
+        },
+      ]),
+    ]);
+
+    const repository = makeRepository(database);
+    const failure = Effect.runPromise(repository.getLabOverview());
+
+    await expect(failure).rejects.toBeInstanceOf(PersistenceError);
+    await expect(failure).rejects.toMatchObject({
+      operation: "Repository.getLabOverview",
+    });
+  });
+
+  it("maps an invalid health aggregation to typed repository persistence failure", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const database = new TestDatabase([
+      d1Result([
+        {
+          metric: "heart_rate",
+          label: "Heart Rate",
+          unit: "bpm",
+          aggregation: "invalid-aggregation",
+          visible: 1,
+        },
+      ]),
+    ]);
+
+    const repository = makeRepository(database);
+    const failure = Effect.runPromise(repository.getHealthMetricConfigs());
+
+    await expect(failure).rejects.toBeInstanceOf(PersistenceError);
+    await expect(failure).rejects.toMatchObject({
+      operation: "Repository.getHealthMetricConfigs",
     });
   });
 });

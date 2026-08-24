@@ -61,6 +61,35 @@ export interface BloodworkReading extends Schema.Schema.Type<
   readonly _schemaModel?: never;
 }
 
+export const ReadingWithMeasurements = Schema.Struct({
+  id: Schema.String,
+  date: Schema.String,
+  source: Schema.String,
+  measurements: Schema.mutable(Schema.Array(Measurement)),
+});
+export interface ReadingWithMeasurements extends Schema.Schema.Type<
+  typeof ReadingWithMeasurements
+> {
+  readonly _schemaModel?: never;
+}
+
+export const LatestPanel = Schema.Struct({
+  date: Schema.String,
+  source: Schema.String,
+});
+export interface LatestPanel extends Schema.Schema.Type<typeof LatestPanel> {
+  readonly _schemaModel?: never;
+}
+
+export const LabOverview = Schema.Struct({
+  latestPanel: Schema.NullOr(LatestPanel),
+  latestMeasurements: Schema.mutable(Schema.Array(Measurement)),
+  panelCount: Schema.Number,
+});
+export interface LabOverview extends Schema.Schema.Type<typeof LabOverview> {
+  readonly _schemaModel?: never;
+}
+
 export const ReadingSummary = Schema.Struct({
   id: Schema.String,
   date: Schema.String,
@@ -176,6 +205,17 @@ export const HealthData = Schema.Struct({
   configs: Schema.mutable(Schema.Array(HealthMetricConfig)),
 });
 export interface HealthData extends Schema.Schema.Type<typeof HealthData> {
+  readonly _schemaModel?: never;
+}
+
+export const DashboardSnapshot = Schema.Struct({
+  vocabulary: Schema.mutable(Schema.Array(VocabularyEntry)),
+  labs: LabOverview,
+  supplements: Schema.mutable(Schema.Array(Supplement)),
+});
+export interface DashboardSnapshot extends Schema.Schema.Type<
+  typeof DashboardSnapshot
+> {
   readonly _schemaModel?: never;
 }
 

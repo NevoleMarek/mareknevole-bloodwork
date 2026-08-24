@@ -8,12 +8,8 @@ import {
   ExportData as ExportDataSchema,
   ReadingPageResponse,
 } from "@/lib/schemas/wire";
-import type {
-  BloodworkReading,
-  ReadingCursor,
-  ReadingSummary,
-  VocabularyEntry,
-} from "@/types/bloodwork";
+import type { ExportData } from "@/lib/schemas/wire";
+import type { ReadingCursor, ReadingSummary } from "@/types/bloodwork";
 
 type MoreState = { kind: "idle" } | { kind: "loading" } | { kind: "error" };
 
@@ -26,11 +22,6 @@ type DataState =
       nextCursor: ReadingCursor | null;
       more: MoreState;
     };
-
-type ExportData = {
-  vocabulary: { entries: VocabularyEntry[] };
-  readings: BloodworkReading[];
-};
 
 function readingsUrl(cursor: ReadingCursor | null) {
   if (!cursor) return "/api/readings";

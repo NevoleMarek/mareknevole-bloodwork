@@ -1,6 +1,9 @@
 import { createReadStream, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
+import type { HealthImportConfig } from "@/lib/schemas/wire";
+import type { HealthMetric } from "@/lib/schemas/domain";
+
 // -- Types --
 
 export type RawRecord = {
@@ -164,18 +167,8 @@ export function deduplicateIntervals(intervals: Interval[]): number {
 }
 
 function finalizeState(state: AccState) {
-  const metrics: {
-    date: string;
-    metric: string;
-    value: number;
-    unit: string;
-  }[] = [];
-  const configs: {
-    metric: string;
-    label: string;
-    unit: string;
-    aggregation: string;
-  }[] = [];
+  const metrics: HealthMetric[] = [];
+  const configs: HealthImportConfig[] = [];
 
   // Resolve sum metrics via interval deduplication
   const sumDayMaps = new Map<string, Map<string, DayBucket>>();

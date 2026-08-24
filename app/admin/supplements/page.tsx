@@ -4,13 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SupplementEditor } from "@/components/admin/supplement-editor";
 import { decodeResponseJson } from "@/lib/effect/client";
-import { SupplementsResponse as SupplementsResponseSchema } from "@/lib/schemas/wire";
-import type { Supplement, SupplementChangelog } from "@/types/bloodwork";
-
-type SupplementsResponse = {
-  supplements: Supplement[];
-  changelog: SupplementChangelog[];
-};
+import {
+  SupplementsResponse as SupplementsResponseSchema,
+  type SupplementsResponse,
+} from "@/lib/schemas/wire";
+import type { SupplementChangelog } from "@/types/bloodwork";
 
 type EditingState =
   | { kind: "none" }

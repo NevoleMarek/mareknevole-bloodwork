@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { runRoute } from "@/lib/effect/http";
 import { Supplements } from "@/lib/effect/services";
 import { updateChangelogEffect } from "@/lib/effect/workflows";
+import type { ChangelogUpdateRequest } from "@/lib/schemas/wire";
 
 const unused = () => Effect.die("unused supplements operation");
 
@@ -27,12 +28,7 @@ const runUpdate = (request: Request, service: Supplements["Service"]) =>
     ),
   );
 
-type ChangelogUpdateBody = {
-  readonly id: string;
-  readonly description: string;
-};
-
-const request = (body: ChangelogUpdateBody) =>
+const request = (body: ChangelogUpdateRequest) =>
   new Request("https://bloodwork.test/api/changelog", {
     method: "PUT",
     body: JSON.stringify(body),

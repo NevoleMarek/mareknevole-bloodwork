@@ -3,9 +3,13 @@ export type {
   BloodworkReading,
   ChangelogCursor,
   ChangelogPage,
+  DashboardSnapshot,
+  LabOverview,
+  LatestPanel,
   Measurement,
   ReadingCursor,
   ReadingPage,
+  ReadingWithMeasurements,
   ReadingSummary,
   ReferenceRange,
   Status,
@@ -14,4 +18,13 @@ export type {
   VocabularyEntry,
 } from "@/lib/schemas/domain";
 
-export type { VocabularyResponse as Vocabulary } from "@/lib/schemas/wire";
+export type {
+  ExportData,
+  HealthImportConfig,
+  HealthImportSummary,
+  SupplementCreateRequest as SupplementCreateInput,
+  SupplementDeleteRequest as SupplementDeleteInput,
+  SupplementUpdateRequest as SupplementUpdateInput,
+  SupplementsResponse,
+  VocabularyResponse as Vocabulary,
+} from "@/lib/schemas/wire";

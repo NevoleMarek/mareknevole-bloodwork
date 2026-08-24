@@ -73,10 +73,13 @@ Repository + DataCache -> Dashboard, Bloodwork, Health, Supplements
 ApplicationConfig -> Auth
 ```
 
-`Repository` is the D1 boundary and decodes persisted rows before mapping them
-to domain schemas. `Gemini` is the only SDK boundary. `DataCache` preserves
-Next/OpenNext `unstable_cache` and tag invalidation semantics; it is not an
-in-memory cache substitute. `lib/effect/http.ts` owns the single
+`Repository` is the D1 boundary and decodes persisted rows—including status
+and aggregation enums—before mapping them to canonical domain schemas.
+`Gemini` is the only SDK boundary; its layer acquires one redacted-key client
+and the finite flash/pro model handles, while each request remains
+interruptible. `DataCache` preserves Next/OpenNext `unstable_cache` and tag
+invalidation semantics; it is not an in-memory cache substitute.
+`lib/effect/http.ts` owns the single
 `Effect.runPromise` bridge used by Next handlers. Browser fetch responses use
 the small `lib/effect/client.ts` decoder bridge.
 

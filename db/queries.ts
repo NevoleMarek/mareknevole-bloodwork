@@ -1,9 +1,6 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import * as Schema from "effect/Schema";
-import * as Result from "effect/Result";
-
-import { HealthAggregationSchema, StatusSchema } from "@/lib/schemas/domain";
 import {
   BiomarkerTrendRow,
   HealthMetricConfigRow,
@@ -20,14 +17,16 @@ import type {
   BiomarkerTrendPoint,
   ChangelogCursor,
   ChangelogPage,
+  LabOverview,
   Measurement,
   ReadingCursor,
   ReadingPage,
+  ReadingWithMeasurements,
   Supplement,
   SupplementChangelog,
   VocabularyEntry,
 } from "@/types/bloodwork";
-import type { HealthMetric, HealthMetricConfig } from "@/types/health";
+import type { HealthData, HealthMetricConfig } from "@/types/health";
 
 // -- Row mappers --
 
@@ -48,15 +47,11 @@ export function mapReadingRow(row: ReadingRow): ReadingRow {
 }
 
 export function mapMeasurementRow(row: MeasurementRow): Measurement {
-  const status = Schema.decodeUnknownResult(StatusSchema)(row.status);
-  if (Result.isFailure(status)) {
-    throw new Error("Invalid persisted measurement status");
-  }
   return {
     vocabularyKey: row.vocabulary_key,
     value: row.value,
     unit: row.unit,
-    status: status.success,
+    status: row.status,
   };
 }
 
@@ -87,17 +82,11 @@ export function mapSupplementChangelogRow(
 export function mapHealthMetricConfigRow(
   row: HealthMetricConfigRow,
 ): HealthMetricConfig {
-  const aggregation = Schema.decodeUnknownResult(HealthAggregationSchema)(
-    row.aggregation,
-  );
-  if (Result.isFailure(aggregation)) {
-    throw new Error("Invalid persisted health aggregation");
-  }
   return {
     metric: row.metric,
     label: row.label,
     unit: row.unit,
-    aggregation: aggregation.success,
+    aggregation: row.aggregation,
     visible: row.visible === 1,
   };
 }
@@ -135,13 +124,7 @@ export async function getVocabulary(
   return rows.map(mapVocabularyRow);
 }
 
-type ReadingWithMeasurements = ReadingRow & { measurements: Measurement[] };
-
-export async function getLabOverview(db: D1Database): Promise<{
-  latestPanel: { date: string; source: string } | null;
-  latestMeasurements: Measurement[];
-  panelCount: number;
-}> {
+export async function getLabOverview(db: D1Database): Promise<LabOverview> {
   const [latestResult, countResult, measurementResult] = await Promise.all([
     db
       .prepare(
@@ -361,7 +344,7 @@ export async function getSupplementChangelogPage(
 export async function getVisibleHealthMetrics(
   db: D1Database,
   cutoffDate: string | null,
-): Promise<{ metrics: HealthMetric[]; configs: HealthMetricConfig[] }> {
+): Promise<HealthData> {
   const metricsQuery = cutoffDate
     ? db
         .prepare(

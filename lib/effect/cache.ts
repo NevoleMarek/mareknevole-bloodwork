@@ -13,24 +13,22 @@ import {
 } from "@/lib/data-cache";
 import type { Period } from "@/lib/period";
 import { PersistenceError } from "@/lib/effect/errors";
-import type { ChangelogPage } from "@/types/bloodwork";
+import type {
+  BiomarkerTrendPoint,
+  ChangelogPage,
+  DashboardSnapshot,
+} from "@/types/bloodwork";
 import type { HealthData } from "@/types/health";
 
 export interface DataCacheContract {
-  readonly dashboard: () => Effect.Effect<
-    Awaited<ReturnType<typeof getCachedDashboard>>,
-    PersistenceError
-  >;
+  readonly dashboard: () => Effect.Effect<DashboardSnapshot, PersistenceError>;
   readonly firstChangelogPage: () => Effect.Effect<
     ChangelogPage,
     PersistenceError
   >;
   readonly biomarkerTrend: (
     key: string,
-  ) => Effect.Effect<
-    Awaited<ReturnType<typeof getCachedBiomarkerTrend>>,
-    PersistenceError
-  >;
+  ) => Effect.Effect<BiomarkerTrendPoint[], PersistenceError>;
   readonly visibleVocabularyKeys: () => Effect.Effect<
     string[],
     PersistenceError
