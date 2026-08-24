@@ -170,8 +170,8 @@ export interface KeyRequest extends Schema.Schema.Type<typeof KeyRequest> {
 }
 
 export const ChangelogUpdateRequest = Schema.Struct({
-  id: Schema.String,
-  description: Schema.String,
+  id: Schema.NonEmptyString,
+  description: Schema.NonEmptyString,
 });
 export interface ChangelogUpdateRequest extends Schema.Schema.Type<
   typeof ChangelogUpdateRequest

@@ -1,8 +1,13 @@
-import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
+import {
+  GoogleGenerativeAI,
+  type GenerativeModel,
+  type Part,
+} from "@google/generative-ai";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Result from "effect/Result";
+import * as Redacted from "effect/Redacted";
 import * as Schema from "effect/Schema";
 
 import {
@@ -34,6 +39,15 @@ export class Gemini extends Context.Service<Gemini, GeminiContract>()(
   "Bloodwork/Gemini",
 ) {}
 
+type GeminiModel = Pick<GenerativeModel, "generateContent">;
+
+/** Keep the Effect cancellation signal attached to the SDK request. */
+export const generateContentWithSignal = (
+  model: GeminiModel,
+  request: Parameters<GeminiModel["generateContent"]>[0],
+  signal: AbortSignal,
+) => model.generateContent(request, { signal });
+
 const parseJson = (text: string): Schema.Json => {
   const cleaned = text
     .replace(/^```(?:json)?\n?/, "")
@@ -55,9 +69,9 @@ export const layer = Layer.effect(
       prompt: string,
       pdfBase64?: string,
     ) {
-      const apiKey = yield* config.requireGeminiApiKey();
+      const apiKey = Redacted.value(yield* config.requireGeminiApiKey());
       const result = yield* Effect.tryPromise({
-        try: async () => {
+        try: async (signal) => {
           const genAI = new GoogleGenerativeAI(apiKey);
           const genModel = genAI.getGenerativeModel({ model });
           const parts: Part[] = pdfBase64
@@ -68,9 +82,11 @@ export const layer = Layer.effect(
                 },
               ]
             : [{ text: prompt }];
-          return genModel.generateContent({
-            contents: [{ role: "user", parts }],
-          });
+          return generateContentWithSignal(
+            genModel,
+            { contents: [{ role: "user", parts }] },
+            signal,
+          );
         },
         catch: (cause) => {
           const statusResult = Schema.decodeUnknownResult(

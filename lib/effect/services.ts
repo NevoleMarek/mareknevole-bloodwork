@@ -1,6 +1,7 @@
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Redacted from "effect/Redacted";
 
 import type { Period } from "@/lib/period";
 import {
@@ -398,7 +399,7 @@ export const authLayer = Layer.effect(
     const authenticate = Effect.fn("Auth.authenticate")(function* (
       password: string,
     ) {
-      const expected = yield* config.requireAdminPassword();
+      const expected = Redacted.value(yield* config.requireAdminPassword());
       const encoder = new TextEncoder();
       const [hashA, hashB] = yield* Effect.all(
         [

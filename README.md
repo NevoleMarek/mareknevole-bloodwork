@@ -58,6 +58,11 @@ Server workflows use Effect v4 at the application boundary. Next route
 handlers only decode a request, invoke a named service workflow, and map typed
 failures to a response. `lib/effect/runtime.ts` is the sole OpenNext context
 adapter; it supplies the required D1 and secret bindings to the runtime graph.
+The named request workflows live in `lib/effect/workflows.ts`; the route files
+only provide the live layer and call the shared response adapter. Configuration
+is read from a binding-backed `ConfigProvider`: `Config.redacted` keeps the
+admin password and Gemini key as `Redacted` values until the trusted Auth or
+Gemini adapter needs them.
 
 The live graph is intentionally topological:
 
@@ -80,10 +85,11 @@ adapter, so Effect service tests use an explicit `Effect.runPromise` bridge in
 the test files. Production `Effect.runPromise` is limited to the shared Next
 adapter and the browser decoder bridge.
 
-Expected failures are tagged schema errors: malformed requests are `400`,
-missing resources are `404`, conflicts are `409`, provider failures are `502`,
-and missing configuration or D1 failures are `503`. Defects and interruption
-are not converted into application responses.
+Expected failures are tagged schema errors: malformed requests and validation
+failures are `400`, missing resources are `404`, conflicts are `409`, provider
+failures are `502`, and missing configuration or D1 failures are `503`. Defects
+and interruption (including framework route-parameter failures) are not
+converted into application responses.
 
 ## Verification
 

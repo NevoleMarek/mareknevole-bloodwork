@@ -34,6 +34,7 @@ import {
   ConflictError,
   NotFoundError,
   PersistenceError,
+  ValidationError,
 } from "@/lib/effect/errors";
 import { SupplementNameRow, SupplementUpdateRow } from "@/lib/schemas/rows";
 import { CloudflareRuntime } from "@/lib/effect/runtime";
@@ -133,7 +134,10 @@ export interface RepositoryContract {
   ) => Effect.Effect<void, PersistenceError | NotFoundError>;
   readonly saveReading: (
     body: SaveReadingRequest,
-  ) => Effect.Effect<string, PersistenceError | ConflictError>;
+  ) => Effect.Effect<
+    string,
+    PersistenceError | ConflictError | ValidationError
+  >;
   readonly createVocabulary: (
     entry: VocabularyEntry,
   ) => Effect.Effect<void, PersistenceError | ConflictError>;
@@ -395,7 +399,10 @@ export const layer = Layer.effect(
     ) {
       if (body.measurements.length === 0) {
         return yield* Effect.fail(
-          new ConflictError({ resource: "reading", id: "empty-measurements" }),
+          new ValidationError({
+            operation: "Repository.saveReading",
+            message: "At least one measurement is required",
+          }),
         );
       }
       const readingId = crypto.randomUUID();
