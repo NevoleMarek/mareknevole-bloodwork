@@ -194,6 +194,7 @@ const protectedPersistenceMutationErrors = [
 ] as const;
 const protectedSaveReadingErrors = [
   ApiBadRequest,
+  ...protocolBadRequestErrors,
   ApiUnauthorized,
   ApiNotFound,
   ApiConflict,
@@ -344,7 +345,10 @@ const healthGroup = HttpApiGroup.make("health").add(
     params: HealthMetricParams,
     payload: HealthVisibilityRequest,
     success: HttpApiSchema.NoContent,
-    error: protectedUnavailableErrors,
+    error: [
+      ...protocolBadRequestErrors,
+      ...protectedUnavailableErrors,
+    ] as const,
   }).middleware(ApiSessionMiddleware),
   HttpApiEndpoint.post("import", "/api/health/import", {
     payload: HealthImportRequest,

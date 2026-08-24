@@ -340,6 +340,66 @@ describe("Bloodwork HttpApi", () => {
         ),
       ),
     ).rejects.toBeInstanceOf(HttpApiError.BadRequest);
+
+    const malformedReadingsFetch: typeof globalThis.fetch = () =>
+      handler(
+        new Request("https://bloodwork.test/api/readings", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            cookie: "bloodwork-session=test-session",
+          },
+          body: "{",
+        }),
+      );
+    await expect(
+      Effect.runPromise(
+        HttpApiClient.make(BloodworkApi, {
+          baseUrl: "https://bloodwork.test",
+        }).pipe(
+          Effect.provide(FetchHttpClient.layer),
+          Effect.flatMap((client) =>
+            client.readings.create({
+              payload: {
+                date: "2026-08-24",
+                source: "lab",
+                measurements: [],
+                newVocabulary: [],
+              },
+            }),
+          ),
+          Effect.provideService(FetchHttpClient.Fetch, malformedReadingsFetch),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(HttpApiError.BadRequest);
+
+    const malformedHealthFetch: typeof globalThis.fetch = () =>
+      handler(
+        new Request("https://bloodwork.test/api/health/metrics/sleep", {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+            cookie: "bloodwork-session=test-session",
+          },
+          body: "{",
+        }),
+      );
+    await expect(
+      Effect.runPromise(
+        HttpApiClient.make(BloodworkApi, {
+          baseUrl: "https://bloodwork.test",
+        }).pipe(
+          Effect.provide(FetchHttpClient.layer),
+          Effect.flatMap((client) =>
+            client.health.updateVisibility({
+              params: { metric: "sleep" },
+              payload: { visible: true },
+            }),
+          ),
+          Effect.provideService(FetchHttpClient.Fetch, malformedHealthFetch),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(HttpApiError.BadRequest);
   });
 
   it("encodes declared transport errors for generated clients", async () => {
@@ -604,6 +664,10 @@ describe("Bloodwork HttpApi", () => {
     );
     expect(document).toHaveProperty("paths./api/session.post.responses.400");
     expect(document).toHaveProperty("paths./api/readings.get.responses.401");
+    expect(document).toHaveProperty("paths./api/readings.post.responses.400");
+    expect(document).toHaveProperty(
+      "paths./api/health/metrics/{metric}.patch.responses.400",
+    );
     expect(document).toHaveProperty("paths./api/readings.get.security", [
       { session: [] },
     ]);
