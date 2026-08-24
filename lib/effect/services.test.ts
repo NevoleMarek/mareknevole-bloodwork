@@ -21,6 +21,8 @@ import {
   providerWorkflowsLayer,
   Auth,
   ProviderWorkflows,
+  supplementsLayer,
+  Supplements,
 } from "@/lib/effect/services";
 import type { SaveReadingRequest } from "@/types/wizard";
 
@@ -33,16 +35,19 @@ const emptyReading: SaveReadingRequest = {
   newVocabulary: [],
 };
 
-const repository = (saveReading: Repository["Service"]["saveReading"]) =>
+const repository = (
+  saveReading: Repository["Service"]["saveReading"],
+  getActiveSupplements: Repository["Service"]["getActiveSupplements"] = unused,
+  getSupplementChangelogPage: Repository["Service"]["getSupplementChangelogPage"] = unused,
+) =>
   Repository.of({
     getVocabulary: unused,
     getLabOverview: unused,
     getBiomarkerTrend: unused,
     getReadingsWithMeasurements: unused,
     getReadingPage: unused,
-    getActiveSupplements: unused,
-    getSupplementChangelog: unused,
-    getSupplementChangelogPage: unused,
+    getActiveSupplements,
+    getSupplementChangelogPage,
     getVisibleHealthMetrics: unused,
     getHealthMetricConfigs: unused,
     getVisibleVocabularyKeys: unused,
@@ -74,6 +79,37 @@ const cache = (
   });
 
 describe("Effect application services", () => {
+  it("does not load changelog rows when listing supplements", async () => {
+    let changelogReads = 0;
+    const layer = supplementsLayer.pipe(
+      Layer.provide(
+        Layer.merge(
+          Layer.succeed(
+            Repository,
+            repository(
+              unused,
+              () => Effect.succeed([]),
+              () => {
+                changelogReads += 1;
+                return Effect.die("supplement list must not read changelog");
+              },
+            ),
+          ),
+          Layer.succeed(DataCache, cache(unused)),
+        ),
+      ),
+    );
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* Supplements;
+        return yield* service.get();
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result).toEqual([]);
+    expect(changelogReads).toBe(0);
+  });
+
   it("keeps missing admin configuration in the typed error channel", async () => {
     const config = Layer.succeed(
       ApplicationConfig,
@@ -119,6 +155,38 @@ describe("Effect application services", () => {
     await expect(Effect.runPromise(program)).rejects.toBeInstanceOf(
       AuthenticationError,
     );
+  });
+
+  it("validates signed session tokens without trusting cookie presence", async () => {
+    const config = Layer.succeed(
+      ApplicationConfig,
+      ApplicationConfig.of({
+        adminPassword: Redacted.make("secret"),
+        geminiApiKey: undefined,
+        nodeEnvironment: "test",
+        requireAdminPassword: () => Effect.succeed(Redacted.make("secret")),
+        requireGeminiApiKey: () =>
+          Effect.fail(new ConfigurationError({ key: "GEMINI_API_KEY" })),
+      }),
+    );
+    const auth = authLayer.pipe(Layer.provide(config));
+    const token = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* Auth;
+        const session = yield* service.authenticate("secret");
+        yield* service.validate(session.token);
+        return session.token;
+      }).pipe(Effect.provide(auth)),
+    );
+
+    await expect(
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const service = yield* Auth;
+          return yield* service.validate(`${token}-tampered`);
+        }).pipe(Effect.provide(auth)),
+      ),
+    ).rejects.toMatchObject({ reason: "invalid-session" });
   });
 
   it("classifies a provider response decode failure", async () => {

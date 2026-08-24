@@ -167,21 +167,23 @@ export async function getLabOverview(db: D1Database): Promise<LabOverview> {
 export async function getBiomarkerTrend(
   db: D1Database,
   key: string,
+  cutoffDate: string,
 ): Promise<BiomarkerTrendPoint[]> {
   const result = await db
     .prepare(
       `SELECT r.date, m.value
        FROM (
-         SELECT reading_id, MAX(id) AS measurement_id
-         FROM measurements
-         WHERE vocabulary_key = ?
-         GROUP BY reading_id
+         SELECT m.reading_id, MAX(m.id) AS measurement_id
+         FROM measurements m
+         JOIN readings filtered_readings ON filtered_readings.id = m.reading_id
+         WHERE m.vocabulary_key = ? AND filtered_readings.date >= ?
+         GROUP BY m.reading_id
        ) selected
        JOIN measurements m ON m.id = selected.measurement_id
        JOIN readings r ON r.id = selected.reading_id
        ORDER BY r.date, r.id`,
     )
-    .bind(key)
+    .bind(key, cutoffDate)
     .all<BiomarkerTrendRow>();
   return await decodeRows(
     BiomarkerTrendRow,
@@ -282,21 +284,6 @@ export async function getActiveSupplements(
     resultsOf("active-supplements", result),
   );
   return rows.map(mapSupplementRow);
-}
-
-export async function getSupplementChangelog(
-  db: D1Database,
-): Promise<SupplementChangelog[]> {
-  const result = await db
-    .prepare(
-      "SELECT * FROM supplement_changelog ORDER BY date DESC, created_at DESC, id DESC",
-    )
-    .all<SupplementChangelogRow>();
-  const rows = await decodeRows(
-    SupplementChangelogRow,
-    resultsOf("supplement-changelog", result),
-  );
-  return rows.map(mapSupplementChangelogRow);
 }
 
 const CHANGELOG_PAGE_SIZE = 20;

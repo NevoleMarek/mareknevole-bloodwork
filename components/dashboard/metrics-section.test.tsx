@@ -59,7 +59,7 @@ describe("MetricsSection", () => {
     );
     expect(await screen.findByText("Latest")).toBeInTheDocument();
     expect(requestPath(fetch.mock.calls[0][0])).toBe(
-      "/api/biomarkers/glucose/trend",
+      "/api/biomarkers/glucose/trend?period=1Y",
     );
 
     await user.click(

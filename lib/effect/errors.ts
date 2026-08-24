@@ -78,10 +78,16 @@ export class ValidationError extends Schema.TaggedErrorClass<ValidationError>()(
   },
 ) {}
 
-/** Login credentials were syntactically valid but not accepted. */
+/** Login credentials or a persisted session token were not accepted. */
 export class AuthenticationError extends Schema.TaggedErrorClass<AuthenticationError>()(
   "Bloodwork.AuthenticationError",
-  { reason: Schema.Literals(["invalid-password", "missing-password"]) },
+  {
+    reason: Schema.Literals([
+      "invalid-password",
+      "missing-password",
+      "invalid-session",
+    ]),
+  },
 ) {}
 
 export type ApplicationError =

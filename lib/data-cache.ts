@@ -10,7 +10,7 @@ import {
   getVocabulary,
 } from "@/db/queries";
 import { getCutoffDate } from "@/lib/period";
-import type { Period } from "@/lib/period";
+import type { Period, TrendPeriod } from "@/lib/period";
 import type {
   BiomarkerTrendPoint,
   DashboardSnapshot,
@@ -46,9 +46,9 @@ export const getCachedFirstChangelogPage = unstable_cache(
 );
 
 export const getCachedBiomarkerTrend = unstable_cache(
-  async (key: string): Promise<BiomarkerTrendPoint[]> => {
+  async (key: string, period: TrendPeriod): Promise<BiomarkerTrendPoint[]> => {
     const env = await readCloudflareEnv();
-    return getBiomarkerTrend(env.DB, key);
+    return getBiomarkerTrend(env.DB, key, getCutoffDate(period));
   },
   [TREND_TAG],
   { tags: [DASHBOARD_TAG, TREND_TAG], revalidate: DAY },

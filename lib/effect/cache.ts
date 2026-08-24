@@ -11,7 +11,7 @@ import {
   invalidateDashboard,
   invalidateHealth,
 } from "@/lib/data-cache";
-import type { Period } from "@/lib/period";
+import type { Period, TrendPeriod } from "@/lib/period";
 import { PersistenceError } from "@/lib/effect/errors";
 import type {
   BiomarkerTrendPoint,
@@ -28,6 +28,7 @@ export interface DataCacheContract {
   >;
   readonly biomarkerTrend: (
     key: string,
+    period: TrendPeriod,
   ) => Effect.Effect<BiomarkerTrendPoint[], PersistenceError>;
   readonly visibleVocabularyKeys: () => Effect.Effect<
     string[],
@@ -67,9 +68,10 @@ export const layer = Layer.succeed(
     }),
     biomarkerTrend: Effect.fn("DataCache.biomarkerTrend")(function* (
       key: string,
+      period: TrendPeriod,
     ) {
       return yield* promise("DataCache.biomarkerTrend", () =>
-        getCachedBiomarkerTrend(key),
+        getCachedBiomarkerTrend(key, period),
       );
     }),
     visibleVocabularyKeys: Effect.fn("DataCache.visibleVocabularyKeys")(

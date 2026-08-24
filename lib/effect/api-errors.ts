@@ -65,7 +65,12 @@ export function toApiError(error: ApplicationError): ApiError {
     return new ApiBadRequest({ error: error.message });
   }
   if (error instanceof AuthenticationError) {
-    return new ApiUnauthorized({ error: "Invalid password" });
+    return new ApiUnauthorized({
+      error:
+        error.reason === "invalid-session"
+          ? "Invalid session"
+          : "Invalid password",
+    });
   }
   if (error instanceof NotFoundError) {
     return new ApiNotFound({

@@ -101,17 +101,21 @@ failures are `502`, and missing configuration or D1 failures are `503`. Defects
 and interruption (including framework route-parameter failures) are not
 converted into application responses.
 
-Readings and public changelog use cursor pagination with a `nextCursor`; the
-dashboard's health and trend requests are bounded by the selected period. The
-vocabulary is a small administrator-maintained dictionary and active supplements
-are bounded current state, so they remain ordinary list resources. Full data
-export is a separate explicit `/api/readings/export` operation because it is
-expensive and not needed for the summaries view. This is a private, same-origin,
-single-user frontend API: idempotency-key plumbing, automated retries, client
-rate-limit metadata, and a per-client kill switch are intentionally omitted.
-Mutations are not automatically retried, and the browser only retries explicit
-user actions; adding those controls would add no meaningful protection for this
-deployment while obscuring the resource contract.
+Readings and public changelog use cursor pagination with a `nextCursor`; health
+requests are bounded by the selected period, while biomarker trend requests use
+one of the bounded `1M`, `6M`, or `1Y` windows (the chart currently requests
+`1Y`, with no unbounded `ALL` trend). The vocabulary is a small
+administrator-maintained dictionary and active supplements are bounded current
+state, so they remain ordinary list resources. Full data export is a separate
+explicit `/api/readings/export` operation because it is expensive and not needed
+for the summaries view. API authentication is enforced by the shared HttpApi
+cookie-security middleware with signed, expiring session tokens; Next middleware
+only performs page redirects. This is a private, same-origin, single-user
+frontend API: idempotency-key plumbing, automated retries, client rate-limit
+metadata, and a per-client kill switch are intentionally omitted. Mutations are
+not automatically retried, and the browser only retries explicit user actions;
+adding those controls would add no meaningful protection for this deployment
+while obscuring the resource contract.
 
 ## Verification
 

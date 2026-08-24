@@ -33,7 +33,10 @@ export function MetricsSection({
       [key]: { kind: "loading" },
     }));
     runApi((client) =>
-      client.dashboard.trend({ params: { key: makeBiomarkerKey(key) } }),
+      client.dashboard.trend({
+        params: { key: makeBiomarkerKey(key) },
+        query: { period: "1Y" },
+      }),
     )
       .then((data) => {
         if (data.points.length === 0) throw new Error("Trend is empty");

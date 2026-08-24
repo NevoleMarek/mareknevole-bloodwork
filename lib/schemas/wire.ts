@@ -1,5 +1,6 @@
 import * as Schema from "effect/Schema";
 
+import { TREND_PERIODS } from "@/lib/period";
 import {
   BloodworkReading,
   BiomarkerTrendPoint,
@@ -43,6 +44,13 @@ export const BiomarkerTrendResponse = Schema.Struct({
 export interface BiomarkerTrendResponse extends Schema.Schema.Type<
   typeof BiomarkerTrendResponse
 > {
+  readonly _schemaModel?: never;
+}
+
+export const TrendQuery = Schema.Struct({
+  period: Schema.Literals(TREND_PERIODS),
+}).annotate({ identifier: "TrendQuery" });
+export interface TrendQuery extends Schema.Schema.Type<typeof TrendQuery> {
   readonly _schemaModel?: never;
 }
 

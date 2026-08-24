@@ -30,7 +30,9 @@ const dashboard = (
 
 const run = (key: string, service: Dashboard["Service"]) =>
   Effect.runPromise(
-    trendEffect(key).pipe(Effect.provide(Layer.succeed(Dashboard, service))),
+    trendEffect(key, "1Y").pipe(
+      Effect.provide(Layer.succeed(Dashboard, service)),
+    ),
   );
 
 describe("public biomarker trend Effect workflow", () => {

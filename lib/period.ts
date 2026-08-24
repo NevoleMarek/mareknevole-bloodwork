@@ -1,9 +1,17 @@
 export const PERIODS = ["1M", "6M", "1Y", "ALL"] as const;
 
+/** Biomarker charts use a bounded window; the API never exposes an unbounded trend. */
+export const TREND_PERIODS = ["1M", "6M", "1Y"] as const;
+
 export type Period = (typeof PERIODS)[number];
+export type TrendPeriod = (typeof TREND_PERIODS)[number];
 
 export function isPeriod(value: string | null): value is Period {
   return value === "1M" || value === "6M" || value === "1Y" || value === "ALL";
+}
+
+export function isTrendPeriod(value: string | null): value is TrendPeriod {
+  return value === "1M" || value === "6M" || value === "1Y";
 }
 
 const months = {

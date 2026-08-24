@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect";
 import { NotFoundError, RequestDecodeError } from "@/lib/effect/errors";
 import { Bloodwork, Dashboard, Supplements } from "@/lib/effect/services";
 import { ChangelogUpdateRequest, SaveReadingRequest } from "@/lib/schemas/wire";
-import type { Period } from "@/lib/period";
+import type { Period, TrendPeriod } from "@/lib/period";
 import type { ChangelogCursor, ReadingCursor } from "@/types/bloodwork";
 
 export const dataEffect = Effect.fn("Workflows.exportData")(function* () {
@@ -52,6 +52,7 @@ export const healthEffect = Effect.fn("Workflows.getHealth")(function* (
 
 export const trendEffect = Effect.fn("Workflows.getTrend")(function* (
   key: string,
+  period: TrendPeriod,
 ) {
   if (key.length === 0) {
     return yield* Effect.fail(
@@ -68,7 +69,7 @@ export const trendEffect = Effect.fn("Workflows.getTrend")(function* (
       new NotFoundError({ resource: "biomarker", id: key }),
     );
   }
-  const points = yield* dashboard.getTrend(key);
+  const points = yield* dashboard.getTrend(key, period);
   return { points };
 });
 

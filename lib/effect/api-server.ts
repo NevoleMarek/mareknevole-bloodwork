@@ -2,15 +2,20 @@ import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Predicate from "effect/Predicate";
+import * as Redacted from "effect/Redacted";
 import * as Schema from "effect/Schema";
-import { HttpApiBuilder, HttpApiSecurity } from "effect/unstable/httpapi";
+import { HttpApiBuilder } from "effect/unstable/httpapi";
 import * as HttpEffect from "effect/unstable/http/HttpEffect";
 import * as HttpRouter from "effect/unstable/http/HttpRouter";
 import * as HttpServer from "effect/unstable/http/HttpServer";
 import type * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
 
-import { BloodworkApi } from "@/lib/effect/api";
+import {
+  ApiSessionMiddleware,
+  BloodworkApi,
+  sessionSecurity,
+} from "@/lib/effect/api";
 import { withApiErrors } from "@/lib/effect/api-errors";
 import { RequestDecodeError } from "@/lib/effect/errors";
 import { appLayer } from "@/lib/effect/layers";
@@ -32,11 +37,21 @@ import {
   trendEffect,
 } from "@/lib/effect/workflows";
 
-const SESSION_COOKIE = "bloodwork-session";
-const sessionSecurity = HttpApiSecurity.apiKey({
-  key: SESSION_COOKIE,
-  in: "cookie",
-});
+const SESSION_COOKIE = sessionSecurity.key;
+
+const apiSessionMiddlewareLayer = Layer.effect(
+  ApiSessionMiddleware,
+  Effect.gen(function* () {
+    const auth = yield* Auth;
+    return {
+      session: (httpEffect, { credential }) =>
+        Effect.gen(function* () {
+          yield* auth.validate(Redacted.value(credential)).pipe(withApiErrors);
+          return yield* httpEffect;
+        }),
+    };
+  }),
+);
 
 const dashboardHandlers = HttpApiBuilder.group(
   BloodworkApi,
@@ -56,8 +71,8 @@ const dashboardHandlers = HttpApiBuilder.group(
         )
         .handle(
           "trend",
-          Effect.fn("HttpApi.dashboard.trend")(function* ({ params }) {
-            return yield* trendEffect(params.key).pipe(
+          Effect.fn("HttpApi.dashboard.trend")(function* ({ params, query }) {
+            return yield* trendEffect(params.key, query.period).pipe(
               Effect.provideService(Dashboard, dashboard),
               withApiErrors,
             );
@@ -254,8 +269,9 @@ const supplementsHandlers = HttpApiBuilder.group(
         .handle(
           "list",
           Effect.fn("HttpApi.supplements.list")(function* () {
-            const result = yield* supplements.get().pipe(withApiErrors);
-            return { supplements: result.supplements };
+            return {
+              supplements: yield* supplements.get().pipe(withApiErrors),
+            };
           }),
         )
         .handle(
@@ -432,7 +448,16 @@ export const makeApiLayer = <E>(services: Layer.Layer<ApiServices, E>) =>
   HttpApiBuilder.layer(BloodworkApi, {
     openapiPath: "/api/openapi.json",
   }).pipe(
-    Layer.provide(handlerDefinitions.pipe(Layer.provide(services))),
+    Layer.provide(
+      handlerDefinitions.pipe(
+        Layer.provide(
+          Layer.merge(
+            services,
+            apiSessionMiddlewareLayer.pipe(Layer.provide(services)),
+          ),
+        ),
+      ),
+    ),
     Layer.provide(HttpServer.layerServices),
   );
 

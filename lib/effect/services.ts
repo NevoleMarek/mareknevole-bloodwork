@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Redacted from "effect/Redacted";
 
-import type { Period } from "@/lib/period";
+import type { Period, TrendPeriod } from "@/lib/period";
 import {
   AuthenticationError,
   ConfigurationError,
@@ -35,7 +35,6 @@ import {
   type HealthImportSummary as HealthImportSummaryType,
   type MapResponse as MapResponseType,
   type ResearchResponse as ResearchResponseType,
-  type SupplementsResponse,
 } from "@/lib/schemas/wire";
 import type {
   BiomarkerTrendPoint,
@@ -44,6 +43,7 @@ import type {
   DashboardSnapshot,
   ReadingCursor,
   ReadingPage,
+  Supplement,
   SupplementCreateInput,
   SupplementDeleteInput,
   SupplementUpdateInput,
@@ -73,6 +73,7 @@ export interface DashboardContract {
   readonly getData: () => Effect.Effect<ExportData, PersistenceError>;
   readonly getTrend: (
     key: string,
+    period: TrendPeriod,
   ) => Effect.Effect<BiomarkerTrendPoint[], PersistenceError>;
   readonly getVisibleKeys: () => Effect.Effect<string[], PersistenceError>;
   readonly getHealth: (
@@ -114,8 +115,11 @@ export const dashboardLayer = Layer.effect(
         })),
       };
     });
-    const getTrend = Effect.fn("Dashboard.getTrend")(function* (key: string) {
-      return yield* cache.biomarkerTrend(key);
+    const getTrend = Effect.fn("Dashboard.getTrend")(function* (
+      key: string,
+      period: TrendPeriod,
+    ) {
+      return yield* cache.biomarkerTrend(key, period);
     });
     const getVisibleKeys = Effect.fn("Dashboard.getVisibleKeys")(function* () {
       return yield* cache.visibleVocabularyKeys();
@@ -283,7 +287,7 @@ export const healthLayer = Layer.effect(
 );
 
 export interface SupplementsContract {
-  readonly get: () => Effect.Effect<SupplementsResponse, PersistenceError>;
+  readonly get: () => Effect.Effect<Supplement[], PersistenceError>;
   readonly create: (
     input: SupplementCreateInput,
   ) => Effect.Effect<void, PersistenceFailure>;
@@ -319,8 +323,7 @@ export const supplementsLayer = Layer.effect(
     );
     const get = Effect.fn("Supplements.get")(function* () {
       const supplements = yield* repository.getActiveSupplements();
-      const changelog = yield* repository.getSupplementChangelog();
-      return { supplements, changelog };
+      return supplements;
     });
     const create = Effect.fn("Supplements.create")(function* (
       input: SupplementCreateInput,
@@ -368,6 +371,9 @@ export interface AuthContract {
   readonly authenticate: (
     password: string,
   ) => Effect.Effect<AuthSession, ConfigurationError | AuthenticationError>;
+  readonly validate: (
+    token: string,
+  ) => Effect.Effect<void, ConfigurationError | AuthenticationError>;
 }
 
 export class Auth extends Context.Service<Auth, AuthContract>()(
@@ -378,6 +384,75 @@ export const authLayer = Layer.effect(
   Auth,
   Effect.gen(function* () {
     const config = yield* ApplicationConfig;
+    const encodeHex = (bytes: Uint8Array): string =>
+      Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    const sessionSignature = (secret: string, payload: string) =>
+      Effect.tryPromise({
+        try: async () => {
+          const key = await crypto.subtle.importKey(
+            "raw",
+            new TextEncoder().encode(secret),
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["sign"],
+          );
+          const signature = await crypto.subtle.sign(
+            "HMAC",
+            key,
+            new TextEncoder().encode(payload),
+          );
+          return encodeHex(new Uint8Array(signature));
+        },
+        catch: (cause) =>
+          new ConfigurationError({ key: `crypto:${String(cause)}` }),
+      });
+    const makeSessionToken = (secret: string) =>
+      Effect.gen(function* () {
+        const expiresAt = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60;
+        const payload = `${expiresAt}.${crypto.randomUUID()}`;
+        const signature = yield* sessionSignature(secret, payload);
+        return `${payload}.${signature}`;
+      });
+    const verifySessionToken = (token: string, secret: string) =>
+      Effect.tryPromise({
+        try: async () => {
+          const parts = token.split(".");
+          if (parts.length !== 3) return false;
+          const expiresAt = Number(parts[0]);
+          const nonce = parts[1];
+          const signature = parts[2];
+          if (
+            !Number.isSafeInteger(expiresAt) ||
+            expiresAt <= Math.floor(Date.now() / 1000) ||
+            nonce.length === 0 ||
+            !/^[0-9a-f]{64}$/.test(signature)
+          ) {
+            return false;
+          }
+          const bytes = new Uint8Array(signature.length / 2);
+          for (let index = 0; index < bytes.length; index++) {
+            bytes[index] = Number.parseInt(
+              signature.slice(index * 2, index * 2 + 2),
+              16,
+            );
+          }
+          const key = await crypto.subtle.importKey(
+            "raw",
+            new TextEncoder().encode(secret),
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["verify"],
+          );
+          return crypto.subtle.verify(
+            "HMAC",
+            key,
+            bytes,
+            new TextEncoder().encode(`${parts[0]}.${nonce}`),
+          );
+        },
+        catch: (cause) =>
+          new ConfigurationError({ key: `crypto:${String(cause)}` }),
+      });
     const authenticate = Effect.fn("Auth.authenticate")(function* (
       password: string,
     ) {
@@ -411,11 +486,20 @@ export const authLayer = Layer.effect(
         );
       }
       return {
-        token: crypto.randomUUID(),
+        token: yield* makeSessionToken(expected),
         secure: config.nodeEnvironment !== "development",
       };
     });
-    return Auth.of({ authenticate });
+    const validate = Effect.fn("Auth.validate")(function* (token: string) {
+      const expected = Redacted.value(yield* config.requireAdminPassword());
+      const valid = yield* verifySessionToken(token, expected);
+      if (!valid) {
+        return yield* Effect.fail(
+          new AuthenticationError({ reason: "invalid-session" }),
+        );
+      }
+    });
+    return Auth.of({ authenticate, validate });
   }),
 );
 

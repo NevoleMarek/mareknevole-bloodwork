@@ -378,15 +378,18 @@ describe("getBiomarkerTrend", () => {
       ]),
     ]);
 
-    const result = await getBiomarkerTrend(database, "glucose");
+    const result = await getBiomarkerTrend(database, "glucose", "2025-08-01");
 
     expect(database.prepareMock).toHaveBeenCalledWith(
-      expect.stringContaining("MAX(id) AS measurement_id"),
+      expect.stringContaining("MAX(m.id) AS measurement_id"),
     );
     expect(database.prepareMock).toHaveBeenCalledWith(
-      expect.stringContaining("GROUP BY reading_id"),
+      expect.stringContaining("GROUP BY m.reading_id"),
     );
-    expect(database.bindMock).toHaveBeenCalledWith("glucose");
+    expect(database.prepareMock).toHaveBeenCalledWith(
+      expect.stringContaining("filtered_readings.date >= ?"),
+    );
+    expect(database.bindMock).toHaveBeenCalledWith("glucose", "2025-08-01");
     expect(result).toEqual([
       { date: "2026-01-01", value: 90 },
       { date: "2026-02-01", value: 95 },

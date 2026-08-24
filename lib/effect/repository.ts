@@ -10,7 +10,6 @@ import {
   getLabOverview,
   getReadingPage,
   getReadingsWithMeasurements,
-  getSupplementChangelog,
   getSupplementChangelogPage,
   getVisibleHealthMetrics,
   getVocabulary,
@@ -24,13 +23,14 @@ import type {
   ReadingPage,
   ReadingWithMeasurements,
   Supplement,
-  SupplementChangelog,
   SupplementCreateInput,
   SupplementDeleteInput,
   SupplementUpdateInput,
   VocabularyEntry,
   HealthImportConfig,
 } from "@/types/bloodwork";
+import { getCutoffDate } from "@/lib/period";
+import type { TrendPeriod } from "@/lib/period";
 import type {
   HealthData,
   HealthMetric,
@@ -54,6 +54,7 @@ export interface RepositoryContract {
   readonly getLabOverview: () => Effect.Effect<LabOverview, PersistenceError>;
   readonly getBiomarkerTrend: (
     key: string,
+    period: TrendPeriod,
   ) => Effect.Effect<BiomarkerTrendPoint[], PersistenceError>;
   readonly getReadingsWithMeasurements: () => Effect.Effect<
     ReadingWithMeasurements[],
@@ -64,10 +65,6 @@ export interface RepositoryContract {
   ) => Effect.Effect<ReadingPage, PersistenceError>;
   readonly getActiveSupplements: () => Effect.Effect<
     Supplement[],
-    PersistenceError
-  >;
-  readonly getSupplementChangelog: () => Effect.Effect<
-    SupplementChangelog[],
     PersistenceError
   >;
   readonly getSupplementChangelogPage: (
@@ -180,10 +177,10 @@ export const makeRepository = (database: D1Database) => {
     },
   );
   const getBiomarkerTrendEffect = Effect.fn("Repository.getBiomarkerTrend")(
-    function* (key: string) {
+    function* (key: string, period: TrendPeriod) {
       return yield* d1(
         "Repository.getBiomarkerTrend",
-        (db) => getBiomarkerTrend(db, key),
+        (db) => getBiomarkerTrend(db, key, getCutoffDate(period)),
         database,
       );
     },
@@ -212,15 +209,6 @@ export const makeRepository = (database: D1Database) => {
     return yield* d1(
       "Repository.getActiveSupplements",
       getActiveSupplements,
-      database,
-    );
-  });
-  const getSupplementChangelogEffect = Effect.fn(
-    "Repository.getSupplementChangelog",
-  )(function* () {
-    return yield* d1(
-      "Repository.getSupplementChangelog",
-      getSupplementChangelog,
       database,
     );
   });
@@ -637,7 +625,6 @@ export const makeRepository = (database: D1Database) => {
     getReadingsWithMeasurements: getReadingsEffect,
     getReadingPage: getReadingPageEffect,
     getActiveSupplements: getActiveSupplementsEffect,
-    getSupplementChangelog: getSupplementChangelogEffect,
     getSupplementChangelogPage: getSupplementChangelogPageEffect,
     getVisibleHealthMetrics: getVisibleHealthMetricsEffect,
     getHealthMetricConfigs: getHealthMetricConfigsEffect,
