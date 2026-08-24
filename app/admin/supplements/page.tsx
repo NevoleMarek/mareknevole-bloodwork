@@ -3,20 +3,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SupplementEditor } from "@/components/admin/supplement-editor";
+import { makeChangelogId, type SupplementsResponse } from "@/lib/effect/api";
 import { runApi } from "@/lib/effect/client";
-import type { SupplementsResponse } from "@/lib/schemas/wire";
 import type { SupplementChangelog } from "@/types/bloodwork";
 
 type EditingState =
   | { kind: "none" }
   | { kind: "editing"; id: string; description: string };
 
-async function loadData(): Promise<SupplementsResponse> {
-  return runApi((client) => client.supplements.list({}));
+type SupplementsData = SupplementsResponse & {
+  changelog: SupplementChangelog[];
+};
+
+async function loadData(): Promise<SupplementsData> {
+  const [supplements, changelog] = await Promise.all([
+    runApi((client) => client.supplements.list({})),
+    runApi((client) => client.changelog.list({ query: {} })),
+  ]);
+  return { ...supplements, changelog: changelog.entries };
 }
 
 export default function AdminSupplementsPage() {
-  const [data, setData] = useState<SupplementsResponse | null>(null);
+  const [data, setData] = useState<SupplementsData | null>(null);
   const [editing, setEditing] = useState<EditingState>({ kind: "none" });
   const didFetch = useRef(false);
 
@@ -32,7 +40,10 @@ export default function AdminSupplementsPage() {
 
   async function handleSaveEdit(id: string, description: string) {
     await runApi((client) =>
-      client.supplements.updateChangelog({ payload: { id, description } }),
+      client.changelog.update({
+        params: { id: makeChangelogId(id) },
+        payload: { description },
+      }),
     );
     setEditing({ kind: "none" });
     await refresh();
@@ -40,7 +51,7 @@ export default function AdminSupplementsPage() {
 
   async function handleDelete(id: string) {
     await runApi((client) =>
-      client.supplements.deleteChangelog({ payload: { id } }),
+      client.changelog.delete({ params: { id: makeChangelogId(id) } }),
     );
     await refresh();
   }

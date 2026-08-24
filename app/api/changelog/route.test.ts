@@ -24,7 +24,7 @@ describe("changelog update Effect workflow", () => {
     let receivedId: string | undefined;
     let receivedDescription: string | undefined;
     const result = await Effect.runPromise(
-      updateChangelogEffect({ id: "entry-1", description: "updated" }).pipe(
+      updateChangelogEffect("entry-1", { description: "updated" }).pipe(
         Effect.provide(
           Layer.succeed(
             Supplements,
@@ -38,7 +38,7 @@ describe("changelog update Effect workflow", () => {
       ),
     );
 
-    expect(result).toEqual({ ok: true });
+    expect(result).toBeUndefined();
     expect(receivedId).toBe("entry-1");
     expect(receivedDescription).toBe("updated");
   });

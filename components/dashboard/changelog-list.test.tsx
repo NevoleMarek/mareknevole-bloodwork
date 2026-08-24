@@ -88,7 +88,7 @@ describe("ChangelogList", () => {
     const dates = screen.getAllByTestId("changelog-date");
     expect(dates[0]).toHaveTextContent(entries[0].date);
     expect(dates[1]).toHaveTextContent("");
-    expect(requestPath(fetch.mock.calls[0][0])).toBe("/api/public/changelog");
+    expect(requestPath(fetch.mock.calls[0][0])).toBe("/api/changelog");
   });
 
   it("appends the next cursor page", async () => {
@@ -117,7 +117,7 @@ describe("ChangelogList", () => {
     expect(await screen.findAllByTestId("changelog-entry")).toHaveLength(25);
     const params = new URLSearchParams(cursor);
     expect(requestPath(fetch.mock.calls[1][0])).toBe(
-      `/api/public/changelog?${params}`,
+      `/api/changelog?${params}`,
     );
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });

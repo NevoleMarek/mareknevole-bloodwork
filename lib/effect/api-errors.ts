@@ -1,6 +1,14 @@
 import * as Effect from "effect/Effect";
-import * as Schema from "effect/Schema";
 
+import {
+  ApiBadGateway,
+  ApiBadRequest,
+  ApiConflict,
+  ApiNotFound,
+  ApiServiceUnavailable,
+  ApiUnauthorized,
+  apiErrorMessage,
+} from "@/lib/effect/api";
 import {
   type ApplicationError,
   AuthenticationError,
@@ -15,41 +23,15 @@ import {
   ValidationError,
 } from "@/lib/effect/errors";
 
-export class ApiBadRequest extends Schema.TaggedErrorClass<ApiBadRequest>()(
-  "Bloodwork.ApiBadRequest",
-  { error: Schema.String },
-  { httpApiStatus: 400 },
-) {}
-
-export class ApiUnauthorized extends Schema.TaggedErrorClass<ApiUnauthorized>()(
-  "Bloodwork.ApiUnauthorized",
-  { error: Schema.String },
-  { httpApiStatus: 401 },
-) {}
-
-export class ApiNotFound extends Schema.TaggedErrorClass<ApiNotFound>()(
-  "Bloodwork.ApiNotFound",
-  { error: Schema.String },
-  { httpApiStatus: 404 },
-) {}
-
-export class ApiConflict extends Schema.TaggedErrorClass<ApiConflict>()(
-  "Bloodwork.ApiConflict",
-  { error: Schema.String },
-  { httpApiStatus: 409 },
-) {}
-
-export class ApiBadGateway extends Schema.TaggedErrorClass<ApiBadGateway>()(
-  "Bloodwork.ApiBadGateway",
-  { error: Schema.String },
-  { httpApiStatus: 502 },
-) {}
-
-export class ApiServiceUnavailable extends Schema.TaggedErrorClass<ApiServiceUnavailable>()(
-  "Bloodwork.ApiServiceUnavailable",
-  { error: Schema.String },
-  { httpApiStatus: 503 },
-) {}
+export {
+  ApiBadGateway,
+  ApiBadRequest,
+  ApiConflict,
+  ApiNotFound,
+  ApiServiceUnavailable,
+  ApiUnauthorized,
+  apiErrorMessage,
+};
 
 export type ApiError =
   | ApiBadRequest
@@ -114,17 +96,3 @@ export const withApiErrors = <A, E extends ApplicationError, R>(
   effect: Effect.Effect<A, E, R>,
 ): Effect.Effect<A, ApiErrorFor<E>, R> =>
   effect.pipe(Effect.mapError(toApiError));
-
-export const apiErrorMessage = (cause: unknown): string | undefined => {
-  if (
-    cause instanceof ApiBadRequest ||
-    cause instanceof ApiUnauthorized ||
-    cause instanceof ApiNotFound ||
-    cause instanceof ApiConflict ||
-    cause instanceof ApiBadGateway ||
-    cause instanceof ApiServiceUnavailable
-  ) {
-    return cause.error;
-  }
-  return undefined;
-};

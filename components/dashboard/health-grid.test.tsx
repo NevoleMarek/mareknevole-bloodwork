@@ -119,7 +119,7 @@ describe("HealthGrid", () => {
     expect(await screen.findByText("Weight")).toBeInTheDocument();
     expect(screen.getByText("Blood Pressure")).toBeInTheDocument();
     expect(requestPath(fetch.mock.calls[0][0])).toBe(
-      "/api/public/health?period=6M",
+      "/api/dashboard/health?period=6M",
     );
   });
 
@@ -162,7 +162,7 @@ describe("HealthGrid", () => {
     );
     expect(
       fetch.mock.calls.some(
-        ([input]) => requestPath(input) === "/api/public/health?period=1Y",
+        ([input]) => requestPath(input) === "/api/dashboard/health?period=1Y",
       ),
     ).toBe(true);
   });
@@ -180,7 +180,7 @@ describe("HealthGrid", () => {
 
     fireEvent.pointerDown(all, { pointerType: "mouse" });
     expect(requestPath(fetch.mock.calls[0][0])).toBe(
-      "/api/public/health?period=ALL",
+      "/api/dashboard/health?period=ALL",
     );
   });
 });

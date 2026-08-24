@@ -4,4 +4,4 @@ export type {
   HealthMetric,
   HealthMetricConfig,
 } from "@/lib/schemas/domain";
-export type { HealthImportRequest } from "@/lib/schemas/wire";
+export type { HealthImportRequest } from "@/lib/effect/api";

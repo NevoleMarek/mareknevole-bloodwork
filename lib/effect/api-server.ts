@@ -1,6 +1,8 @@
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Predicate from "effect/Predicate";
+import * as Schema from "effect/Schema";
 import { HttpApiBuilder, HttpApiSecurity } from "effect/unstable/httpapi";
 import * as HttpEffect from "effect/unstable/http/HttpEffect";
 import * as HttpRouter from "effect/unstable/http/HttpRouter";
@@ -24,43 +26,28 @@ import {
 import {
   changelogEffect,
   dataEffect,
-  deleteChangelogEffect,
-  deleteReadingEffect,
   getReadingsEffect,
   healthEffect,
   saveReadingEffect,
   trendEffect,
-  updateChangelogEffect,
 } from "@/lib/effect/workflows";
-import { OkResponse } from "@/lib/schemas/wire";
 
 const SESSION_COOKIE = "bloodwork-session";
 const sessionSecurity = HttpApiSecurity.apiKey({
   key: SESSION_COOKIE,
   in: "cookie",
 });
-const ok = OkResponse.make({ ok: true });
 
-const publicHandlers = HttpApiBuilder.group(
+const dashboardHandlers = HttpApiBuilder.group(
   BloodworkApi,
-  "public",
+  "dashboard",
   (handlers) =>
     Effect.gen(function* () {
       const dashboard = yield* Dashboard;
       return handlers
         .handle(
-          "changelog",
-          Effect.fn("HttpApi.public.changelog")(function* ({ query }) {
-            const cursor = yield* changelogCursor(query).pipe(withApiErrors);
-            return yield* changelogEffect(cursor).pipe(
-              Effect.provideService(Dashboard, dashboard),
-              withApiErrors,
-            );
-          }),
-        )
-        .handle(
           "health",
-          Effect.fn("HttpApi.public.health")(function* ({ query }) {
+          Effect.fn("HttpApi.dashboard.health")(function* ({ query }) {
             return yield* healthEffect(query.period).pipe(
               Effect.provideService(Dashboard, dashboard),
               withApiErrors,
@@ -69,7 +56,7 @@ const publicHandlers = HttpApiBuilder.group(
         )
         .handle(
           "trend",
-          Effect.fn("HttpApi.public.trend")(function* ({ params }) {
+          Effect.fn("HttpApi.dashboard.trend")(function* ({ params }) {
             return yield* trendEffect(params.key).pipe(
               Effect.provideService(Dashboard, dashboard),
               withApiErrors,
@@ -79,119 +66,182 @@ const publicHandlers = HttpApiBuilder.group(
     }),
 );
 
-const authHandlers = HttpApiBuilder.group(BloodworkApi, "auth", (handlers) =>
-  Effect.gen(function* () {
-    const auth = yield* Auth;
-    return handlers
-      .handle(
-        "login",
-        Effect.fn("HttpApi.auth.login")(function* ({ payload }) {
-          const session = yield* auth
-            .authenticate(payload.password)
-            .pipe(withApiErrors);
-          yield* HttpApiBuilder.securitySetCookie(
-            sessionSecurity,
-            session.token,
-            {
-              httpOnly: true,
-              secure: session.secure,
-              sameSite: "strict",
-              maxAge: Duration.days(7),
-              path: "/",
-            },
-          );
-          return ok;
-        }),
-      )
-      .handle(
-        "logout",
-        Effect.fn("HttpApi.auth.logout")(function* () {
-          yield* HttpEffect.appendPreResponseHandler((_request, response) =>
-            // The cookie name and path are server-owned constants.
-            Effect.sync(() =>
-              HttpServerResponse.expireCookieUnsafe(response, SESSION_COOKIE, {
-                path: "/",
-              }),
-            ),
-          );
-          return ok;
-        }),
-      );
-  }),
+const changelogHandlers = HttpApiBuilder.group(
+  BloodworkApi,
+  "changelog",
+  (handlers) =>
+    Effect.gen(function* () {
+      const dashboard = yield* Dashboard;
+      const supplements = yield* Supplements;
+      return handlers
+        .handle(
+          "list",
+          Effect.fn("HttpApi.changelog.list")(function* ({ query }) {
+            const cursor = yield* changelogCursor(query).pipe(withApiErrors);
+            return yield* changelogEffect(cursor).pipe(
+              Effect.provideService(Dashboard, dashboard),
+              withApiErrors,
+            );
+          }),
+        )
+        .handle(
+          "update",
+          Effect.fn("HttpApi.changelog.update")(function* ({
+            params,
+            payload,
+          }) {
+            yield* supplements
+              .updateChangelog(params.id, payload.description)
+              .pipe(withApiErrors);
+            return undefined;
+          }),
+        )
+        .handle(
+          "delete",
+          Effect.fn("HttpApi.changelog.delete")(function* ({ params }) {
+            yield* supplements.deleteChangelog(params.id).pipe(withApiErrors);
+            return undefined;
+          }),
+        );
+    }),
 );
 
-const dataHandlers = HttpApiBuilder.group(BloodworkApi, "data", (handlers) =>
-  Effect.gen(function* () {
-    const dashboard = yield* Dashboard;
-    const bloodwork = yield* Bloodwork;
-    return handlers
-      .handle(
-        "exportData",
-        Effect.fn("HttpApi.data.export")(function* () {
-          return yield* dataEffect().pipe(
-            Effect.provideService(Dashboard, dashboard),
-            withApiErrors,
-          );
-        }),
-      )
-      .handle(
-        "readings",
-        Effect.fn("HttpApi.data.readings")(function* ({ query }) {
-          const cursor = yield* readingCursor(query).pipe(withApiErrors);
-          return yield* getReadingsEffect(cursor).pipe(
-            Effect.provideService(Dashboard, dashboard),
-            withApiErrors,
-          );
-        }),
-      )
-      .handle(
-        "saveReading",
-        Effect.fn("HttpApi.data.saveReading")(function* ({ payload }) {
-          return yield* saveReadingEffect(payload).pipe(
-            Effect.provideService(Bloodwork, bloodwork),
-            withApiErrors,
-          );
-        }),
-      )
-      .handle(
-        "deleteReading",
-        Effect.fn("HttpApi.data.deleteReading")(function* ({ payload }) {
-          return yield* deleteReadingEffect(payload.id).pipe(
-            Effect.provideService(Bloodwork, bloodwork),
-            withApiErrors,
-          );
-        }),
-      )
-      .handle(
-        "vocabulary",
-        Effect.fn("HttpApi.data.vocabulary")(function* () {
-          return {
-            entries: yield* bloodwork.getVocabulary().pipe(withApiErrors),
-          };
-        }),
-      )
-      .handle(
-        "createVocabulary",
-        Effect.fn("HttpApi.data.createVocabulary")(function* ({ payload }) {
-          yield* bloodwork.createVocabulary(payload.entry).pipe(withApiErrors);
-          return ok;
-        }),
-      )
-      .handle(
-        "updateVocabulary",
-        Effect.fn("HttpApi.data.updateVocabulary")(function* ({ payload }) {
-          yield* bloodwork.updateVocabulary(payload.entry).pipe(withApiErrors);
-          return ok;
-        }),
-      )
-      .handle(
-        "deleteVocabulary",
-        Effect.fn("HttpApi.data.deleteVocabulary")(function* ({ payload }) {
-          yield* bloodwork.deleteVocabulary(payload.key).pipe(withApiErrors);
-          return ok;
-        }),
-      );
-  }),
+const sessionHandlers = HttpApiBuilder.group(
+  BloodworkApi,
+  "session",
+  (handlers) =>
+    Effect.gen(function* () {
+      const auth = yield* Auth;
+      return handlers
+        .handle(
+          "create",
+          Effect.fn("HttpApi.session.create")(function* ({ payload }) {
+            const session = yield* auth
+              .authenticate(payload.password)
+              .pipe(withApiErrors);
+            yield* HttpApiBuilder.securitySetCookie(
+              sessionSecurity,
+              session.token,
+              {
+                httpOnly: true,
+                secure: session.secure,
+                sameSite: "strict",
+                maxAge: Duration.days(7),
+                path: "/",
+              },
+            );
+            return { authenticated: true };
+          }),
+        )
+        .handle(
+          "delete",
+          Effect.fn("HttpApi.session.delete")(function* () {
+            yield* HttpEffect.appendPreResponseHandler((_request, response) =>
+              // The cookie name and path are server-owned constants.
+              Effect.sync(() =>
+                HttpServerResponse.expireCookieUnsafe(
+                  response,
+                  SESSION_COOKIE,
+                  {
+                    path: "/",
+                  },
+                ),
+              ),
+            );
+            return undefined;
+          }),
+        );
+    }),
+);
+
+const readingsHandlers = HttpApiBuilder.group(
+  BloodworkApi,
+  "readings",
+  (handlers) =>
+    Effect.gen(function* () {
+      const dashboard = yield* Dashboard;
+      const bloodwork = yield* Bloodwork;
+      return handlers
+        .handle(
+          "list",
+          Effect.fn("HttpApi.readings.list")(function* ({ query }) {
+            const cursor = yield* readingCursor(query).pipe(withApiErrors);
+            return yield* getReadingsEffect(cursor).pipe(
+              Effect.provideService(Dashboard, dashboard),
+              withApiErrors,
+            );
+          }),
+        )
+        .handle(
+          "export",
+          Effect.fn("HttpApi.readings.export")(function* () {
+            return yield* dataEffect().pipe(
+              Effect.provideService(Dashboard, dashboard),
+              withApiErrors,
+            );
+          }),
+        )
+        .handle(
+          "create",
+          Effect.fn("HttpApi.readings.create")(function* ({ payload }) {
+            return yield* saveReadingEffect(payload).pipe(
+              Effect.provideService(Bloodwork, bloodwork),
+              withApiErrors,
+            );
+          }),
+        )
+        .handle(
+          "delete",
+          Effect.fn("HttpApi.readings.delete")(function* ({ params }) {
+            yield* bloodwork.deleteReading(params.id).pipe(withApiErrors);
+            return undefined;
+          }),
+        );
+    }),
+);
+
+const vocabularyHandlers = HttpApiBuilder.group(
+  BloodworkApi,
+  "vocabulary",
+  (handlers) =>
+    Effect.gen(function* () {
+      const bloodwork = yield* Bloodwork;
+      return handlers
+        .handle(
+          "list",
+          Effect.fn("HttpApi.vocabulary.list")(function* () {
+            return {
+              entries: yield* bloodwork.getVocabulary().pipe(withApiErrors),
+            };
+          }),
+        )
+        .handle(
+          "create",
+          Effect.fn("HttpApi.vocabulary.create")(function* ({ payload }) {
+            yield* bloodwork.createVocabulary(payload).pipe(withApiErrors);
+            return undefined;
+          }),
+        )
+        .handle(
+          "update",
+          Effect.fn("HttpApi.vocabulary.update")(function* ({
+            params,
+            payload,
+          }) {
+            yield* bloodwork
+              .updateVocabulary({ ...payload, key: params.key })
+              .pipe(withApiErrors);
+            return undefined;
+          }),
+        )
+        .handle(
+          "delete",
+          Effect.fn("HttpApi.vocabulary.delete")(function* ({ params }) {
+            yield* bloodwork.deleteVocabulary(params.key).pipe(withApiErrors);
+            return undefined;
+          }),
+        );
+    }),
 );
 
 const supplementsHandlers = HttpApiBuilder.group(
@@ -204,50 +254,39 @@ const supplementsHandlers = HttpApiBuilder.group(
         .handle(
           "list",
           Effect.fn("HttpApi.supplements.list")(function* () {
-            return yield* supplements.get().pipe(withApiErrors);
+            const result = yield* supplements.get().pipe(withApiErrors);
+            return { supplements: result.supplements };
           }),
         )
         .handle(
           "create",
           Effect.fn("HttpApi.supplements.create")(function* ({ payload }) {
             yield* supplements.create(payload).pipe(withApiErrors);
-            return ok;
+            return undefined;
           }),
         )
         .handle(
           "update",
-          Effect.fn("HttpApi.supplements.update")(function* ({ payload }) {
-            yield* supplements.update(payload).pipe(withApiErrors);
-            return ok;
-          }),
-        )
-        .handle(
-          "remove",
-          Effect.fn("HttpApi.supplements.remove")(function* ({ payload }) {
-            yield* supplements.remove(payload).pipe(withApiErrors);
-            return ok;
-          }),
-        )
-        .handle(
-          "updateChangelog",
-          Effect.fn("HttpApi.supplements.updateChangelog")(function* ({
+          Effect.fn("HttpApi.supplements.update")(function* ({
+            params,
             payload,
           }) {
-            return yield* updateChangelogEffect(payload).pipe(
-              Effect.provideService(Supplements, supplements),
-              withApiErrors,
-            );
+            yield* supplements
+              .update({ ...payload, id: params.id })
+              .pipe(withApiErrors);
+            return undefined;
           }),
         )
         .handle(
-          "deleteChangelog",
-          Effect.fn("HttpApi.supplements.deleteChangelog")(function* ({
-            payload,
+          "delete",
+          Effect.fn("HttpApi.supplements.delete")(function* ({
+            params,
+            query,
           }) {
-            return yield* deleteChangelogEffect(payload.id).pipe(
-              Effect.provideService(Supplements, supplements),
-              withApiErrors,
-            );
+            yield* supplements
+              .remove({ ...query, id: params.id })
+              .pipe(withApiErrors);
+            return undefined;
           }),
         );
     }),
@@ -268,9 +307,14 @@ const healthHandlers = HttpApiBuilder.group(
         )
         .handle(
           "updateVisibility",
-          Effect.fn("HttpApi.health.updateVisibility")(function* ({ payload }) {
-            yield* health.updateVisibility(payload).pipe(withApiErrors);
-            return ok;
+          Effect.fn("HttpApi.health.updateVisibility")(function* ({
+            params,
+            payload,
+          }) {
+            yield* health
+              .updateVisibility({ ...payload, metric: params.metric })
+              .pipe(withApiErrors);
+            return undefined;
           }),
         )
         .handle(
@@ -282,73 +326,98 @@ const healthHandlers = HttpApiBuilder.group(
     }),
 );
 
-const readPdf = Effect.fn("HttpApi.provider.readPdf")(function* (
+interface MultipartSource {
+  readonly formData: () => Promise<FormData>;
+}
+
+const MultipartSource = Schema.declare<MultipartSource>(
+  (value): value is MultipartSource =>
+    Predicate.hasProperty(value, "formData") &&
+    Predicate.isFunction(value.formData),
+  { identifier: "MultipartSource" },
+);
+
+const PdfFile = Schema.declare<File>(
+  (value): value is File =>
+    Predicate.hasProperty(value, "name") &&
+    Predicate.isString(value.name) &&
+    Predicate.hasProperty(value, "arrayBuffer") &&
+    Predicate.isFunction(value.arrayBuffer),
+  { identifier: "PdfFile" },
+);
+
+const readPdf = Effect.fn("HttpApi.import.readPdf")(function* (
   source: HttpServerRequest.HttpServerRequest["source"],
 ) {
-  if (!(source instanceof Request)) {
-    return yield* Effect.fail(
-      new RequestDecodeError({
-        operation: "extract.request",
-        message: "Unsupported request source",
-      }),
-    );
-  }
+  const multipartSource = yield* Schema.decodeUnknownEffect(MultipartSource)(
+    source,
+  ).pipe(
+    Effect.mapError(
+      () =>
+        new RequestDecodeError({
+          operation: "extract.request",
+          message: "Unsupported request source",
+        }),
+    ),
+  );
   const formData = yield* Effect.tryPromise({
-    try: () => source.formData(),
+    try: () => multipartSource.formData(),
     catch: () =>
       new RequestDecodeError({
         operation: "extract.form",
         message: "Invalid multipart body",
       }),
   });
-  const file = formData.get("pdf");
-  if (!(file instanceof File)) {
-    return yield* Effect.fail(
-      new RequestDecodeError({
-        operation: "extract.pdf",
-        message: "No PDF file provided",
-      }),
-    );
-  }
-  return file;
+  return yield* Schema.decodeUnknownEffect(PdfFile)(formData.get("pdf")).pipe(
+    Effect.mapError(
+      () =>
+        new RequestDecodeError({
+          operation: "extract.pdf",
+          message: "No PDF file provided",
+        }),
+    ),
+  );
 });
 
-const providerHandlers = HttpApiBuilder.group(
+const importHandlers = HttpApiBuilder.group(
   BloodworkApi,
-  "provider",
+  "import",
   (handlers) =>
     Effect.gen(function* () {
       const workflows = yield* ProviderWorkflows;
       return handlers
         .handleRaw(
           "extract",
-          Effect.fn("HttpApi.provider.extract")(function* ({ request }) {
+          Effect.fn("HttpApi.import.extract")(function* ({ request }) {
             const file = yield* readPdf(request.source).pipe(withApiErrors);
             return yield* workflows.extract(file).pipe(withApiErrors);
           }),
         )
         .handle(
           "map",
-          Effect.fn("HttpApi.provider.map")(function* ({ payload }) {
+          Effect.fn("HttpApi.import.map")(function* ({ payload }) {
             return yield* workflows.map(payload).pipe(withApiErrors);
           }),
         )
         .handle(
           "research",
-          Effect.fn("HttpApi.provider.research")(function* ({ payload }) {
+          Effect.fn("HttpApi.import.research")(function* ({ payload }) {
             return yield* workflows.research(payload).pipe(withApiErrors);
           }),
         );
     }),
 );
 
-const handlerDefinitions = Layer.mergeAll(
-  publicHandlers,
-  authHandlers,
-  dataHandlers,
+/** Dependency-free handler definitions; production provisioning is below. */
+export const handlerDefinitions = Layer.mergeAll(
+  dashboardHandlers,
+  changelogHandlers,
+  sessionHandlers,
+  readingsHandlers,
+  vocabularyHandlers,
   supplementsHandlers,
   healthHandlers,
-  providerHandlers,
+  importHandlers,
 );
 
 export type ApiServices =

@@ -2,10 +2,15 @@ import * as Effect from "effect/Effect";
 import { FetchHttpClient } from "effect/unstable/http";
 import { HttpApiClient } from "effect/unstable/httpapi";
 
-import { BloodworkApi } from "@/lib/effect/api";
+import {
+  apiErrorMessage,
+  BloodworkApi,
+  type BloodworkApiClient,
+} from "@/lib/effect/api";
 
-export type BloodworkApiClient = HttpApiClient.ForApi<typeof BloodworkApi>;
 export const apiUrls = HttpApiClient.urlBuilder(BloodworkApi);
+
+export { apiErrorMessage };
 
 /** Run a generated, schema-decoding client operation against the Bloodwork API. */
 export const runApi = <A, E>(

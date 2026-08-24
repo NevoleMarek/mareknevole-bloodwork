@@ -58,7 +58,7 @@ export function UploadWizard() {
     if (!vocabularyRequest.current) {
       vocabularyRequest.current = (async () => {
         try {
-          const data = await runApi((client) => client.data.vocabulary({}));
+          const data = await runApi((client) => client.vocabulary.list({}));
           setVocabulary(data.entries);
           return data.entries;
         } catch (error) {
@@ -82,7 +82,7 @@ export function UploadWizard() {
 
       try {
         const data = await runApi((client) =>
-          client.provider.extract({ payload: formData }),
+          client.import.extract({ payload: formData }),
         );
         setState({
           step: "review-extraction",
@@ -108,7 +108,7 @@ export function UploadWizard() {
       try {
         const entries = await loadVocabulary();
         const data = await runApi((client) =>
-          client.provider.map({
+          client.import.map({
             payload: { variables, vocabulary: entries },
           }),
         );
@@ -181,7 +181,7 @@ export function UploadWizard() {
       };
 
       try {
-        await runApi((client) => client.data.saveReading({ payload: body }));
+        await runApi((client) => client.readings.create({ payload: body }));
         setState({ step: "done" });
       } catch (e) {
         setState({
@@ -214,7 +214,7 @@ export function UploadWizard() {
 
       try {
         const data = await runApi((client) =>
-          client.provider.research({ payload: { newEntries } }),
+          client.import.research({ payload: { newEntries } }),
         );
         setState({
           step: "review-research",

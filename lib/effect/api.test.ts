@@ -1,10 +1,12 @@
+// @vitest-environment node
+
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { FetchHttpClient } from "effect/unstable/http";
 import { HttpApiClient } from "effect/unstable/httpapi";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { BloodworkApi } from "@/lib/effect/api";
+import { BloodworkApi, makeBiomarkerKey } from "@/lib/effect/api";
 import {
   ApiBadGateway,
   ApiBadRequest,
@@ -18,6 +20,7 @@ import {
   makeApiWebHandler,
 } from "@/lib/effect/api-server";
 import {
+  AuthenticationError,
   ConflictError,
   NotFoundError,
   PersistenceError,
@@ -90,7 +93,7 @@ const sharedServices = Layer.mergeAll(
   Layer.succeed(
     ProviderWorkflows,
     ProviderWorkflows.of({
-      extract: unused,
+      extract: () => Effect.succeed({ date: "2026-08-24", variables: [] }),
       map: unused,
       research: unused,
     }),
@@ -133,7 +136,7 @@ afterAll(() => dispose());
 describe("Bloodwork HttpApi", () => {
   it("serves declared endpoints through the Fetch handler", async () => {
     const response = await handler(
-      new Request("https://bloodwork.test/api/data"),
+      new Request("https://bloodwork.test/api/readings/export"),
     );
 
     expect(response.status).toBe(200);
@@ -145,7 +148,7 @@ describe("Bloodwork HttpApi", () => {
 
   it("rejects invalid query values before invoking handlers", async () => {
     const response = await handler(
-      new Request("https://bloodwork.test/api/public/health?period=forever"),
+      new Request("https://bloodwork.test/api/dashboard/health?period=forever"),
     );
 
     expect(response.status).toBe(400);
@@ -153,9 +156,7 @@ describe("Bloodwork HttpApi", () => {
 
   it("encodes declared transport errors for generated clients", async () => {
     const response = await handler(
-      new Request(
-        "https://bloodwork.test/api/public/changelog?date=2026-01-01",
-      ),
+      new Request("https://bloodwork.test/api/changelog?date=2026-01-01"),
     );
 
     expect(response.status).toBe(400);
@@ -166,9 +167,42 @@ describe("Bloodwork HttpApi", () => {
 
     await expect(
       runClient((client) =>
-        client.public.changelog({ query: { date: "2026-01-01" } }),
+        client.changelog.list({ query: { date: "2026-01-01" } }),
       ),
     ).rejects.toBeInstanceOf(ApiBadRequest);
+  });
+
+  it("projects authentication failures to the declared unauthorized error", async () => {
+    const authServices = Layer.merge(
+      services,
+      Layer.succeed(
+        Auth,
+        Auth.of({
+          authenticate: () =>
+            Effect.fail(
+              new AuthenticationError({ reason: "invalid-password" }),
+            ),
+        }),
+      ),
+    );
+    const { dispose: disposeAuth, handler: authHandler } =
+      makeApiWebHandler(authServices);
+    try {
+      const response = await authHandler(
+        new Request("https://bloodwork.test/api/session", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ password: "wrong" }),
+        }),
+      );
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toEqual({
+        _tag: "Bloodwork.ApiUnauthorized",
+        error: "Invalid password",
+      });
+    } finally {
+      await disposeAuth();
+    }
   });
 
   it("rejects malformed JSON at the HttpApi payload boundary", async () => {
@@ -183,9 +217,21 @@ describe("Bloodwork HttpApi", () => {
     expect(response.status).toBe(400);
   });
 
+  it("encodes multipart uploads through the generated client", async () => {
+    const formData = new FormData();
+    formData.append(
+      "pdf",
+      new File(["pdf"], "panel.pdf", { type: "application/pdf" }),
+    );
+
+    await expect(
+      runClient((client) => client.import.extract({ payload: formData })),
+    ).resolves.toEqual({ date: "2026-08-24", variables: [] });
+  });
+
   it("sets the session cookie through the Effect response pipeline", async () => {
     const response = await handler(
-      new Request("https://bloodwork.test/api/auth", {
+      new Request("https://bloodwork.test/api/session", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ password: "secret" }),
@@ -200,10 +246,10 @@ describe("Bloodwork HttpApi", () => {
 
   it("removes the session cookie through the Effect response pipeline", async () => {
     const response = await handler(
-      new Request("https://bloodwork.test/api/auth", { method: "DELETE" }),
+      new Request("https://bloodwork.test/api/session", { method: "DELETE" }),
     );
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(204);
     expect(response.headers.get("set-cookie")).toContain(
       "bloodwork-session=; Max-Age=0",
     );
@@ -218,7 +264,7 @@ describe("Bloodwork HttpApi", () => {
     expect(response.status).toBe(200);
     expect(document).toHaveProperty("paths./api/readings.get");
     expect(document).toHaveProperty("paths./api/readings.post");
-    expect(document).toHaveProperty("paths./api/extract.post");
+    expect(document).toHaveProperty("paths./api/import/extract.post");
     expect(document).toHaveProperty("components.schemas.ReadingPage");
     expect(document).toHaveProperty("components.schemas.SaveReadingRequest");
   });
@@ -227,7 +273,7 @@ describe("Bloodwork HttpApi", () => {
     const urls = HttpApiClient.urlBuilder(BloodworkApi);
 
     expect(
-      urls.public.changelog({
+      urls.changelog.list({
         query: {
           date: "2026-01-01",
           createdAt: "2026-01-01T10:00:00Z",
@@ -235,11 +281,11 @@ describe("Bloodwork HttpApi", () => {
         },
       }),
     ).toBe(
-      "/api/public/changelog?date=2026-01-01&createdAt=2026-01-01T10%3A00%3A00Z&id=entry-1",
+      "/api/changelog?date=2026-01-01&createdAt=2026-01-01T10%3A00%3A00Z&id=entry-1",
     );
-    expect(urls.public.trend({ params: { key: "a/b" } })).toBe(
-      "/api/public/trends/a%2Fb",
-    );
+    expect(
+      urls.dashboard.trend({ params: { key: makeBiomarkerKey("a/b") } }),
+    ).toBe("/api/biomarkers/a%2Fb/trend");
   });
 });
 
@@ -301,11 +347,11 @@ describe("Next request lifetime", () => {
     const requestServices = Layer.merge(sharedServices, requestDashboard);
 
     const first = await handleApiRequestWith(
-      new Request("https://bloodwork.test/api/data"),
+      new Request("https://bloodwork.test/api/readings/export"),
       requestServices,
     );
     const second = await handleApiRequestWith(
-      new Request("https://bloodwork.test/api/data"),
+      new Request("https://bloodwork.test/api/readings/export"),
       requestServices,
     );
 

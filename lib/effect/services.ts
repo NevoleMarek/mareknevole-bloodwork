@@ -33,7 +33,6 @@ import {
   type AuthSession,
   type ExportData,
   type HealthImportSummary as HealthImportSummaryType,
-  type HealthVisibilityRequest,
   type MapResponse as MapResponseType,
   type ResearchResponse as ResearchResponseType,
   type SupplementsResponse,
@@ -235,9 +234,10 @@ export interface HealthContract {
     HealthMetricConfig[],
     PersistenceError
   >;
-  readonly updateVisibility: (
-    request: HealthVisibilityRequest,
-  ) => Effect.Effect<void, PersistenceError>;
+  readonly updateVisibility: (request: {
+    readonly metric: string;
+    readonly visible: boolean;
+  }) => Effect.Effect<void, PersistenceError>;
   readonly import: (
     request: HealthImportRequest,
   ) => Effect.Effect<HealthImportSummaryType, PersistenceError>;
@@ -255,12 +255,18 @@ export const healthLayer = Layer.effect(
     const getConfigs = Effect.fn("Health.getConfigs")(function* () {
       return yield* repository.getHealthMetricConfigs();
     });
-    const updateVisibility = Effect.fn("Health.updateVisibility")(function* (
-      request: HealthVisibilityRequest,
-    ) {
-      yield* repository.updateHealthVisibility(request.metric, request.visible);
-      yield* cache.invalidateHealth();
-    });
+    const updateVisibility = Effect.fn("Health.updateVisibility")(
+      function* (request: {
+        readonly metric: string;
+        readonly visible: boolean;
+      }) {
+        yield* repository.updateHealthVisibility(
+          request.metric,
+          request.visible,
+        );
+        yield* cache.invalidateHealth();
+      },
+    );
     const importHealth = Effect.fn("Health.import")(function* (
       request: HealthImportRequest,
     ) {

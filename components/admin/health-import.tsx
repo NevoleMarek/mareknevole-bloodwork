@@ -4,9 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
-import { apiErrorMessage } from "@/lib/effect/api-errors";
-import { runApi } from "@/lib/effect/client";
-import { HealthImportRequest } from "@/lib/schemas/wire";
+import { apiErrorMessage, runApi } from "@/lib/effect/client";
+import { HealthImportRequest } from "@/lib/effect/api";
 
 type ImportState =
   | { kind: "idle" }

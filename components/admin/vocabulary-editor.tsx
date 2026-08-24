@@ -3,12 +3,22 @@
 import { useState } from "react";
 
 import { runApi } from "@/lib/effect/client";
+import { makeVocabularyKey } from "@/lib/effect/api";
 import type { VocabularyEntry } from "@/types/bloodwork";
 
 type EditingState =
   | { kind: "none" }
   | { kind: "editing"; entry: VocabularyEntry }
   | { kind: "adding" };
+
+const updatePayload = (entry: VocabularyEntry) => ({
+  label: entry.label,
+  unit: entry.unit,
+  referenceRange: entry.referenceRange,
+  description: entry.description,
+  featured: entry.featured,
+  visible: entry.visible,
+});
 
 export function VocabularyEditor({
   entries,
@@ -44,8 +54,9 @@ export function VocabularyEditor({
 
   async function toggleVisible(entry: VocabularyEntry) {
     await runApi((client) =>
-      client.data.updateVocabulary({
-        payload: { entry: { ...entry, visible: !entry.visible } },
+      client.vocabulary.update({
+        params: { key: makeVocabularyKey(entry.key) },
+        payload: updatePayload({ ...entry, visible: !entry.visible }),
       }),
     );
     onRefresh();
@@ -53,8 +64,9 @@ export function VocabularyEditor({
 
   async function toggleFeatured(entry: VocabularyEntry) {
     await runApi((client) =>
-      client.data.updateVocabulary({
-        payload: { entry: { ...entry, featured: !entry.featured } },
+      client.vocabulary.update({
+        params: { key: makeVocabularyKey(entry.key) },
+        payload: updatePayload({ ...entry, featured: !entry.featured }),
       }),
     );
     onRefresh();
@@ -73,8 +85,11 @@ export function VocabularyEditor({
     };
     await runApi((client) =>
       editing.kind === "adding"
-        ? client.data.createVocabulary({ payload: { entry } })
-        : client.data.updateVocabulary({ payload: { entry } }),
+        ? client.vocabulary.create({ payload: entry })
+        : client.vocabulary.update({
+            params: { key: makeVocabularyKey(entry.key) },
+            payload: updatePayload(entry),
+          }),
     );
     setEditing({ kind: "none" });
     onRefresh();
@@ -82,7 +97,7 @@ export function VocabularyEditor({
 
   async function handleDelete(key: string) {
     await runApi((client) =>
-      client.data.deleteVocabulary({ payload: { key } }),
+      client.vocabulary.delete({ params: { key: makeVocabularyKey(key) } }),
     );
     onRefresh();
   }

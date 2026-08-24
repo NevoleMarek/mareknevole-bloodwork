@@ -62,7 +62,7 @@ export function HealthGridContent({
     const pending =
       requests.current.get(requested) ??
       runApi((client) =>
-        client.public.health({ query: { period: requested } }),
+        client.dashboard.health({ query: { period: requested } }),
       );
     requests.current.set(requested, pending);
     pending

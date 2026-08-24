@@ -20,7 +20,10 @@ export function HealthVisibility({
       prev.map((c) => (c.metric === metric ? { ...c, visible } : c)),
     );
     await runApi((client) =>
-      client.health.updateVisibility({ payload: { metric, visible } }),
+      client.health.updateVisibility({
+        params: { metric },
+        payload: { visible },
+      }),
     );
   }, []);
 

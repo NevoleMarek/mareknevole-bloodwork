@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { runApi } from "@/lib/effect/client";
+import { makeSupplementId } from "@/lib/effect/api";
 import type { Supplement } from "@/types/bloodwork";
 
 type RowState =
@@ -57,8 +58,8 @@ export function SupplementEditor({
 
     await runApi((client) =>
       client.supplements.update({
+        params: { id: makeSupplementId(id) },
         payload: {
-          id,
           name: state.name,
           dose: state.dose,
           frequency: state.frequency,
@@ -76,8 +77,9 @@ export function SupplementEditor({
     if (state.kind !== "removing") return;
 
     await runApi((client) =>
-      client.supplements.remove({
-        payload: { id, changelogDate: state.changelogDate },
+      client.supplements.delete({
+        params: { id: makeSupplementId(id) },
+        query: { changelogDate: state.changelogDate },
       }),
     );
     onRefresh();

@@ -25,7 +25,7 @@ export default function AdminLayout({
   if (pathname === "/admin") return <>{children}</>;
 
   async function handleLogout() {
-    await runApi((client) => client.auth.logout({}));
+    await runApi((client) => client.session.delete({}));
     router.push("/admin");
   }
 

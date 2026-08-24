@@ -73,10 +73,9 @@ export const trendEffect = Effect.fn("Workflows.getTrend")(function* (
 });
 
 export const updateChangelogEffect = Effect.fn("Workflows.updateChangelog")(
-  function* (body: ChangelogUpdateRequest) {
+  function* (id: string, body: ChangelogUpdateRequest) {
     const supplements = yield* Supplements;
-    yield* supplements.updateChangelog(body.id, body.description);
-    return { ok: true };
+    yield* supplements.updateChangelog(id, body.description);
   },
 );
 
@@ -84,6 +83,5 @@ export const deleteChangelogEffect = Effect.fn("Workflows.deleteChangelog")(
   function* (id: string) {
     const supplements = yield* Supplements;
     yield* supplements.deleteChangelog(id);
-    return { ok: true };
   },
 );

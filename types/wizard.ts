@@ -12,7 +12,7 @@ export type {
   ResearchResponse,
   SaveReadingRequest,
   SaveReadingResponse,
-} from "@/lib/schemas/wire";
+} from "@/lib/effect/api";
 
 import type {
   ExtractedVariable,

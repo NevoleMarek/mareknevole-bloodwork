@@ -7,7 +7,7 @@ import { runApi } from "@/lib/effect/client";
 import type { VocabularyEntry } from "@/types/bloodwork";
 
 async function loadEntries(): Promise<VocabularyEntry[]> {
-  const json = await runApi((client) => client.data.vocabulary({}));
+  const json = await runApi((client) => client.vocabulary.list({}));
   return json.entries;
 }
 

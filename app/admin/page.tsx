@@ -15,7 +15,9 @@ export default function AdminLogin() {
     setError("");
 
     try {
-      await runApi((client) => client.auth.login({ payload: { password } }));
+      await runApi((client) =>
+        client.session.create({ payload: { password } }),
+      );
       router.push("/admin/data");
     } catch {
       setError("Invalid password");

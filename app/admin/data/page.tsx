@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ReadingsTable } from "@/components/admin/readings-table";
+import { makeReadingId, type ExportData } from "@/lib/effect/api";
 import { runApi } from "@/lib/effect/client";
-import type { ExportData } from "@/lib/schemas/wire";
 import type { ReadingCursor, ReadingSummary } from "@/types/bloodwork";
 
 type MoreState = { kind: "idle" } | { kind: "loading" } | { kind: "error" };
@@ -21,7 +21,7 @@ type DataState =
 
 const loadReadings = (cursor: ReadingCursor | null) =>
   runApi((client) =>
-    client.data.readings({ query: cursor === null ? {} : cursor }),
+    client.readings.list({ query: cursor === null ? {} : cursor }),
   );
 
 function formatExportMarkdown(data: ExportData) {
@@ -122,7 +122,7 @@ export default function AdminDataPage() {
     const generation = exportGeneration.current;
     const request = (async () => {
       try {
-        const result = await runApi((client) => client.data.exportData({}));
+        const result = await runApi((client) => client.readings.export({}));
         if (exportGeneration.current === generation) {
           exportData.current = result;
         }
@@ -220,7 +220,7 @@ export default function AdminDataPage() {
           readings={data.readings}
           onDelete={async (id) => {
             await runApi((client) =>
-              client.data.deleteReading({ payload: { id } }),
+              client.readings.delete({ params: { id: makeReadingId(id) } }),
             );
             exportGeneration.current += 1;
             exportData.current = null;

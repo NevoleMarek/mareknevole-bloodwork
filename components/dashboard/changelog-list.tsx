@@ -23,11 +23,11 @@ type ChangelogState =
     };
 
 const pageUrl = (cursor: ChangelogCursor | null) =>
-  apiUrls.public.changelog({ query: cursor === null ? {} : cursor });
+  apiUrls.changelog.list({ query: cursor === null ? {} : cursor });
 
 const fetchPage = (cursor: ChangelogCursor | null) =>
   runApi((client) =>
-    client.public.changelog({ query: cursor === null ? {} : cursor }),
+    client.changelog.list({ query: cursor === null ? {} : cursor }),
   );
 
 export function ChangelogList() {

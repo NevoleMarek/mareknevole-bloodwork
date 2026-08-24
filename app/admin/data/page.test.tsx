@@ -98,7 +98,9 @@ describe("AdminDataPage", () => {
       ),
     ).toBe(true);
     expect(
-      fetch.mock.calls.some(([input]) => requestPath(input) === "/api/data"),
+      fetch.mock.calls.some(
+        ([input]) => requestPath(input) === "/api/readings/export",
+      ),
     ).toBe(false);
     const button = screen.getByRole("button", { name: "Copy as Markdown" });
 
@@ -109,7 +111,9 @@ describe("AdminDataPage", () => {
     });
 
     expect(
-      fetch.mock.calls.some(([input]) => requestPath(input) === "/api/data"),
+      fetch.mock.calls.some(
+        ([input]) => requestPath(input) === "/api/readings/export",
+      ),
     ).toBe(true);
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining("| Glucose | 4.8 | mmol/L | normal |"),
@@ -169,7 +173,9 @@ describe("AdminDataPage", () => {
     fireEvent.click(button);
 
     expect(
-      fetch.mock.calls.some(([input]) => requestPath(input) === "/api/data"),
+      fetch.mock.calls.some(
+        ([input]) => requestPath(input) === "/api/readings/export",
+      ),
     ).toBe(true);
     expect(write).toHaveBeenCalledTimes(1);
 
@@ -195,8 +201,8 @@ describe("AdminDataPage", () => {
       if (url.startsWith("/api/readings?") && init?.method === "GET") {
         return pendingMore;
       }
-      if (url === "/api/readings" && init?.method === "DELETE") {
-        return Promise.resolve(jsonResponse({ ok: true }));
+      if (url.startsWith("/api/readings/") && init?.method === "DELETE") {
+        return Promise.resolve(new Response(null, { status: 204 }));
       }
       if (url === "/api/readings") {
         firstPageRequests += 1;
@@ -271,15 +277,15 @@ describe("AdminDataPage", () => {
     let exportRequests = 0;
     const fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = requestPath(input);
-      if (url === "/api/data") {
+      if (url === "/api/readings/export") {
         exportRequests += 1;
         if (exportRequests === 1) return pendingExport;
         return Promise.resolve(
           jsonResponse({ vocabulary: { entries: [] }, readings: [] }),
         );
       }
-      if (url === "/api/readings" && init?.method === "DELETE") {
-        return Promise.resolve(jsonResponse({ ok: true }));
+      if (url.startsWith("/api/readings/") && init?.method === "DELETE") {
+        return Promise.resolve(new Response(null, { status: 204 }));
       }
       if (url === "/api/readings") {
         readingRequests += 1;
