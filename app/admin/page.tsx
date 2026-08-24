@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { runApi } from "@/lib/effect/client";
+
 export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -12,15 +14,10 @@ export default function AdminLogin() {
     e.preventDefault();
     setError("");
 
-    const res = await fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-
-    if (res.ok) {
+    try {
+      await runApi((client) => client.auth.login({ payload: { password } }));
       router.push("/admin/data");
-    } else {
+    } catch {
       setError("Invalid password");
     }
   }

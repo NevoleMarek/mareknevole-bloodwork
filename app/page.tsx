@@ -6,7 +6,7 @@ import { HealthGrid } from "@/components/dashboard/health-grid";
 import { MetricsSection } from "@/components/dashboard/metrics-section";
 import { SectionNav } from "@/components/dashboard/section-nav";
 import { SupplementTable } from "@/components/dashboard/supplement-table";
-import { provideAppLayer, runAppEffect } from "@/lib/effect/http";
+import { provideAppLayer, runAppEffect } from "@/lib/effect/run";
 import { Dashboard } from "@/lib/effect/services";
 
 export default async function Home() {

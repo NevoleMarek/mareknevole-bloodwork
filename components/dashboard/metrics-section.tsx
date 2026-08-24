@@ -6,8 +6,7 @@ import { BiomarkerTable } from "@/components/dashboard/biomarker-table";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import type { TrendState } from "@/components/dashboard/trend-panel";
 import { TrendPanel } from "@/components/dashboard/trend-panel";
-import { decodeResponseJson } from "@/lib/effect/client";
-import { BiomarkerTrendResponse } from "@/lib/schemas/wire";
+import { runApi } from "@/lib/effect/client";
 import type { VocabularyEntry } from "@/types/bloodwork";
 
 const MAX_SELECTED = 10;
@@ -32,14 +31,8 @@ export function MetricsSection({
       ...current,
       [key]: { kind: "loading" },
     }));
-    fetch(`/api/public/trends/${encodeURIComponent(key)}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Trend request failed");
-        const data = await decodeResponseJson(
-          response,
-          BiomarkerTrendResponse,
-          "public.trend",
-        );
+    runApi((client) => client.public.trend({ params: { key } }))
+      .then((data) => {
         if (data.points.length === 0) throw new Error("Trend is empty");
         setTrends((current) => ({
           ...current,

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HealthGridContent } from "@/components/dashboard/health-grid";
+import { jsonResponse, requestPath } from "@/test/http";
 import type { HealthData } from "@/types/health";
 
 const health: HealthData = {
@@ -104,10 +105,7 @@ afterEach(() => {
 
 describe("HealthGrid", () => {
   it("loads six months only when the section approaches the viewport", async () => {
-    const fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue(health),
-    });
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(health));
     vi.stubGlobal("fetch", fetch);
 
     render(<HealthGridContent requestedPeriod={null} />);
@@ -120,14 +118,13 @@ describe("HealthGrid", () => {
     enterViewport();
     expect(await screen.findByText("Weight")).toBeInTheDocument();
     expect(screen.getByText("Blood Pressure")).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith("/api/public/health?period=6M");
+    expect(requestPath(fetch.mock.calls[0][0])).toBe(
+      "/api/public/health?period=6M",
+    );
   });
 
   it("derives one month from cached six-month data", async () => {
-    const fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue(health),
-    });
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(health));
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
 
@@ -145,10 +142,9 @@ describe("HealthGrid", () => {
   });
 
   it("follows period changes from browser navigation", async () => {
-    const fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue(health),
-    });
+    const fetch = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(jsonResponse(health)));
     vi.stubGlobal("fetch", fetch);
 
     render(<HealthGridContent requestedPeriod={null} />);
@@ -164,14 +160,17 @@ describe("HealthGrid", () => {
       "aria-pressed",
       "true",
     );
-    expect(fetch).toHaveBeenCalledWith("/api/public/health?period=1Y");
+    expect(
+      fetch.mock.calls.some(
+        ([input]) => requestPath(input) === "/api/public/health?period=1Y",
+      ),
+    ).toBe(true);
   });
 
   it("does not preload full history when a touch scroll begins", () => {
-    const fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue(health),
-    });
+    const fetch = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(jsonResponse(health)));
     vi.stubGlobal("fetch", fetch);
 
     render(<HealthGridContent requestedPeriod={null} />);
@@ -180,6 +179,8 @@ describe("HealthGrid", () => {
     expect(fetch).not.toHaveBeenCalled();
 
     fireEvent.pointerDown(all, { pointerType: "mouse" });
-    expect(fetch).toHaveBeenCalledWith("/api/public/health?period=ALL");
+    expect(requestPath(fetch.mock.calls[0][0])).toBe(
+      "/api/public/health?period=ALL",
+    );
   });
 });

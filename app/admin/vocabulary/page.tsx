@@ -3,18 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { VocabularyEditor } from "@/components/admin/vocabulary-editor";
-import { decodeResponseJson } from "@/lib/effect/client";
-import { VocabularyResponse } from "@/lib/schemas/wire";
+import { runApi } from "@/lib/effect/client";
 import type { VocabularyEntry } from "@/types/bloodwork";
 
 async function loadEntries(): Promise<VocabularyEntry[]> {
-  const res = await fetch("/api/vocabulary");
-  if (!res.ok) throw new Error("Vocabulary request failed");
-  const json = await decodeResponseJson(
-    res,
-    VocabularyResponse,
-    "admin.vocabulary",
-  );
+  const json = await runApi((client) => client.data.vocabulary({}));
   return json.entries;
 }
 

@@ -54,15 +54,16 @@ bun run dev
 
 ## Application architecture
 
-Server workflows use Effect v4 at the application boundary. Next route
-handlers only decode a request, invoke a named service workflow, and map typed
-failures to a response. `lib/effect/runtime.ts` is the sole OpenNext context
-adapter; it supplies the required D1 and secret bindings to the runtime graph.
-The named request workflows live in `lib/effect/workflows.ts`; the route files
-only provide the live layer and call the shared response adapter. Configuration
-is read from a binding-backed `ConfigProvider`: `Config.redacted` keeps the
-admin password and Gemini key as `Redacted` values until the trusted Auth or
-Gemini adapter needs them.
+The API is declared once with Effect v4's `effect/unstable/httpapi` contract.
+Its endpoint schemas drive request decoding, response encoding, typed failures,
+OpenAPI at `/api/openapi.json`, and the generated browser client. Handler groups
+invoke named Effect workflows and services; one optional Next catch-all route
+adapts the resulting Fetch handler instead of maintaining a route file per
+endpoint. `lib/effect/runtime.ts` remains the sole OpenNext context adapter and
+supplies D1 and secret bindings to the live graph. Configuration is read from a
+binding-backed `ConfigProvider`: `Config.redacted` keeps the admin password and
+Gemini key as `Redacted` values until the trusted Auth or Gemini adapter needs
+them.
 
 The live graph is intentionally topological:
 
@@ -79,14 +80,17 @@ and aggregation enums—before mapping them to canonical domain schemas.
 and the finite flash/pro model handles, while each request remains
 interruptible. `DataCache` preserves Next/OpenNext `unstable_cache` and tag
 invalidation semantics; it is not an in-memory cache substitute.
-`lib/effect/http.ts` owns the single
-`Effect.runPromise` bridge used by Next handlers. Browser fetch responses use
-the small `lib/effect/client.ts` decoder bridge.
+`lib/effect/api-server.ts` composes the contract, handler groups, platform
+services, and application layer into the Fetch handler consumed by Next.
+`lib/effect/client.ts` uses `HttpApiClient` so browser calls share the same URL,
+payload, success, and error schemas. Server components cross their Effect
+boundary through `lib/effect/run.ts`.
 
 The beta.102 test package does not register a compatible `it.effect` Vitest
 adapter, so Effect service tests use an explicit `Effect.runPromise` bridge in
-the test files. Production `Effect.runPromise` is limited to the shared Next
-adapter and the browser decoder bridge.
+the test files. Production `Effect.runPromise` is limited to server-component
+and generated-client boundaries; the HttpApi runtime owns the Next Fetch
+boundary.
 
 Expected failures are tagged schema errors: malformed requests and validation
 failures are `400`, missing resources are `404`, conflicts are `409`, provider

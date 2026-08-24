@@ -8,7 +8,7 @@ import {
   RequestDecodeError,
   ValidationError,
 } from "@/lib/effect/errors";
-import { runRoute } from "@/lib/effect/http";
+import { readingCursor } from "@/lib/effect/query";
 import { Bloodwork, Dashboard } from "@/lib/effect/services";
 import {
   deleteReadingEffect,
@@ -46,95 +46,89 @@ const bloodwork = (
 
 const page: ReadingPage = { entries: [], nextCursor: null };
 
-const runReading = <A, E, R>(
+const run = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
   services: Layer.Layer<R, never, never>,
-) => runRoute(effect.pipe(Effect.provide(services)));
+) => Effect.runPromise(effect.pipe(Effect.provide(services)));
 
-describe("readings Effect route workflows", () => {
+describe("readings Effect workflows", () => {
   it("loads the first page through Dashboard without a cursor", async () => {
     let receivedCursor: ReadingCursor | null | undefined;
-    const service = dashboard((cursor) => {
-      receivedCursor = cursor;
-      return Effect.succeed(page);
-    });
-
-    const response = await runReading(
-      getReadingsEffect(new Request("https://bloodwork.test/api/readings")),
-      Layer.succeed(Dashboard, service),
+    const result = await run(
+      getReadingsEffect(null),
+      Layer.succeed(
+        Dashboard,
+        dashboard((cursor) => {
+          receivedCursor = cursor;
+          return Effect.succeed(page);
+        }),
+      ),
     );
 
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual(page);
+    expect(result).toEqual(page);
     expect(receivedCursor).toBeNull();
   });
 
   it("rejects a partial cursor before calling Dashboard", async () => {
-    const response = await runReading(
-      getReadingsEffect(
-        new Request("https://bloodwork.test/api/readings?date=2026-01-01"),
-      ),
-      Layer.succeed(
-        Dashboard,
-        dashboard(() => Effect.die("Dashboard must not be called")),
-      ),
-    );
-
-    expect(response.status).toBe(400);
-  });
-
-  it("loads a complete cursor, including an intentionally empty persisted date", async () => {
-    let receivedCursor: ReadingCursor | null | undefined;
-    const service = dashboard((cursor) => {
-      receivedCursor = cursor;
-      return Effect.succeed(page);
-    });
-
-    const response = await runReading(
-      getReadingsEffect(
-        new Request("https://bloodwork.test/api/readings?date=&id=r1"),
-      ),
-      Layer.succeed(Dashboard, service),
-    );
-
-    expect(response.status).toBe(200);
-    expect(receivedCursor).toEqual({ date: "", id: "r1" });
-  });
-
-  it("maps persistence failures from the current Dashboard workflow", async () => {
-    const response = await runReading(
-      getReadingsEffect(new Request("https://bloodwork.test/api/readings")),
-      Layer.succeed(
-        Dashboard,
-        dashboard(() =>
-          Effect.fail(
-            new PersistenceError({
-              operation: "Dashboard.getReadingPage",
-              cause: new Error("d1 unavailable"),
-            }),
-          ),
+    const effect = readingCursor({ date: "2026-01-01" }).pipe(
+      Effect.flatMap(getReadingsEffect),
+      Effect.provide(
+        Layer.succeed(
+          Dashboard,
+          dashboard(() => Effect.die("Dashboard must not be called")),
         ),
       ),
     );
 
-    expect(response.status).toBe(503);
+    await expect(Effect.runPromise(effect)).rejects.toBeInstanceOf(
+      RequestDecodeError,
+    );
   });
 
-  it("decodes POST bodies and invokes Bloodwork", async () => {
-    let receivedDate: string | undefined;
-    const response = await runReading(
-      saveReadingEffect(
-        new Request("https://bloodwork.test/api/readings", {
-          method: "POST",
-          body: JSON.stringify({
-            date: "2026-01-01",
-            source: "lab",
-            measurements: [],
-            newVocabulary: [],
-          }),
-          headers: { "content-type": "application/json" },
+  it("keeps an intentionally empty persisted cursor date", async () => {
+    let receivedCursor: ReadingCursor | null | undefined;
+    const result = await run(
+      readingCursor({ date: "", id: "r1" }).pipe(
+        Effect.flatMap(getReadingsEffect),
+      ),
+      Layer.succeed(
+        Dashboard,
+        dashboard((cursor) => {
+          receivedCursor = cursor;
+          return Effect.succeed(page);
         }),
       ),
+    );
+
+    expect(result).toEqual(page);
+    expect(receivedCursor).toEqual({ date: "", id: "r1" });
+  });
+
+  it("keeps persistence failures typed", async () => {
+    const failure = new PersistenceError({
+      operation: "Dashboard.getReadingPage",
+      cause: new Error("d1 unavailable"),
+    });
+    await expect(
+      run(
+        getReadingsEffect(null),
+        Layer.succeed(
+          Dashboard,
+          dashboard(() => Effect.fail(failure)),
+        ),
+      ),
+    ).rejects.toBe(failure);
+  });
+
+  it("saves a decoded reading request", async () => {
+    let receivedDate: string | undefined;
+    const result = await run(
+      saveReadingEffect({
+        date: "2026-01-01",
+        source: "lab",
+        measurements: [],
+        newVocabulary: [],
+      }),
       Layer.succeed(
         Bloodwork,
         bloodwork((request) => {
@@ -144,94 +138,44 @@ describe("readings Effect route workflows", () => {
       ),
     );
 
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ readingId: "reading-1" });
+    expect(result).toEqual({ readingId: "reading-1" });
     expect(receivedDate).toBe("2026-01-01");
   });
 
-  it("maps malformed POST JSON to a typed 400 response", async () => {
-    const response = await runReading(
-      saveReadingEffect(
-        new Request("https://bloodwork.test/api/readings", {
-          method: "POST",
-          body: "{",
-          headers: { "content-type": "application/json" },
+  it("preserves repository validation failures", async () => {
+    const failure = new ValidationError({
+      operation: "Repository.saveReading",
+      message: "At least one measurement is required",
+    });
+    await expect(
+      run(
+        saveReadingEffect({
+          date: "2026-01-01",
+          source: "lab",
+          measurements: [],
+          newVocabulary: [],
         }),
-      ),
-      Layer.succeed(
-        Bloodwork,
-        bloodwork(() => Effect.die("Bloodwork must not be called"), unused),
-      ),
-    );
-
-    expect(response.status).toBe(400);
-  });
-
-  it("maps repository validation for empty measurements to 400", async () => {
-    const response = await runReading(
-      saveReadingEffect(
-        new Request("https://bloodwork.test/api/readings", {
-          method: "POST",
-          body: JSON.stringify({
-            date: "2026-01-01",
-            source: "lab",
-            measurements: [],
-            newVocabulary: [],
-          }),
-          headers: { "content-type": "application/json" },
-        }),
-      ),
-      Layer.succeed(
-        Bloodwork,
-        bloodwork(
-          () =>
-            Effect.fail(
-              new ValidationError({
-                operation: "Repository.saveReading",
-                message: "At least one measurement is required",
-              }),
-            ),
-          unused,
+        Layer.succeed(
+          Bloodwork,
+          bloodwork(() => Effect.fail(failure), unused),
         ),
       ),
-    );
-
-    expect(response.status).toBe(400);
+    ).rejects.toBe(failure);
   });
 
-  it("maps a missing reading mutation to 404", async () => {
-    const response = await runReading(
-      deleteReadingEffect(
-        new Request("https://bloodwork.test/api/readings", {
-          method: "DELETE",
-          body: JSON.stringify({ id: "missing" }),
-          headers: { "content-type": "application/json" },
-        }),
-      ),
-      Layer.succeed(
-        Bloodwork,
-        bloodwork(unused, () =>
-          Effect.fail(
-            new NotFoundError({ resource: "reading", id: "missing" }),
-          ),
+  it("preserves a missing-reading failure", async () => {
+    const failure = new NotFoundError({
+      resource: "reading",
+      id: "missing",
+    });
+    await expect(
+      run(
+        deleteReadingEffect("missing"),
+        Layer.succeed(
+          Bloodwork,
+          bloodwork(unused, () => Effect.fail(failure)),
         ),
       ),
-    );
-
-    expect(response.status).toBe(404);
-  });
-
-  it("keeps request errors typed instead of treating them as defects", async () => {
-    const effect = saveReadingEffect(
-      new Request("https://bloodwork.test/api/readings", {
-        method: "POST",
-        body: "null",
-        headers: { "content-type": "application/json" },
-      }),
-    ).pipe(Effect.provide(Layer.succeed(Bloodwork, bloodwork(unused, unused))));
-
-    await expect(Effect.runPromise(effect)).rejects.toBeInstanceOf(
-      RequestDecodeError,
-    );
+    ).rejects.toBe(failure);
   });
 });

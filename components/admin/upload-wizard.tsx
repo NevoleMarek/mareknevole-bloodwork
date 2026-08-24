@@ -10,13 +10,7 @@ import type {
   WizardState,
 } from "@/types/wizard";
 import { deriveStatus } from "@/lib/status";
-import { decodeResponseJson } from "@/lib/effect/client";
-import {
-  ExtractResponse,
-  MapResponse,
-  ResearchResponse,
-  VocabularyResponse,
-} from "@/lib/schemas/wire";
+import { runApi } from "@/lib/effect/client";
 
 import { StepUpload } from "@/components/admin/step-upload";
 import { StepReviewExtraction } from "@/components/admin/step-review-extraction";
@@ -64,13 +58,7 @@ export function UploadWizard() {
     if (!vocabularyRequest.current) {
       vocabularyRequest.current = (async () => {
         try {
-          const response = await fetch("/api/vocabulary");
-          if (!response.ok) throw new Error("Vocabulary request failed");
-          const data = await decodeResponseJson(
-            response,
-            VocabularyResponse,
-            "admin.vocabulary",
-          );
+          const data = await runApi((client) => client.data.vocabulary({}));
           setVocabulary(data.entries);
           return data.entries;
         } catch (error) {
@@ -93,15 +81,8 @@ export function UploadWizard() {
       formData.append("pdf", file);
 
       try {
-        const res = await fetch("/api/extract", {
-          method: "POST",
-          body: formData,
-        });
-        if (!res.ok) throw new Error("Extraction failed");
-        const data = await decodeResponseJson(
-          res,
-          ExtractResponse,
-          "admin.extract",
+        const data = await runApi((client) =>
+          client.provider.extract({ payload: formData }),
         );
         setState({
           step: "review-extraction",
@@ -126,13 +107,11 @@ export function UploadWizard() {
 
       try {
         const entries = await loadVocabulary();
-        const res = await fetch("/api/map", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ variables, vocabulary: entries }),
-        });
-        if (!res.ok) throw new Error("Mapping failed");
-        const data = await decodeResponseJson(res, MapResponse, "admin.map");
+        const data = await runApi((client) =>
+          client.provider.map({
+            payload: { variables, vocabulary: entries },
+          }),
+        );
         setState({
           step: "review-mapping",
           pdfUrl,
@@ -202,12 +181,7 @@ export function UploadWizard() {
       };
 
       try {
-        const res = await fetch("/api/readings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) throw new Error("Save failed");
+        await runApi((client) => client.data.saveReading({ payload: body }));
         setState({ step: "done" });
       } catch (e) {
         setState({
@@ -239,16 +213,8 @@ export function UploadWizard() {
       setState({ step: "researching", pdfUrl, date, mappings });
 
       try {
-        const res = await fetch("/api/research", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ newEntries }),
-        });
-        if (!res.ok) throw new Error("Research failed");
-        const data = await decodeResponseJson(
-          res,
-          ResearchResponse,
-          "admin.research",
+        const data = await runApi((client) =>
+          client.provider.research({ payload: { newEntries } }),
         );
         setState({
           step: "review-research",

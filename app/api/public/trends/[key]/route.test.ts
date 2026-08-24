@@ -2,8 +2,11 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { describe, expect, it } from "vitest";
 
-import { PersistenceError } from "@/lib/effect/errors";
-import { runRoute } from "@/lib/effect/http";
+import {
+  NotFoundError,
+  PersistenceError,
+  RequestDecodeError,
+} from "@/lib/effect/errors";
 import { Dashboard } from "@/lib/effect/services";
 import { trendEffect } from "@/lib/effect/workflows";
 import type { BiomarkerTrendPoint } from "@/types/bloodwork";
@@ -25,18 +28,17 @@ const dashboard = (
     getReadingPage: unused,
   });
 
-const runTrend = <A, E, R>(
-  effect: Effect.Effect<A, E, R>,
-  service: Layer.Layer<R, never, never>,
-) => runRoute(effect.pipe(Effect.provide(service)));
+const run = (key: string, service: Dashboard["Service"]) =>
+  Effect.runPromise(
+    trendEffect(key).pipe(Effect.provide(Layer.succeed(Dashboard, service))),
+  );
 
-describe("public biomarker trend Effect route workflow", () => {
-  it("rejects unknown keys before creating a trend cache entry", async () => {
+describe("public biomarker trend Effect workflow", () => {
+  it("rejects unknown keys before loading a trend", async () => {
     let trendCalls = 0;
-    const response = await runTrend(
-      trendEffect(Promise.resolve({ key: "random-cache-key" })),
-      Layer.succeed(
-        Dashboard,
+    await expect(
+      run(
+        "random-cache-key",
         dashboard(
           () => Effect.succeed(["glucose"]),
           () => {
@@ -45,85 +47,53 @@ describe("public biomarker trend Effect route workflow", () => {
           },
         ),
       ),
-    );
-
-    expect(response.status).toBe(404);
+    ).rejects.toBeInstanceOf(NotFoundError);
     expect(trendCalls).toBe(0);
   });
 
   it("returns points for a visible biomarker", async () => {
     const points: BiomarkerTrendPoint[] = [{ date: "2026-01-01", value: 90 }];
     let requestedKey: string | undefined;
-    const response = await runTrend(
-      trendEffect(Promise.resolve({ key: "glucose" })),
-      Layer.succeed(
-        Dashboard,
-        dashboard(
-          () => Effect.succeed(["glucose"]),
-          (key) => {
-            requestedKey = key;
-            return Effect.succeed(points);
-          },
-        ),
+    const result = await run(
+      "glucose",
+      dashboard(
+        () => Effect.succeed(["glucose"]),
+        (key) => {
+          requestedKey = key;
+          return Effect.succeed(points);
+        },
       ),
     );
 
-    expect(await response.json()).toEqual({ points });
+    expect(result).toEqual({ points });
     expect(requestedKey).toBe("glucose");
   });
 
-  it("classifies an empty key as a typed 400 request failure", async () => {
-    const response = await runTrend(
-      trendEffect(Promise.resolve({ key: "" })),
-      Layer.succeed(
-        Dashboard,
+  it("classifies an empty key as a typed request failure", async () => {
+    await expect(
+      run(
+        "",
         dashboard(
           () => Effect.die("Dashboard must not be called"),
           () => Effect.die("Dashboard must not be called"),
         ),
       ),
-    );
-
-    expect(response.status).toBe(400);
+    ).rejects.toBeInstanceOf(RequestDecodeError);
   });
 
-  it("preserves framework params rejection as a defect instead of turning it into 404", async () => {
-    const frameworkFailure = new Error("framework params unavailable");
-    const effect = trendEffect(Promise.reject(frameworkFailure)).pipe(
-      Effect.provide(
-        Layer.succeed(
-          Dashboard,
-          dashboard(
-            () => Effect.die("Dashboard must not be called"),
-            () => Effect.die("Dashboard must not be called"),
-          ),
-        ),
-      ),
-    );
-
-    await expect(runRoute(effect)).rejects.toThrow(
-      "framework params unavailable",
-    );
-  });
-
-  it("maps persistence failures from the trend service to 503", async () => {
-    const response = await runTrend(
-      trendEffect(Promise.resolve({ key: "glucose" })),
-      Layer.succeed(
-        Dashboard,
+  it("preserves persistence failures", async () => {
+    const failure = new PersistenceError({
+      operation: "Dashboard.getTrend",
+      cause: new Error("d1 unavailable"),
+    });
+    await expect(
+      run(
+        "glucose",
         dashboard(
           () => Effect.succeed(["glucose"]),
-          () =>
-            Effect.fail(
-              new PersistenceError({
-                operation: "Dashboard.getTrend",
-                cause: new Error("d1 unavailable"),
-              }),
-            ),
+          () => Effect.fail(failure),
         ),
       ),
-    );
-
-    expect(response.status).toBe(503);
+    ).rejects.toBe(failure);
   });
 });

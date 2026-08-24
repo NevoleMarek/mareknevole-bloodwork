@@ -1,29 +1,22 @@
 import * as Effect from "effect/Effect";
-import * as Schema from "effect/Schema";
+import { FetchHttpClient } from "effect/unstable/http";
+import { HttpApiClient } from "effect/unstable/httpapi";
 
-import { RequestDecodeError } from "@/lib/effect/errors";
+import { BloodworkApi } from "@/lib/effect/api";
 
-/** Browser bridge: untrusted fetch JSON is decoded before React consumes it. */
-export const decodeResponseJson = <
-  S extends Schema.ConstraintDecoder<unknown, never>,
->(
-  response: Response,
-  schema: S,
-  operation: string,
-): Promise<S["Type"]> =>
+export type BloodworkApiClient = HttpApiClient.ForApi<typeof BloodworkApi>;
+export const apiUrls = HttpApiClient.urlBuilder(BloodworkApi);
+
+/** Run a generated, schema-decoding client operation against the Bloodwork API. */
+export const runApi = <A, E>(
+  operation: (client: BloodworkApiClient) => Effect.Effect<A, E>,
+): Promise<A> =>
   Effect.runPromise(
-    Effect.tryPromise({
-      try: () => response.json(),
-      catch: () =>
-        new RequestDecodeError({ operation, message: "Invalid response JSON" }),
+    HttpApiClient.make(BloodworkApi, {
+      baseUrl: globalThis.location.origin,
     }).pipe(
-      Effect.flatMap((body) => Schema.decodeUnknownEffect(schema)(body)),
-      Effect.mapError(
-        () =>
-          new RequestDecodeError({
-            operation,
-            message: "Invalid response shape",
-          }),
-      ),
+      Effect.provide(FetchHttpClient.layer),
+      Effect.flatMap(operation),
+      Effect.provideService(FetchHttpClient.Fetch, globalThis.fetch),
     ),
   );

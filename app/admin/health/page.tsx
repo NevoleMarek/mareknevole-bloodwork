@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 
 import { HealthAdmin } from "@/components/admin/health-admin";
-import { provideAppLayer, runAppEffect } from "@/lib/effect/http";
+import { provideAppLayer, runAppEffect } from "@/lib/effect/run";
 import { Health } from "@/lib/effect/services";
 
 export const dynamic = "force-dynamic";

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ChangelogList } from "@/components/dashboard/changelog-list";
+import { jsonResponse, requestPath } from "@/test/http";
 import type { ChangelogPage, SupplementChangelog } from "@/types/bloodwork";
 
 function makeEntries(count: number, offset = 0): SupplementChangelog[] {
@@ -74,10 +75,9 @@ afterEach(() => {
 describe("ChangelogList", () => {
   it("loads and groups the first page near the viewport", async () => {
     const entries = makeEntries(3);
-    const fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue({ entries, nextCursor: null }),
-    });
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ entries, nextCursor: null }));
     vi.stubGlobal("fetch", fetch);
 
     render(<ChangelogList />);
@@ -88,7 +88,7 @@ describe("ChangelogList", () => {
     const dates = screen.getAllByTestId("changelog-date");
     expect(dates[0]).toHaveTextContent(entries[0].date);
     expect(dates[1]).toHaveTextContent("");
-    expect(fetch).toHaveBeenCalledWith("/api/public/changelog");
+    expect(requestPath(fetch.mock.calls[0][0])).toBe("/api/public/changelog");
   });
 
   it("appends the next cursor page", async () => {
@@ -104,14 +104,8 @@ describe("ChangelogList", () => {
     ];
     const fetch = vi
       .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: vi.fn().mockResolvedValue(pages[0]),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: vi.fn().mockResolvedValue(pages[1]),
-      });
+      .mockResolvedValueOnce(jsonResponse(pages[0]))
+      .mockResolvedValueOnce(jsonResponse(pages[1]));
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
 
@@ -122,7 +116,9 @@ describe("ChangelogList", () => {
 
     expect(await screen.findAllByTestId("changelog-entry")).toHaveLength(25);
     const params = new URLSearchParams(cursor);
-    expect(fetch).toHaveBeenNthCalledWith(2, `/api/public/changelog?${params}`);
+    expect(requestPath(fetch.mock.calls[1][0])).toBe(
+      `/api/public/changelog?${params}`,
+    );
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
@@ -141,20 +137,18 @@ describe("ChangelogList", () => {
     };
     const fetch = vi
       .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: vi.fn().mockResolvedValue({
+      .mockResolvedValueOnce(
+        jsonResponse({
           entries: firstEntries,
           nextCursor: firstCursor,
         }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: vi.fn().mockResolvedValue({
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
           entries: secondEntries,
           nextCursor: secondCursor,
         }),
-      });
+      );
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
 

@@ -3,8 +3,7 @@
 import { useCallback, useState } from "react";
 import { HealthImport } from "@/components/admin/health-import";
 import { HealthVisibility } from "@/components/admin/health-visibility";
-import { decodeResponseJson } from "@/lib/effect/client";
-import { HealthMetricConfigs } from "@/lib/schemas/wire";
+import { runApi } from "@/lib/effect/client";
 import type { HealthMetricConfig } from "@/types/health";
 
 export function HealthAdmin({
@@ -15,12 +14,7 @@ export function HealthAdmin({
   const [configs, setConfigs] = useState(initial);
 
   const refresh = useCallback(async () => {
-    const res = await fetch("/api/health-config");
-    const data = await decodeResponseJson(
-      res,
-      HealthMetricConfigs,
-      "admin.health-config",
-    );
+    const data = await runApi((client) => client.health.configs({}));
     setConfigs(data);
   }, []);
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+
+import { runApi } from "@/lib/effect/client";
 import type { VocabularyEntry } from "@/types/bloodwork";
 
 type EditingState =
@@ -41,24 +43,20 @@ export function VocabularyEditor({
   }
 
   async function toggleVisible(entry: VocabularyEntry) {
-    await fetch("/api/vocabulary", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        entry: { ...entry, visible: !entry.visible },
+    await runApi((client) =>
+      client.data.updateVocabulary({
+        payload: { entry: { ...entry, visible: !entry.visible } },
       }),
-    });
+    );
     onRefresh();
   }
 
   async function toggleFeatured(entry: VocabularyEntry) {
-    await fetch("/api/vocabulary", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        entry: { ...entry, featured: !entry.featured },
+    await runApi((client) =>
+      client.data.updateVocabulary({
+        payload: { entry: { ...entry, featured: !entry.featured } },
       }),
-    });
+    );
     onRefresh();
   }
 
@@ -73,22 +71,19 @@ export function VocabularyEditor({
       featured: editing.kind === "editing" ? editing.entry.featured : false,
       visible: editing.kind === "editing" ? editing.entry.visible : true,
     };
-    const method = editing.kind === "adding" ? "POST" : "PUT";
-    await fetch("/api/vocabulary", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entry }),
-    });
+    await runApi((client) =>
+      editing.kind === "adding"
+        ? client.data.createVocabulary({ payload: { entry } })
+        : client.data.updateVocabulary({ payload: { entry } }),
+    );
     setEditing({ kind: "none" });
     onRefresh();
   }
 
   async function handleDelete(key: string) {
-    await fetch("/api/vocabulary", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key }),
-    });
+    await runApi((client) =>
+      client.data.deleteVocabulary({ payload: { key } }),
+    );
     onRefresh();
   }
 

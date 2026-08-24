@@ -22,7 +22,7 @@ import {
 
 export const VocabularyResponse = Schema.Struct({
   entries: Schema.mutable(Schema.Array(VocabularyEntry)),
-});
+}).annotate({ identifier: "VocabularyResponse" });
 export interface VocabularyResponse extends Schema.Schema.Type<
   typeof VocabularyResponse
 > {
@@ -33,14 +33,14 @@ export const ReadingPageResponse = ReadingPage;
 export const ExportData = Schema.Struct({
   vocabulary: VocabularyResponse,
   readings: Schema.mutable(Schema.Array(BloodworkReading)),
-});
+}).annotate({ identifier: "ExportData" });
 export interface ExportData extends Schema.Schema.Type<typeof ExportData> {
   readonly _schemaModel?: never;
 }
 
 export const BiomarkerTrendResponse = Schema.Struct({
   points: Schema.mutable(Schema.Array(BiomarkerTrendPoint)),
-});
+}).annotate({ identifier: "BiomarkerTrendResponse" });
 export interface BiomarkerTrendResponse extends Schema.Schema.Type<
   typeof BiomarkerTrendResponse
 > {
@@ -51,7 +51,7 @@ export const ChangelogPageResponse = ChangelogPage;
 export const SupplementsResponse = Schema.Struct({
   supplements: Schema.mutable(Schema.Array(Supplement)),
   changelog: Schema.mutable(Schema.Array(SupplementChangelog)),
-});
+}).annotate({ identifier: "SupplementsResponse" });
 export interface SupplementsResponse extends Schema.Schema.Type<
   typeof SupplementsResponse
 > {
@@ -61,14 +61,14 @@ export interface SupplementsResponse extends Schema.Schema.Type<
 export const HealthDataResponse = HealthData;
 export const HealthMetricConfigs = Schema.mutable(
   Schema.Array(HealthMetricConfig),
-);
+).annotate({ identifier: "HealthMetricConfigs" });
 
 export const HealthImportConfig = Schema.Struct({
   metric: Schema.String,
   label: Schema.String,
   unit: Schema.String,
   aggregation: HealthAggregationSchema,
-});
+}).annotate({ identifier: "HealthImportConfig" });
 export interface HealthImportConfig extends Schema.Schema.Type<
   typeof HealthImportConfig
 > {
@@ -78,20 +78,9 @@ export interface HealthImportConfig extends Schema.Schema.Type<
 export const HealthImportRequest = Schema.Struct({
   metrics: Schema.mutable(Schema.Array(HealthMetric)),
   configs: Schema.mutable(Schema.Array(HealthImportConfig)),
-});
+}).annotate({ identifier: "HealthImportRequest" });
 export interface HealthImportRequest extends Schema.Schema.Type<
   typeof HealthImportRequest
-> {
-  readonly _schemaModel?: never;
-}
-
-export const HealthImportResponse = Schema.Struct({
-  error: Schema.optional(Schema.String),
-  metrics: Schema.optional(Schema.Number),
-  days: Schema.optional(Schema.Number),
-});
-export interface HealthImportResponse extends Schema.Schema.Type<
-  typeof HealthImportResponse
 > {
   readonly _schemaModel?: never;
 }
@@ -100,7 +89,7 @@ export const HealthImportSummary = Schema.Struct({
   saved: Schema.Number,
   metrics: Schema.Number,
   days: Schema.Number,
-});
+}).annotate({ identifier: "HealthImportSummary" });
 export interface HealthImportSummary extends Schema.Schema.Type<
   typeof HealthImportSummary
 > {
@@ -110,7 +99,7 @@ export interface HealthImportSummary extends Schema.Schema.Type<
 export const ExtractResponse = Schema.Struct({
   date: Schema.String,
   variables: Schema.mutable(Schema.Array(ExtractedVariable)),
-});
+}).annotate({ identifier: "ExtractResponse" });
 export interface ExtractResponse extends Schema.Schema.Type<
   typeof ExtractResponse
 > {
@@ -120,21 +109,21 @@ export interface ExtractResponse extends Schema.Schema.Type<
 export const MapRequest = Schema.Struct({
   variables: Schema.mutable(Schema.Array(ExtractedVariable)),
   vocabulary: Schema.mutable(Schema.Array(VocabularyEntry)),
-});
+}).annotate({ identifier: "MapRequest" });
 export interface MapRequest extends Schema.Schema.Type<typeof MapRequest> {
   readonly _schemaModel?: never;
 }
 
 export const MapResponse = Schema.Struct({
   mappings: Schema.mutable(Schema.Array(MappedVariable)),
-});
+}).annotate({ identifier: "MapResponse" });
 export interface MapResponse extends Schema.Schema.Type<typeof MapResponse> {
   readonly _schemaModel?: never;
 }
 
 export const ResearchRequest = Schema.Struct({
   newEntries: Schema.mutable(Schema.Array(ResearchEntry)),
-});
+}).annotate({ identifier: "ResearchRequest" });
 export interface ResearchRequest extends Schema.Schema.Type<
   typeof ResearchRequest
 > {
@@ -143,7 +132,7 @@ export interface ResearchRequest extends Schema.Schema.Type<
 
 export const ResearchResponse = Schema.Struct({
   entries: Schema.mutable(Schema.Array(ResearchedEntry)),
-});
+}).annotate({ identifier: "ResearchResponse" });
 export interface ResearchResponse extends Schema.Schema.Type<
   typeof ResearchResponse
 > {
@@ -155,7 +144,7 @@ export const SaveReadingRequest = Schema.Struct({
   source: Schema.String,
   measurements: Schema.mutable(Schema.Array(Measurement)),
   newVocabulary: Schema.mutable(Schema.Array(VocabularyEntry)),
-});
+}).annotate({ identifier: "SaveReadingRequest" });
 export interface SaveReadingRequest extends Schema.Schema.Type<
   typeof SaveReadingRequest
 > {
@@ -164,19 +153,23 @@ export interface SaveReadingRequest extends Schema.Schema.Type<
 
 export const SaveReadingResponse = Schema.Struct({
   readingId: Schema.String,
-});
+}).annotate({ identifier: "SaveReadingResponse" });
 export interface SaveReadingResponse extends Schema.Schema.Type<
   typeof SaveReadingResponse
 > {
   readonly _schemaModel?: never;
 }
 
-export const IdRequest = Schema.Struct({ id: Schema.String });
+export const IdRequest = Schema.Struct({ id: Schema.String }).annotate({
+  identifier: "IdRequest",
+});
 export interface IdRequest extends Schema.Schema.Type<typeof IdRequest> {
   readonly _schemaModel?: never;
 }
 
-export const KeyRequest = Schema.Struct({ key: Schema.String });
+export const KeyRequest = Schema.Struct({ key: Schema.String }).annotate({
+  identifier: "KeyRequest",
+});
 export interface KeyRequest extends Schema.Schema.Type<typeof KeyRequest> {
   readonly _schemaModel?: never;
 }
@@ -184,7 +177,7 @@ export interface KeyRequest extends Schema.Schema.Type<typeof KeyRequest> {
 export const ChangelogUpdateRequest = Schema.Struct({
   id: Schema.NonEmptyString,
   description: Schema.NonEmptyString,
-});
+}).annotate({ identifier: "ChangelogUpdateRequest" });
 export interface ChangelogUpdateRequest extends Schema.Schema.Type<
   typeof ChangelogUpdateRequest
 > {
@@ -194,7 +187,7 @@ export interface ChangelogUpdateRequest extends Schema.Schema.Type<
 export const HealthVisibilityRequest = Schema.Struct({
   metric: Schema.String,
   visible: Schema.Boolean,
-});
+}).annotate({ identifier: "HealthVisibilityRequest" });
 export interface HealthVisibilityRequest extends Schema.Schema.Type<
   typeof HealthVisibilityRequest
 > {
@@ -203,7 +196,7 @@ export interface HealthVisibilityRequest extends Schema.Schema.Type<
 
 export const VocabularyEntryRequest = Schema.Struct({
   entry: VocabularyEntry,
-});
+}).annotate({ identifier: "VocabularyEntryRequest" });
 export interface VocabularyEntryRequest extends Schema.Schema.Type<
   typeof VocabularyEntryRequest
 > {
@@ -216,7 +209,7 @@ export const SupplementCreateRequest = Schema.Struct({
   frequency: Schema.String,
   startedAt: Schema.String,
   changelogDate: Schema.String,
-});
+}).annotate({ identifier: "SupplementCreateRequest" });
 export interface SupplementCreateRequest extends Schema.Schema.Type<
   typeof SupplementCreateRequest
 > {
@@ -230,7 +223,7 @@ export const SupplementUpdateRequest = Schema.Struct({
   frequency: Schema.String,
   startedAt: Schema.String,
   changelogDate: Schema.String,
-});
+}).annotate({ identifier: "SupplementUpdateRequest" });
 export interface SupplementUpdateRequest extends Schema.Schema.Type<
   typeof SupplementUpdateRequest
 > {
@@ -240,22 +233,54 @@ export interface SupplementUpdateRequest extends Schema.Schema.Type<
 export const SupplementDeleteRequest = Schema.Struct({
   id: Schema.String,
   changelogDate: Schema.String,
-});
+}).annotate({ identifier: "SupplementDeleteRequest" });
 export interface SupplementDeleteRequest extends Schema.Schema.Type<
   typeof SupplementDeleteRequest
 > {
   readonly _schemaModel?: never;
 }
 
-export const LoginRequest = Schema.Struct({ password: Schema.String });
+export const LoginRequest = Schema.Struct({ password: Schema.String }).annotate(
+  {
+    identifier: "LoginRequest",
+  },
+);
 export interface LoginRequest extends Schema.Schema.Type<typeof LoginRequest> {
+  readonly _schemaModel?: never;
+}
+
+export const OkResponse = Schema.Struct({ ok: Schema.Boolean }).annotate({
+  identifier: "OkResponse",
+});
+export interface OkResponse extends Schema.Schema.Type<typeof OkResponse> {
+  readonly _schemaModel?: never;
+}
+
+export const ReadingCursorQuery = Schema.Struct({
+  date: Schema.optionalKey(Schema.String),
+  id: Schema.optionalKey(Schema.String),
+}).annotate({ identifier: "ReadingCursorQuery" });
+export interface ReadingCursorQuery extends Schema.Schema.Type<
+  typeof ReadingCursorQuery
+> {
+  readonly _schemaModel?: never;
+}
+
+export const ChangelogCursorQuery = Schema.Struct({
+  date: Schema.optionalKey(Schema.String),
+  createdAt: Schema.optionalKey(Schema.String),
+  id: Schema.optionalKey(Schema.String),
+}).annotate({ identifier: "ChangelogCursorQuery" });
+export interface ChangelogCursorQuery extends Schema.Schema.Type<
+  typeof ChangelogCursorQuery
+> {
   readonly _schemaModel?: never;
 }
 
 export const AuthSession = Schema.Struct({
   token: Schema.String,
   secure: Schema.Boolean,
-});
+}).annotate({ identifier: "AuthSession" });
 export interface AuthSession extends Schema.Schema.Type<typeof AuthSession> {
   readonly _schemaModel?: never;
 }

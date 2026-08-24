@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MetricsSection } from "@/components/dashboard/metrics-section";
+import { jsonResponse, requestPath } from "@/test/http";
 import type { VocabularyEntry } from "@/types/bloodwork";
 
 const metric = {
@@ -33,15 +34,14 @@ afterEach(() => {
 
 describe("MetricsSection", () => {
   it("loads a selected trend once and reuses it", async () => {
-    const fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue({
+    const fetch = vi.fn().mockResolvedValue(
+      jsonResponse({
         points: [
           { date: "2025-06-15", value: 92 },
           { date: "2025-09-15", value: 95 },
         ],
       }),
-    });
+    );
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
 
@@ -58,7 +58,9 @@ describe("MetricsSection", () => {
       screen.getByRole("button", { name: /Glucose: 95 mg\/dL/ }),
     );
     expect(await screen.findByText("Latest")).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith("/api/public/trends/glucose");
+    expect(requestPath(fetch.mock.calls[0][0])).toBe(
+      "/api/public/trends/glucose",
+    );
 
     await user.click(
       screen.getByRole("button", { name: "Remove Glucose trend" }),

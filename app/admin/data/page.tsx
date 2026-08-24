@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ReadingsTable } from "@/components/admin/readings-table";
-import { decodeResponseJson } from "@/lib/effect/client";
-import {
-  ExportData as ExportDataSchema,
-  ReadingPageResponse,
-} from "@/lib/schemas/wire";
+import { runApi } from "@/lib/effect/client";
 import type { ExportData } from "@/lib/schemas/wire";
 import type { ReadingCursor, ReadingSummary } from "@/types/bloodwork";
 
@@ -23,23 +19,10 @@ type DataState =
       more: MoreState;
     };
 
-function readingsUrl(cursor: ReadingCursor | null) {
-  if (!cursor) return "/api/readings";
-  return `/api/readings?${new URLSearchParams({
-    date: cursor.date,
-    id: cursor.id,
-  })}`;
-}
-
-async function loadReadings(cursor: ReadingCursor | null) {
-  const response = await fetch(readingsUrl(cursor));
-  if (!response.ok) throw new Error("Readings request failed");
-  return decodeResponseJson(
-    response,
-    ReadingPageResponse,
-    "admin.readings.page",
+const loadReadings = (cursor: ReadingCursor | null) =>
+  runApi((client) =>
+    client.data.readings({ query: cursor === null ? {} : cursor }),
   );
-}
 
 function formatExportMarkdown(data: ExportData) {
   const lines: string[] = [];
@@ -139,13 +122,7 @@ export default function AdminDataPage() {
     const generation = exportGeneration.current;
     const request = (async () => {
       try {
-        const response = await fetch("/api/data");
-        if (!response.ok) throw new Error("Export request failed");
-        const result = await decodeResponseJson(
-          response,
-          ExportDataSchema,
-          "admin.data.export",
-        );
+        const result = await runApi((client) => client.data.exportData({}));
         if (exportGeneration.current === generation) {
           exportData.current = result;
         }
@@ -242,11 +219,9 @@ export default function AdminDataPage() {
         <ReadingsTable
           readings={data.readings}
           onDelete={async (id) => {
-            await fetch("/api/readings", {
-              method: "DELETE",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id }),
-            });
+            await runApi((client) =>
+              client.data.deleteReading({ payload: { id } }),
+            );
             exportGeneration.current += 1;
             exportData.current = null;
             exportRequest.current = null;

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { runApi } from "@/lib/effect/client";
+
 const navItems = [
   { href: "/admin/upload", label: "Upload" },
   { href: "/admin/data", label: "Data" },
@@ -23,7 +25,7 @@ export default function AdminLayout({
   if (pathname === "/admin") return <>{children}</>;
 
   async function handleLogout() {
-    await fetch("/api/auth", { method: "DELETE" });
+    await runApi((client) => client.auth.logout({}));
     router.push("/admin");
   }
 

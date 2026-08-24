@@ -1,8 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { decodeResponseJson } from "@/lib/effect/client";
-import { HealthImportResponse } from "@/lib/schemas/wire";
+import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
+
+import { apiErrorMessage } from "@/lib/effect/api-errors";
+import { runApi } from "@/lib/effect/client";
+import { HealthImportRequest } from "@/lib/schemas/wire";
 
 type ImportState =
   | { kind: "idle" }
@@ -62,23 +66,19 @@ export function HealthImport({ onImported }: { onImported: () => void }) {
 
       try {
         const body = await file.text();
-        const res = await fetch("/api/health-import", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body,
-        });
-        const data = await decodeResponseJson(
-          res,
-          HealthImportResponse,
-          "admin.health-import",
+        const payload = await Effect.runPromise(
+          Effect.try({
+            try: () => JSON.parse(body),
+            catch: () => new Error("Invalid health import JSON"),
+          }).pipe(
+            Effect.flatMap((value) =>
+              Schema.decodeUnknownEffect(HealthImportRequest)(value),
+            ),
+          ),
         );
-        if (!res.ok) {
-          transitionTo({
-            kind: "error",
-            message: `Error: ${data.error ?? "Import failed"}`,
-          });
-          return;
-        }
+        const data = await runApi((client) =>
+          client.health.import({ payload }),
+        );
 
         transitionTo({
           kind: "success",
@@ -90,9 +90,15 @@ export function HealthImport({ onImported }: { onImported: () => void }) {
           3000,
         );
       } catch (error) {
+        const transportMessage = apiErrorMessage(error);
         transitionTo({
           kind: "error",
-          message: error instanceof Error ? error.message : "Import failed",
+          message:
+            transportMessage === undefined
+              ? error instanceof Error
+                ? error.message
+                : "Import failed"
+              : `Error: ${transportMessage}`,
         });
       }
     },

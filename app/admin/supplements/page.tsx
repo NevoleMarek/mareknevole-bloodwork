@@ -3,11 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SupplementEditor } from "@/components/admin/supplement-editor";
-import { decodeResponseJson } from "@/lib/effect/client";
-import {
-  SupplementsResponse as SupplementsResponseSchema,
-  type SupplementsResponse,
-} from "@/lib/schemas/wire";
+import { runApi } from "@/lib/effect/client";
+import type { SupplementsResponse } from "@/lib/schemas/wire";
 import type { SupplementChangelog } from "@/types/bloodwork";
 
 type EditingState =
@@ -15,12 +12,7 @@ type EditingState =
   | { kind: "editing"; id: string; description: string };
 
 async function loadData(): Promise<SupplementsResponse> {
-  const res = await fetch("/api/supplements");
-  return decodeResponseJson(
-    res,
-    SupplementsResponseSchema,
-    "admin.supplements",
-  );
+  return runApi((client) => client.supplements.list({}));
 }
 
 export default function AdminSupplementsPage() {
@@ -39,21 +31,17 @@ export default function AdminSupplementsPage() {
   }, []);
 
   async function handleSaveEdit(id: string, description: string) {
-    await fetch("/api/changelog", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, description }),
-    });
+    await runApi((client) =>
+      client.supplements.updateChangelog({ payload: { id, description } }),
+    );
     setEditing({ kind: "none" });
     await refresh();
   }
 
   async function handleDelete(id: string) {
-    await fetch("/api/changelog", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
+    await runApi((client) =>
+      client.supplements.deleteChangelog({ payload: { id } }),
+    );
     await refresh();
   }
 

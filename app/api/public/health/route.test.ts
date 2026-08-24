@@ -3,7 +3,6 @@ import * as Layer from "effect/Layer";
 import { describe, expect, it } from "vitest";
 
 import { PersistenceError } from "@/lib/effect/errors";
-import { runRoute } from "@/lib/effect/http";
 import { Dashboard } from "@/lib/effect/services";
 import { healthEffect } from "@/lib/effect/workflows";
 import type { HealthData } from "@/types/health";
@@ -24,62 +23,32 @@ const dashboard = (getHealth: Dashboard["Service"]["getHealth"]) =>
 
 const health: HealthData = { metrics: [], configs: [] };
 
-const runHealth = <A, E, R>(
-  effect: Effect.Effect<A, E, R>,
-  service: Layer.Layer<R, never, never>,
-) => runRoute(effect.pipe(Effect.provide(service)));
+const run = (service: Dashboard["Service"]) =>
+  Effect.runPromise(
+    healthEffect("1Y").pipe(Effect.provide(Layer.succeed(Dashboard, service))),
+  );
 
-describe("public health Effect route workflow", () => {
-  it("rejects an invalid period as a typed 400", async () => {
-    const response = await runHealth(
-      healthEffect(
-        new Request("https://bloodwork.test/api/public/health?period=forever"),
-      ),
-      Layer.succeed(
-        Dashboard,
-        dashboard(() => Effect.die("Dashboard must not be called")),
-      ),
-    );
-
-    expect(response.status).toBe(400);
-  });
-
-  it("returns the selected period from Dashboard", async () => {
+describe("public health Effect workflow", () => {
+  it("passes the selected period to Dashboard", async () => {
     let selectedPeriod: string | undefined;
-    const service = dashboard((period) => {
-      selectedPeriod = period;
-      return Effect.succeed(health);
-    });
-    const response = await runHealth(
-      healthEffect(
-        new Request("https://bloodwork.test/api/public/health?period=1Y"),
-      ),
-      Layer.succeed(Dashboard, service),
+    const result = await run(
+      dashboard((period) => {
+        selectedPeriod = period;
+        return Effect.succeed(health);
+      }),
     );
 
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual(health);
+    expect(result).toEqual(health);
     expect(selectedPeriod).toBe("1Y");
   });
 
-  it("maps persistence failures from Dashboard to 503", async () => {
-    const response = await runHealth(
-      healthEffect(
-        new Request("https://bloodwork.test/api/public/health?period=1Y"),
-      ),
-      Layer.succeed(
-        Dashboard,
-        dashboard(() =>
-          Effect.fail(
-            new PersistenceError({
-              operation: "Dashboard.getHealth",
-              cause: new Error("d1 unavailable"),
-            }),
-          ),
-        ),
-      ),
+  it("preserves Dashboard persistence failures", async () => {
+    const failure = new PersistenceError({
+      operation: "Dashboard.getHealth",
+      cause: new Error("d1 unavailable"),
+    });
+    await expect(run(dashboard(() => Effect.fail(failure)))).rejects.toBe(
+      failure,
     );
-
-    expect(response.status).toBe(503);
   });
 });

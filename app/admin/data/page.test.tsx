@@ -3,13 +3,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import AdminDataPage from "@/app/admin/data/page";
-import type { ExportData } from "@/lib/schemas/wire";
-import type { ReadingPage } from "@/types/bloodwork";
-
-type TestResponse<Data> = {
-  ok: boolean;
-  json: () => Promise<Data>;
-};
+import { jsonResponse, requestPath } from "@/test/http";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -19,10 +13,9 @@ afterEach(() => {
 
 describe("AdminDataPage", () => {
   it("loads the first page through Strict Mode effect replay", async () => {
-    const fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue({ entries: [], nextCursor: null }),
-    });
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ entries: [], nextCursor: null }));
     vi.stubGlobal("fetch", fetch);
 
     render(
@@ -33,7 +26,7 @@ describe("AdminDataPage", () => {
 
     expect(await screen.findByText("No readings yet.")).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch).toHaveBeenCalledWith("/api/readings");
+    expect(requestPath(fetch.mock.calls[0][0])).toBe("/api/readings");
   });
 
   it("loads summaries first and full data only for export", async () => {
@@ -43,11 +36,11 @@ describe("AdminDataPage", () => {
       configurable: true,
       value: { writeText },
     });
-    const fetch = vi.fn((url: string) => {
+    const fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = requestPath(input);
       if (url === "/api/readings") {
-        return Promise.resolve({
-          ok: true,
-          json: vi.fn().mockResolvedValue({
+        return Promise.resolve(
+          jsonResponse({
             entries: [
               {
                 id: "r1",
@@ -58,11 +51,10 @@ describe("AdminDataPage", () => {
             ],
             nextCursor: null,
           }),
-        });
+        );
       }
-      return Promise.resolve({
-        ok: true,
-        json: vi.fn().mockResolvedValue({
+      return Promise.resolve(
+        jsonResponse({
           vocabulary: {
             entries: [
               {
@@ -91,7 +83,7 @@ describe("AdminDataPage", () => {
             },
           ],
         }),
-      });
+      );
     });
     vi.stubGlobal("fetch", fetch);
 
@@ -100,8 +92,14 @@ describe("AdminDataPage", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(fetch).toHaveBeenCalledWith("/api/readings");
-    expect(fetch).not.toHaveBeenCalledWith("/api/data");
+    expect(
+      fetch.mock.calls.some(
+        ([input]) => requestPath(input) === "/api/readings",
+      ),
+    ).toBe(true);
+    expect(
+      fetch.mock.calls.some(([input]) => requestPath(input) === "/api/data"),
+    ).toBe(false);
     const button = screen.getByRole("button", { name: "Copy as Markdown" });
 
     await act(async () => {
@@ -110,7 +108,9 @@ describe("AdminDataPage", () => {
       await Promise.resolve();
     });
 
-    expect(fetch).toHaveBeenCalledWith("/api/data");
+    expect(
+      fetch.mock.calls.some(([input]) => requestPath(input) === "/api/data"),
+    ).toBe(true);
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining("| Glucose | 4.8 | mmol/L | normal |"),
     );
@@ -133,8 +133,8 @@ describe("AdminDataPage", () => {
   });
 
   it("invokes the promised clipboard write before export data arrives", async () => {
-    let resolveExport!: (value: TestResponse<ExportData>) => void;
-    const pendingExport = new Promise<TestResponse<ExportData>>((resolve) => {
+    let resolveExport!: (value: Response) => void;
+    const pendingExport = new Promise<Response>((resolve) => {
       resolveExport = resolve;
     });
     class TestClipboardItem {
@@ -153,12 +153,10 @@ describe("AdminDataPage", () => {
       configurable: true,
       value: { write, writeText: vi.fn() },
     });
-    const fetch = vi.fn((url: string) => {
+    const fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = requestPath(input);
       if (url === "/api/readings") {
-        return Promise.resolve({
-          ok: true,
-          json: vi.fn().mockResolvedValue({ entries: [], nextCursor: null }),
-        });
+        return Promise.resolve(jsonResponse({ entries: [], nextCursor: null }));
       }
       return pendingExport;
     });
@@ -170,14 +168,15 @@ describe("AdminDataPage", () => {
     });
     fireEvent.click(button);
 
-    expect(fetch).toHaveBeenCalledWith("/api/data");
+    expect(
+      fetch.mock.calls.some(([input]) => requestPath(input) === "/api/data"),
+    ).toBe(true);
     expect(write).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      resolveExport({
-        ok: true,
-        json: async () => ({ vocabulary: { entries: [] }, readings: [] }),
-      });
+      resolveExport(
+        jsonResponse({ vocabulary: { entries: [] }, readings: [] }),
+      );
       await pendingExport;
     });
     expect(screen.getByRole("status")).toHaveTextContent(
@@ -186,15 +185,18 @@ describe("AdminDataPage", () => {
   });
 
   it("discards a load-more result after deletion refreshes the first page", async () => {
-    let resolveMore!: (value: TestResponse<ReadingPage>) => void;
-    const pendingMore = new Promise<TestResponse<ReadingPage>>((resolve) => {
+    let resolveMore!: (value: Response) => void;
+    const pendingMore = new Promise<Response>((resolve) => {
       resolveMore = resolve;
     });
     let firstPageRequests = 0;
-    const fetch = vi.fn((url: string, init?: RequestInit) => {
-      if (url.startsWith("/api/readings?") && !init) return pendingMore;
+    const fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = requestPath(input);
+      if (url.startsWith("/api/readings?") && init?.method === "GET") {
+        return pendingMore;
+      }
       if (url === "/api/readings" && init?.method === "DELETE") {
-        return Promise.resolve({ ok: true });
+        return Promise.resolve(jsonResponse({ ok: true }));
       }
       if (url === "/api/readings") {
         firstPageRequests += 1;
@@ -212,16 +214,15 @@ describe("AdminDataPage", () => {
                 source: "new.pdf",
                 measurementCount: 2,
               };
-        return Promise.resolve({
-          ok: true,
-          json: vi.fn().mockResolvedValue({
+        return Promise.resolve(
+          jsonResponse({
             entries: [entry],
             nextCursor:
               firstPageRequests === 1
                 ? { date: entry.date, id: entry.id }
                 : null,
           }),
-        });
+        );
       }
       throw new Error(`Unexpected request: ${url}`);
     });
@@ -236,9 +237,8 @@ describe("AdminDataPage", () => {
     expect(await screen.findByText("2026-08-10")).toBeInTheDocument();
 
     await act(async () => {
-      resolveMore({
-        ok: true,
-        json: async () => ({
+      resolveMore(
+        jsonResponse({
           entries: [
             {
               id: "stale",
@@ -249,7 +249,7 @@ describe("AdminDataPage", () => {
           ],
           nextCursor: null,
         }),
-      });
+      );
       await pendingMore;
     });
 
@@ -258,8 +258,8 @@ describe("AdminDataPage", () => {
   });
 
   it("does not cache an export that resolves after a deletion", async () => {
-    let resolveExport!: (value: TestResponse<ExportData>) => void;
-    const pendingExport = new Promise<TestResponse<ExportData>>((resolve) => {
+    let resolveExport!: (value: Response) => void;
+    const pendingExport = new Promise<Response>((resolve) => {
       resolveExport = resolve;
     });
     const writeText = vi.fn().mockResolvedValue(undefined);
@@ -269,23 +269,22 @@ describe("AdminDataPage", () => {
     });
     let readingRequests = 0;
     let exportRequests = 0;
-    const fetch = vi.fn((url: string, init?: RequestInit) => {
+    const fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = requestPath(input);
       if (url === "/api/data") {
         exportRequests += 1;
         if (exportRequests === 1) return pendingExport;
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ vocabulary: { entries: [] }, readings: [] }),
-        });
+        return Promise.resolve(
+          jsonResponse({ vocabulary: { entries: [] }, readings: [] }),
+        );
       }
       if (url === "/api/readings" && init?.method === "DELETE") {
-        return Promise.resolve({ ok: true });
+        return Promise.resolve(jsonResponse({ ok: true }));
       }
       if (url === "/api/readings") {
         readingRequests += 1;
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
+        return Promise.resolve(
+          jsonResponse({
             entries:
               readingRequests === 1
                 ? [
@@ -299,7 +298,7 @@ describe("AdminDataPage", () => {
                 : [],
             nextCursor: null,
           }),
-        });
+        );
       }
       throw new Error(`Unexpected request: ${url}`);
     });
@@ -315,15 +314,14 @@ describe("AdminDataPage", () => {
     expect(await screen.findByText("No readings yet.")).toBeInTheDocument();
 
     await act(async () => {
-      resolveExport({
-        ok: true,
-        json: async () => ({
+      resolveExport(
+        jsonResponse({
           vocabulary: { entries: [] },
           readings: [
             { date: "2026-01-01", source: "old.pdf", measurements: [] },
           ],
         }),
-      });
+      );
       await pendingExport;
     });
 
