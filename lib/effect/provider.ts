@@ -61,7 +61,7 @@ export interface GeminiModelHandles {
 }
 
 /** Acquire the finite model set once while constructing the owning service. */
-export const acquireGeminiModels = (
+const acquireGeminiModels = (
   apiKey: Redacted.Redacted<string>,
   createClient: (apiKey: string) => GeminiClient = defaultCreateClient,
 ): GeminiModelHandles => {
@@ -100,7 +100,7 @@ const parseJson = (text: string): Schema.Json => {
   return decoded.success;
 };
 
-export const makeGenerate = (
+const makeGenerate = (
   config: Pick<ApplicationConfigContract, "requireGeminiApiKey">,
   models: GeminiModelHandles | undefined,
 ) =>

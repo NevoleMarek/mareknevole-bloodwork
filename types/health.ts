@@ -1,5 +1,4 @@
 export type {
-  HealthAggregation,
   HealthData,
   HealthMetric,
   HealthMetricConfig,

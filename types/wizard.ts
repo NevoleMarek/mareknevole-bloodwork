@@ -2,16 +2,11 @@ export type {
   ExtractedVariable,
   MappedVariable,
   ResearchedEntry,
-  ResearchEntry,
 } from "@/lib/schemas/domain";
 export type {
-  ExtractResponse,
   MapRequest,
-  MapResponse,
   ResearchRequest,
-  ResearchResponse,
   SaveReadingRequest,
-  SaveReadingResponse,
 } from "@/lib/effect/api";
 
 import type {

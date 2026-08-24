@@ -83,14 +83,6 @@ export class ApiServiceUnavailable extends Schema.TaggedErrorClass<ApiServiceUna
   { httpApiStatus: 503 },
 ) {}
 
-export type ApiError =
-  | ApiBadRequest
-  | ApiUnauthorized
-  | ApiNotFound
-  | ApiConflict
-  | ApiBadGateway
-  | ApiServiceUnavailable;
-
 /** The browser sends this same-origin cookie with generated client requests. */
 export const sessionSecurity = HttpApiSecurity.apiKey({
   key: "bloodwork-session",

@@ -5,7 +5,7 @@ import { join, relative, resolve, sep } from "node:path";
 export const OPENNEXT_TAG_CACHE_SCHEMA =
   "CREATE TABLE IF NOT EXISTS revalidations (tag TEXT NOT NULL, revalidatedAt INTEGER NOT NULL, UNIQUE(tag) ON CONFLICT REPLACE);";
 
-export type OpenNextCacheEntry = {
+type OpenNextCacheEntry = {
   key: string;
   route: string;
   value: string;

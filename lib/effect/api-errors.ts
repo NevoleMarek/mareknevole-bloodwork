@@ -29,7 +29,6 @@ export {
   ApiConflict,
   ApiNotFound,
   ApiServiceUnavailable,
-  ApiUnauthorized,
   apiErrorMessage,
 };
 

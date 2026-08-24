@@ -223,7 +223,7 @@ function extractAttr(line: string, name: string): string | null {
   return match ? match[1] : null;
 }
 
-export function parseRecordLine(line: string): RawRecord | null {
+function parseRecordLine(line: string): RawRecord | null {
   if (!line.includes("<Record ")) return null;
   const type = extractAttr(line, "type");
   const sourceName = extractAttr(line, "sourceName") ?? "";

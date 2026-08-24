@@ -79,10 +79,3 @@ export const updateChangelogEffect = Effect.fn("Workflows.updateChangelog")(
     yield* supplements.updateChangelog(id, body.description);
   },
 );
-
-export const deleteChangelogEffect = Effect.fn("Workflows.deleteChangelog")(
-  function* (id: string) {
-    const supplements = yield* Supplements;
-    yield* supplements.deleteChangelog(id);
-  },
-);

@@ -13,7 +13,6 @@ export const HealthAggregationSchema = Schema.Literals([
   "sum",
   "duration",
 ]).annotate({ identifier: "HealthAggregation" });
-export type HealthAggregation = typeof HealthAggregationSchema.Type;
 
 export const ReferenceRange = Schema.Struct({
   min: Schema.Number,
