@@ -46,6 +46,7 @@ export default Alchemy.Stack(
       ADMIN_PASSWORD: Config.redacted("ADMIN_PASSWORD"),
       DB: database,
       GEMINI_API_KEY: Config.redacted("GEMINI_API_KEY"),
+      NEXTJS_ENV: isProduction ? "production" : "development",
       NEXT_INC_CACHE_KV: incrementalCache,
       NEXT_TAG_CACHE_D1: database,
     };

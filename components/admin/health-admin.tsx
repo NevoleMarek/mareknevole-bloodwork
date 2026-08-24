@@ -1,11 +1,10 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import * as Schema from "effect/Schema";
-
 import { HealthImport } from "@/components/admin/health-import";
 import { HealthVisibility } from "@/components/admin/health-visibility";
-import { HealthMetricConfigsSchema } from "@/lib/domain-schemas";
+import { decodeResponseJson } from "@/lib/effect/client";
+import { HealthMetricConfigs } from "@/lib/schemas/wire";
 import type { HealthMetricConfig } from "@/types/health";
 
 export function HealthAdmin({
@@ -17,8 +16,10 @@ export function HealthAdmin({
 
   const refresh = useCallback(async () => {
     const res = await fetch("/api/health-config");
-    const data = Schema.decodeUnknownSync(HealthMetricConfigsSchema)(
-      await res.json(),
+    const data = await decodeResponseJson(
+      res,
+      HealthMetricConfigs,
+      "admin.health-config",
     );
     setConfigs(data);
   }, []);

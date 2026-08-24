@@ -1,36 +1,39 @@
-import assert from "node:assert";
-import * as Schema from "effect/Schema";
+import * as Effect from "effect/Effect";
 
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { RequestDecodeError } from "@/lib/effect/errors";
+import { provideAppLayer, runRoute } from "@/lib/effect/http";
+import { ProviderWorkflows } from "@/lib/effect/services";
 
-import { callGemini, parseGeminiJson } from "@/lib/gemini";
-import { ExtractResponseSchema } from "@/lib/domain-schemas";
-import { extractVariablesPrompt } from "@/prompts/extract-variables";
+const readPdf = (request: Request) =>
+  Effect.tryPromise({
+    try: () => request.formData(),
+    catch: () =>
+      new RequestDecodeError({
+        operation: "extract.form",
+        message: "Invalid multipart body",
+      }),
+  }).pipe(
+    Effect.flatMap((formData) => {
+      const file = formData.get("pdf");
+      return file instanceof File
+        ? Effect.succeed(file)
+        : Effect.fail(
+            new RequestDecodeError({
+              operation: "extract.pdf",
+              message: "No PDF file provided",
+            }),
+          );
+    }),
+  );
 
 export async function POST(request: Request) {
-  const { env } = await getCloudflareContext();
-  const apiKey = env.GEMINI_API_KEY;
-  assert(apiKey, "GEMINI_API_KEY is required");
-
-  const formData = await request.formData();
-  const file = formData.get("pdf");
-  assert(file instanceof File, "No PDF file provided");
-
-  const bytes = await file.arrayBuffer();
-  const base64 = Buffer.from(bytes).toString("base64");
-
-  const text = await callGemini(
-    apiKey,
-    "gemini-3-flash-preview",
-    extractVariablesPrompt,
-    base64,
+  return runRoute(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const file = yield* readPdf(request);
+        const workflows = yield* ProviderWorkflows;
+        return yield* workflows.extract(file);
+      }),
+    ),
   );
-  const result = Schema.decodeUnknownSync(ExtractResponseSchema)(
-    parseGeminiJson(text),
-  );
-
-  assert(result.date, "No date extracted");
-  assert(result.variables.length > 0, "No variables extracted");
-
-  return Response.json(result);
 }

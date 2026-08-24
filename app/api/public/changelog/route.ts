@@ -1,11 +1,19 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import * as Effect from "effect/Effect";
 
-import { createChangelogHandler } from "@/app/api/public/changelog/handler";
-import { getSupplementChangelogPage } from "@/db/queries";
-import { getCachedFirstChangelogPage } from "@/lib/data-cache";
+import { provideAppLayer, runRoute } from "@/lib/effect/http";
+import { changelogCursor } from "@/lib/effect/query";
+import { Dashboard } from "@/lib/effect/services";
 
-export const GET = createChangelogHandler({
-  getDatabase: async () => (await getCloudflareContext()).env.DB,
-  getFirstPage: getCachedFirstChangelogPage,
-  getPage: getSupplementChangelogPage,
-});
+export async function GET(request: Request) {
+  return runRoute(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const cursor = yield* changelogCursor(request);
+        const dashboard = yield* Dashboard;
+        return cursor === null
+          ? yield* dashboard.getFirstChangelogPage()
+          : yield* dashboard.getChangelogPage(cursor);
+      }),
+    ),
+  );
+}

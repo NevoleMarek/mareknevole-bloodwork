@@ -1,30 +1,33 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-import * as Schema from "effect/Schema";
+import * as Effect from "effect/Effect";
 
-import { getHealthMetricConfigs } from "@/db/queries";
-import { invalidateHealth } from "@/lib/data-cache";
-import { HealthVisibilityRequestSchema } from "@/lib/domain-schemas";
+import { decodeJson, provideAppLayer, runRoute } from "@/lib/effect/http";
+import { Health } from "@/lib/effect/services";
+import { HealthVisibilityRequest } from "@/lib/schemas/wire";
 
 export async function GET() {
-  const { env } = await getCloudflareContext();
-  const configs = await getHealthMetricConfigs(env.DB);
-  return Response.json(configs);
+  return runRoute(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const health = yield* Health;
+        return yield* health.getConfigs();
+      }),
+    ),
+  );
 }
 
 export async function PATCH(request: Request) {
-  const { env } = await getCloudflareContext();
-  const db = env.DB;
-
-  const body = Schema.decodeUnknownSync(HealthVisibilityRequestSchema)(
-    await request.json(),
+  return runRoute(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const body = yield* decodeJson(
+          request,
+          HealthVisibilityRequest,
+          "health-config.visibility",
+        );
+        const health = yield* Health;
+        yield* health.updateVisibility(body);
+        return { ok: true };
+      }),
+    ),
   );
-
-  await db
-    .prepare("UPDATE health_metric_config SET visible = ? WHERE metric = ?")
-    .bind(body.visible ? 1 : 0, body.metric)
-    .run();
-
-  invalidateHealth();
-
-  return Response.json({ ok: true });
 }

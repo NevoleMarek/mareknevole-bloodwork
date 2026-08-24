@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as Schema from "effect/Schema";
 
-import { ChangelogPageSchema } from "@/lib/domain-schemas";
+import { decodeResponseJson } from "@/lib/effect/client";
+import { ChangelogPageResponse } from "@/lib/schemas/wire";
 import type {
   ChangelogCursor,
   ChangelogPage,
@@ -36,7 +36,11 @@ function pageUrl(cursor: ChangelogCursor | null) {
 async function fetchPage(cursor: ChangelogCursor | null) {
   const response = await fetch(pageUrl(cursor));
   if (!response.ok) throw new Error("Changelog request failed");
-  return Schema.decodeUnknownSync(ChangelogPageSchema)(await response.json());
+  return decodeResponseJson(
+    response,
+    ChangelogPageResponse,
+    "public.changelog",
+  );
 }
 
 export function ChangelogList() {

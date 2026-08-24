@@ -7,6 +7,7 @@ declare global {
     ADMIN_PASSWORD: string;
     HEALTH_API_TOKEN: string;
     GEMINI_API_KEY: string;
+    NEXTJS_ENV: string;
   }
 }
 

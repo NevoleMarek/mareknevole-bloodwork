@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import * as Schema from "effect/Schema";
-
 import type { VocabularyEntry } from "@/types/bloodwork";
 import type {
   ExtractedVariable,
@@ -12,12 +10,13 @@ import type {
   WizardState,
 } from "@/types/wizard";
 import { deriveStatus } from "@/lib/status";
+import { decodeResponseJson } from "@/lib/effect/client";
 import {
-  ExtractResponseSchema,
-  MapResponseSchema,
-  ResearchResponseSchema,
-  VocabularyResponseSchema,
-} from "@/lib/domain-schemas";
+  ExtractResponse,
+  MapResponse,
+  ResearchResponse,
+  VocabularyResponse,
+} from "@/lib/schemas/wire";
 
 import { StepUpload } from "@/components/admin/step-upload";
 import { StepReviewExtraction } from "@/components/admin/step-review-extraction";
@@ -67,8 +66,10 @@ export function UploadWizard() {
         try {
           const response = await fetch("/api/vocabulary");
           if (!response.ok) throw new Error("Vocabulary request failed");
-          const data = Schema.decodeUnknownSync(VocabularyResponseSchema)(
-            await response.json(),
+          const data = await decodeResponseJson(
+            response,
+            VocabularyResponse,
+            "admin.vocabulary",
           );
           setVocabulary(data.entries);
           return data.entries;
@@ -97,8 +98,10 @@ export function UploadWizard() {
           body: formData,
         });
         if (!res.ok) throw new Error("Extraction failed");
-        const data = Schema.decodeUnknownSync(ExtractResponseSchema)(
-          await res.json(),
+        const data = await decodeResponseJson(
+          res,
+          ExtractResponse,
+          "admin.extract",
         );
         setState({
           step: "review-extraction",
@@ -129,9 +132,7 @@ export function UploadWizard() {
           body: JSON.stringify({ variables, vocabulary: entries }),
         });
         if (!res.ok) throw new Error("Mapping failed");
-        const data = Schema.decodeUnknownSync(MapResponseSchema)(
-          await res.json(),
-        );
+        const data = await decodeResponseJson(res, MapResponse, "admin.map");
         setState({
           step: "review-mapping",
           pdfUrl,
@@ -244,8 +245,10 @@ export function UploadWizard() {
           body: JSON.stringify({ newEntries }),
         });
         if (!res.ok) throw new Error("Research failed");
-        const data = Schema.decodeUnknownSync(ResearchResponseSchema)(
-          await res.json(),
+        const data = await decodeResponseJson(
+          res,
+          ResearchResponse,
+          "admin.research",
         );
         setState({
           step: "review-research",

@@ -1,77 +1,26 @@
-import type { Status, VocabularyEntry } from "@/types/bloodwork";
+export type {
+  ExtractedVariable,
+  MappedVariable,
+  ResearchedEntry,
+  ResearchEntry,
+} from "@/lib/schemas/domain";
+export type {
+  ExtractResponse,
+  MapRequest,
+  MapResponse,
+  ResearchRequest,
+  ResearchResponse,
+  SaveReadingRequest,
+  SaveReadingResponse,
+} from "@/lib/schemas/wire";
 
-export type ExtractedVariable = {
-  label: string;
-  value: number;
-  unit: string;
-};
+import type {
+  ExtractedVariable,
+  MappedVariable,
+  ResearchedEntry,
+} from "@/lib/schemas/domain";
 
-export type MappedVariable = {
-  label: string;
-  originalValue: number;
-  originalUnit: string;
-  vocabularyKey: string;
-  convertedValue: number;
-  convertedUnit: string;
-  isNew: boolean;
-  referenceRange?: { min: number; max: number };
-};
-
-// API response types
-
-export type ExtractResponse = {
-  date: string;
-  variables: ExtractedVariable[];
-};
-
-export type MapRequest = {
-  variables: ExtractedVariable[];
-  vocabulary: VocabularyEntry[];
-};
-
-export type MapResponse = {
-  mappings: MappedVariable[];
-};
-
-export type ResearchEntry = {
-  vocabularyKey: string;
-  label: string;
-  unit: string;
-  referenceRange: { min: number; max: number };
-};
-
-export type ResearchedEntry = {
-  vocabularyKey: string;
-  description: string;
-  referenceRange: { min: number; max: number };
-};
-
-export type ResearchRequest = {
-  newEntries: ResearchEntry[];
-};
-
-export type ResearchResponse = {
-  entries: ResearchedEntry[];
-};
-
-export type SaveReadingRequest = {
-  date: string;
-  source: string;
-  measurements: {
-    vocabularyKey: string;
-    value: number;
-    unit: string;
-    status: Status;
-  }[];
-  newVocabulary: VocabularyEntry[];
-};
-
-export type SaveReadingResponse = {
-  readingId: string;
-};
-
-// Wizard state machine
-
+// UI-only state remains intentionally separate from persisted and wire models.
 export type WizardState =
   | { step: "upload" }
   | { step: "extracting"; pdfUrl: string }

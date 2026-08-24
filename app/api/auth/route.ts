@@ -1,46 +1,34 @@
 import { cookies } from "next/headers";
-import * as Schema from "effect/Schema";
+import * as Effect from "effect/Effect";
+
+import { Auth } from "@/lib/effect/services";
+import { decodeJson, provideAppLayer, runRouteValue } from "@/lib/effect/http";
+import { LoginRequest } from "@/lib/schemas/wire";
 
 const SESSION_COOKIE = "bloodwork-session";
-const LoginRequest = Schema.Struct({ password: Schema.String });
+const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 
-async function timingSafeEqual(a: string, b: string): Promise<boolean> {
-  const encoder = new TextEncoder();
-  const hashA = new Uint8Array(
-    await crypto.subtle.digest("SHA-256", encoder.encode(a)),
+export async function POST(request: Request) {
+  const result = await runRouteValue(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const body = yield* decodeJson(request, LoginRequest, "auth.login");
+        const auth = yield* Auth;
+        return yield* auth.authenticate(body.password);
+      }),
+    ),
   );
-  const hashB = new Uint8Array(
-    await crypto.subtle.digest("SHA-256", encoder.encode(b)),
-  );
-  let mismatch = 0;
-  for (let i = 0; i < hashA.length; i++) mismatch |= hashA[i] ^ hashB[i];
-  return mismatch === 0;
-}
-const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+  if (result._tag === "Failure") return result.response;
 
-export async function POST(req: Request) {
-  let password: string;
-  try {
-    ({ password } = Schema.decodeUnknownSync(LoginRequest)(await req.json()));
-  } catch {
-    return Response.json({ error: "Invalid login request" }, { status: 400 });
-  }
-  const adminPassword = process.env.ADMIN_PASSWORD;
-
-  if (!adminPassword || !(await timingSafeEqual(password, adminPassword))) {
-    return Response.json({ error: "Invalid password" }, { status: 401 });
-  }
-
-  const token = crypto.randomUUID();
+  const body = result.value;
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, token, {
+  cookieStore.set(SESSION_COOKIE, body.token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: body.secure,
     sameSite: "strict",
     maxAge: SESSION_MAX_AGE,
     path: "/",
   });
-
   return Response.json({ ok: true });
 }
 

@@ -1,13 +1,20 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import * as Effect from "effect/Effect";
 
 import { HealthAdmin } from "@/components/admin/health-admin";
-import { getHealthMetricConfigs } from "@/db/queries";
+import { provideAppLayer, runAppEffect } from "@/lib/effect/http";
+import { Health } from "@/lib/effect/services";
 
 export const dynamic = "force-dynamic";
 
 export default async function HealthPage() {
-  const { env } = await getCloudflareContext();
-  const configs = await getHealthMetricConfigs(env.DB);
+  const configs = await runAppEffect(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const health = yield* Health;
+        return yield* health.getConfigs();
+      }),
+    ),
+  );
 
   return (
     <>

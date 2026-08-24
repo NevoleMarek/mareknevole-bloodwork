@@ -1,17 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as Schema from "effect/Schema";
 
 import { VocabularyEditor } from "@/components/admin/vocabulary-editor";
-import { VocabularyResponseSchema } from "@/lib/domain-schemas";
+import { decodeResponseJson } from "@/lib/effect/client";
+import { VocabularyResponse } from "@/lib/schemas/wire";
 import type { VocabularyEntry } from "@/types/bloodwork";
 
 async function loadEntries(): Promise<VocabularyEntry[]> {
   const res = await fetch("/api/vocabulary");
   if (!res.ok) throw new Error("Vocabulary request failed");
-  const json = Schema.decodeUnknownSync(VocabularyResponseSchema)(
-    await res.json(),
+  const json = await decodeResponseJson(
+    res,
+    VocabularyResponse,
+    "admin.vocabulary",
   );
   return json.entries;
 }

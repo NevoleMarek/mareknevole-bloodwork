@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import * as Schema from "effect/Schema";
-
 import { BloodPressureChart } from "@/components/dashboard/blood-pressure-chart";
 import { HealthChart } from "@/components/dashboard/health-chart";
-import { HealthDataSchema } from "@/lib/domain-schemas";
+import { decodeResponseJson } from "@/lib/effect/client";
+import { HealthDataResponse } from "@/lib/schemas/wire";
 import { getCutoffDate, isPeriod } from "@/lib/period";
 import type { Period } from "@/lib/period";
 import { PERIODS } from "@/lib/period";
@@ -65,8 +64,10 @@ export function HealthGridContent({
       requests.current.get(requested) ??
       fetch(`/api/public/health?period=${requested}`).then(async (response) => {
         if (!response.ok) throw new Error("Health request failed");
-        return Schema.decodeUnknownSync(HealthDataSchema)(
-          await response.json(),
+        return decodeResponseJson(
+          response,
+          HealthDataResponse,
+          "public.health",
         );
       });
     requests.current.set(requested, pending);

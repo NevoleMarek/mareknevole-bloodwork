@@ -1,16 +1,25 @@
 import { connection } from "next/server";
+import * as Effect from "effect/Effect";
 
 import { ChangelogList } from "@/components/dashboard/changelog-list";
 import { HealthGrid } from "@/components/dashboard/health-grid";
 import { MetricsSection } from "@/components/dashboard/metrics-section";
 import { SectionNav } from "@/components/dashboard/section-nav";
 import { SupplementTable } from "@/components/dashboard/supplement-table";
-import { getCachedDashboard } from "@/lib/data-cache";
+import { provideAppLayer, runAppEffect } from "@/lib/effect/http";
+import { Dashboard } from "@/lib/effect/services";
 
 export default async function Home() {
   await connection();
 
-  const { vocabulary, labs, supplements } = await getCachedDashboard();
+  const { vocabulary, labs, supplements } = await runAppEffect(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const dashboard = yield* Dashboard;
+        return yield* dashboard.getDashboard();
+      }),
+    ),
+  );
 
   const latest = labs.latestPanel;
   const latestDate = latest

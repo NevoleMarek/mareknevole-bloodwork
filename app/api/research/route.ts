@@ -1,35 +1,21 @@
-import assert from "node:assert";
-import * as Schema from "effect/Schema";
+import * as Effect from "effect/Effect";
 
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-
-import { callGemini, parseGeminiJson } from "@/lib/gemini";
-import {
-  ResearchRequestSchema,
-  ResearchResponseSchema,
-} from "@/lib/domain-schemas";
-import { researchVariablesPrompt } from "@/prompts/research-variables";
+import { decodeJson, provideAppLayer, runRoute } from "@/lib/effect/http";
+import { ProviderWorkflows } from "@/lib/effect/services";
+import { ResearchRequest } from "@/lib/schemas/wire";
 
 export async function POST(request: Request) {
-  const { env } = await getCloudflareContext();
-  const apiKey = env.GEMINI_API_KEY;
-  assert(apiKey, "GEMINI_API_KEY is required");
-
-  const body = Schema.decodeUnknownSync(ResearchRequestSchema)(
-    await request.json(),
+  return runRoute(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const body = yield* decodeJson(
+          request,
+          ResearchRequest,
+          "research.request",
+        );
+        const workflows = yield* ProviderWorkflows;
+        return yield* workflows.research(body);
+      }),
+    ),
   );
-  assert(body.newEntries.length > 0, "No entries to research");
-
-  const prompt = researchVariablesPrompt(
-    JSON.stringify(body.newEntries, null, 2),
-  );
-
-  const text = await callGemini(apiKey, "gemini-3.1-pro-preview", prompt);
-  const result = Schema.decodeUnknownSync(ResearchResponseSchema)(
-    parseGeminiJson(text),
-  );
-
-  assert(result.entries.length > 0, "No research results returned");
-
-  return Response.json(result);
 }

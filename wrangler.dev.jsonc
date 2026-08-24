@@ -2,6 +2,9 @@
   "name": "bloodwork-local",
   "compatibility_date": "2025-12-01",
   "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "NEXTJS_ENV": "development",
+  },
   "kv_namespaces": [
     {
       "binding": "NEXT_INC_CACHE_KV",

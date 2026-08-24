@@ -1,47 +1,35 @@
-import assert from "node:assert";
-import * as Schema from "effect/Schema";
+import * as Effect from "effect/Effect";
 
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { decodeJson, provideAppLayer, runRoute } from "@/lib/effect/http";
+import { Supplements } from "@/lib/effect/services";
+import { ChangelogUpdateRequest, IdRequest } from "@/lib/schemas/wire";
 
-import { invalidateDashboard } from "@/lib/data-cache";
-import {
-  ChangelogUpdateRequestSchema,
-  IdRequestSchema,
-} from "@/lib/domain-schemas";
 export async function PUT(request: Request) {
-  const { env } = await getCloudflareContext();
-  const db = env.DB;
-  const { id, description } = Schema.decodeUnknownSync(
-    ChangelogUpdateRequestSchema,
-  )(await request.json());
-  assert(id && description, "id and description required");
-
-  const result = await db
-    .prepare("UPDATE supplement_changelog SET description = ? WHERE id = ?")
-    .bind(description, id)
-    .run();
-
-  if (result.meta.changes === 0)
-    return Response.json({ error: "Not found" }, { status: 404 });
-
-  invalidateDashboard();
-
-  return Response.json({ ok: true });
+  return runRoute(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const body = yield* decodeJson(
+          request,
+          ChangelogUpdateRequest,
+          "changelog.update",
+        );
+        const supplements = yield* Supplements;
+        yield* supplements.updateChangelog(body.id, body.description);
+        return { ok: true };
+      }),
+    ),
+  );
 }
 
 export async function DELETE(request: Request) {
-  const { env } = await getCloudflareContext();
-  const db = env.DB;
-  const { id } = Schema.decodeUnknownSync(IdRequestSchema)(
-    await request.json(),
+  return runRoute(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const body = yield* decodeJson(request, IdRequest, "changelog.delete");
+        const supplements = yield* Supplements;
+        yield* supplements.deleteChangelog(body.id);
+        return { ok: true };
+      }),
+    ),
   );
-
-  await db
-    .prepare("DELETE FROM supplement_changelog WHERE id = ?")
-    .bind(id)
-    .run();
-
-  invalidateDashboard();
-
-  return Response.json({ ok: true });
 }

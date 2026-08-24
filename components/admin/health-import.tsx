@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as Schema from "effect/Schema";
-
-import { HealthImportResponseSchema } from "@/lib/domain-schemas";
+import { decodeResponseJson } from "@/lib/effect/client";
+import { HealthImportResponse } from "@/lib/schemas/wire";
 
 type ImportState =
   | { kind: "idle" }
@@ -68,8 +67,10 @@ export function HealthImport({ onImported }: { onImported: () => void }) {
           headers: { "Content-Type": "application/json" },
           body,
         });
-        const data = Schema.decodeUnknownSync(HealthImportResponseSchema)(
-          await res.json(),
+        const data = await decodeResponseJson(
+          res,
+          HealthImportResponse,
+          "admin.health-import",
         );
         if (!res.ok) {
           transitionTo({

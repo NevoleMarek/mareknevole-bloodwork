@@ -1,10 +1,15 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import * as Effect from "effect/Effect";
 
-import { createDataHandler } from "@/app/api/data/handler";
-import { getReadingsWithMeasurements, getVocabulary } from "@/db/queries";
+import { provideAppLayer, runRoute } from "@/lib/effect/http";
+import { Dashboard } from "@/lib/effect/services";
 
-export const GET = createDataHandler({
-  getDatabase: async () => (await getCloudflareContext()).env.DB,
-  getReadings: getReadingsWithMeasurements,
-  getVocabulary,
-});
+export async function GET() {
+  return runRoute(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const dashboard = yield* Dashboard;
+        return yield* dashboard.getData();
+      }),
+    ),
+  );
+}

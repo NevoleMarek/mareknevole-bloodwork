@@ -1,141 +1,71 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-import * as Schema from "effect/Schema";
+import * as Effect from "effect/Effect";
 
-import { getActiveSupplements, getSupplementChangelog } from "@/db/queries";
-import { invalidateDashboard } from "@/lib/data-cache";
+import { decodeJson, provideAppLayer, runRoute } from "@/lib/effect/http";
+import { Supplements } from "@/lib/effect/services";
 import {
-  SupplementCreateRequestSchema,
-  SupplementDeleteRequestSchema,
-  SupplementUpdateRequestSchema,
-} from "@/lib/domain-schemas";
+  SupplementCreateRequest,
+  SupplementDeleteRequest,
+  SupplementUpdateRequest,
+} from "@/lib/schemas/wire";
 
 export async function GET() {
-  const { env } = await getCloudflareContext();
-  const db = env.DB;
-
-  const supplements = await getActiveSupplements(db);
-  const changelog = await getSupplementChangelog(db);
-
-  return Response.json({ supplements, changelog });
-}
-
-export async function POST(req: Request) {
-  const { env } = await getCloudflareContext();
-  const db = env.DB;
-  const body = Schema.decodeUnknownSync(SupplementCreateRequestSchema)(
-    await req.json(),
+  return runRoute(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const supplements = yield* Supplements;
+        return yield* supplements.get();
+      }),
+    ),
   );
-
-  const now = new Date().toISOString();
-  const id = crypto.randomUUID();
-
-  await db
-    .prepare(
-      "INSERT INTO supplements (id, name, dose, frequency, started_at, stopped_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)",
-    )
-    .bind(id, body.name, body.dose, body.frequency, body.startedAt, now, now)
-    .run();
-
-  await db
-    .prepare(
-      "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
-    )
-    .bind(
-      crypto.randomUUID(),
-      body.changelogDate,
-      `Added ${body.name} ${body.dose}`,
-      now,
-    )
-    .run();
-
-  invalidateDashboard();
-
-  return Response.json({ ok: true });
 }
 
-export async function PUT(req: Request) {
-  const { env } = await getCloudflareContext();
-  const db = env.DB;
-  const body = Schema.decodeUnknownSync(SupplementUpdateRequestSchema)(
-    await req.json(),
+export async function POST(request: Request) {
+  return runRoute(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const body = yield* decodeJson(
+          request,
+          SupplementCreateRequest,
+          "supplements.create",
+        );
+        const supplements = yield* Supplements;
+        yield* supplements.create(body);
+        return { ok: true };
+      }),
+    ),
   );
-
-  const old = await db
-    .prepare("SELECT * FROM supplements WHERE id = ?")
-    .bind(body.id)
-    .first<{
-      name: string;
-      dose: string;
-      frequency: string;
-      started_at: string;
-    }>();
-
-  if (!old) return Response.json({ error: "Not found" }, { status: 404 });
-
-  const now = new Date().toISOString();
-  const changes: string[] = [];
-  if (old.dose !== body.dose)
-    changes.push(`Changed ${old.name} dose from ${old.dose} to ${body.dose}`);
-  if (old.frequency !== body.frequency)
-    changes.push(`Changed ${old.name} frequency to ${body.frequency}`);
-  if (old.name !== body.name)
-    changes.push(`Renamed ${old.name} to ${body.name}`);
-  if (old.started_at !== body.startedAt)
-    changes.push(`Changed ${old.name} start date to ${body.startedAt}`);
-
-  await db
-    .prepare(
-      "UPDATE supplements SET name = ?, dose = ?, frequency = ?, started_at = ?, updated_at = ? WHERE id = ?",
-    )
-    .bind(body.name, body.dose, body.frequency, body.startedAt, now, body.id)
-    .run();
-
-  for (const desc of changes) {
-    await db
-      .prepare(
-        "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
-      )
-      .bind(crypto.randomUUID(), body.changelogDate, desc, now)
-      .run();
-  }
-
-  invalidateDashboard();
-
-  return Response.json({ ok: true });
 }
 
-export async function DELETE(req: Request) {
-  const { env } = await getCloudflareContext();
-  const db = env.DB;
-  const { id, changelogDate } = Schema.decodeUnknownSync(
-    SupplementDeleteRequestSchema,
-  )(await req.json());
+export async function PUT(request: Request) {
+  return runRoute(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const body = yield* decodeJson(
+          request,
+          SupplementUpdateRequest,
+          "supplements.update",
+        );
+        const supplements = yield* Supplements;
+        yield* supplements.update(body);
+        return { ok: true };
+      }),
+    ),
+  );
+}
 
-  const supplement = await db
-    .prepare("SELECT name FROM supplements WHERE id = ?")
-    .bind(id)
-    .first<{ name: string }>();
-
-  if (!supplement)
-    return Response.json({ error: "Not found" }, { status: 404 });
-
-  const now = new Date().toISOString();
-
-  await db
-    .prepare(
-      "UPDATE supplements SET stopped_at = ?, updated_at = ? WHERE id = ?",
-    )
-    .bind(now, now, id)
-    .run();
-
-  await db
-    .prepare(
-      "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
-    )
-    .bind(crypto.randomUUID(), changelogDate, `Removed ${supplement.name}`, now)
-    .run();
-
-  invalidateDashboard();
-
-  return Response.json({ ok: true });
+export async function DELETE(request: Request) {
+  return runRoute(
+    provideAppLayer(
+      Effect.gen(function* () {
+        const body = yield* decodeJson(
+          request,
+          SupplementDeleteRequest,
+          "supplements.delete",
+        );
+        const supplements = yield* Supplements;
+        yield* supplements.remove(body);
+        return { ok: true };
+      }),
+    ),
+  );
 }
