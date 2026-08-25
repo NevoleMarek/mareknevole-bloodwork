@@ -10,10 +10,6 @@ export function isPeriod(value: string | null): value is Period {
   return value === "1M" || value === "6M" || value === "1Y" || value === "ALL";
 }
 
-export function isTrendPeriod(value: string | null): value is TrendPeriod {
-  return value === "1M" || value === "6M" || value === "1Y";
-}
-
 const months = {
   "1M": 1,
   "6M": 6,

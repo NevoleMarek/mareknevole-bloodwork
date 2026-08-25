@@ -1,8 +1,8 @@
 import * as Effect from "effect/Effect";
 
 import { NotFoundError, RequestDecodeError } from "@/lib/effect/errors";
-import { Bloodwork, Dashboard, Supplements } from "@/lib/effect/services";
-import { ChangelogUpdateRequest, SaveReadingRequest } from "@/lib/schemas/wire";
+import { Bloodwork, Dashboard } from "@/lib/effect/services";
+import { SaveReadingRequest } from "@/lib/schemas/wire";
 import type { Period, TrendPeriod } from "@/lib/period";
 import type { ChangelogCursor, ReadingCursor } from "@/types/bloodwork";
 
@@ -17,14 +17,6 @@ export const getReadingsEffect = Effect.fn("Workflows.getReadings")(function* (
   const dashboard = yield* Dashboard;
   return yield* dashboard.getReadingPage(cursor);
 });
-
-export const deleteReadingEffect = Effect.fn("Workflows.deleteReading")(
-  function* (id: string) {
-    const bloodwork = yield* Bloodwork;
-    yield* bloodwork.deleteReading(id);
-    return { ok: true };
-  },
-);
 
 export const saveReadingEffect = Effect.fn("Workflows.saveReading")(function* (
   body: SaveReadingRequest,
@@ -72,17 +64,3 @@ export const trendEffect = Effect.fn("Workflows.getTrend")(function* (
   const points = yield* dashboard.getTrend(key, period);
   return { points };
 });
-
-export const updateChangelogEffect = Effect.fn("Workflows.updateChangelog")(
-  function* (id: string, body: ChangelogUpdateRequest) {
-    const supplements = yield* Supplements;
-    yield* supplements.updateChangelog(id, body.description);
-  },
-);
-
-export const deleteChangelogEffect = Effect.fn("Workflows.deleteChangelog")(
-  function* (id: string) {
-    const supplements = yield* Supplements;
-    yield* supplements.deleteChangelog(id);
-  },
-);

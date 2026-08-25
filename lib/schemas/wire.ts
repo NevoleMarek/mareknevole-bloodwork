@@ -12,7 +12,6 @@ import {
   HealthMetric,
   MappedVariable,
   Measurement,
-  ReferenceRange,
   ResearchedEntry,
   ResearchEntry,
   ReadingPage,
@@ -251,13 +250,6 @@ export interface LoginRequest extends Schema.Schema.Type<typeof LoginRequest> {
   readonly _schemaModel?: never;
 }
 
-export const OkResponse = Schema.Struct({ ok: Schema.Boolean }).annotate({
-  identifier: "OkResponse",
-});
-export interface OkResponse extends Schema.Schema.Type<typeof OkResponse> {
-  readonly _schemaModel?: never;
-}
-
 export const ReadingCursorQuery = Schema.Struct({
   date: Schema.optionalKey(Schema.String),
   id: Schema.optionalKey(Schema.String),
@@ -286,5 +278,3 @@ export const AuthSession = Schema.Struct({
 export interface AuthSession extends Schema.Schema.Type<typeof AuthSession> {
   readonly _schemaModel?: never;
 }
-
-export { ReferenceRange };

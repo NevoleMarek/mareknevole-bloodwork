@@ -425,7 +425,7 @@ const importHandlers = HttpApiBuilder.group(
 );
 
 /** Dependency-free handler definitions; production provisioning is below. */
-export const handlerDefinitions = Layer.mergeAll(
+const handlerDefinitions = Layer.mergeAll(
   dashboardHandlers,
   changelogHandlers,
   sessionHandlers,
@@ -444,7 +444,7 @@ export type ApiServices =
   | ProviderWorkflows
   | Supplements;
 
-export const makeApiLayer = <E>(services: Layer.Layer<ApiServices, E>) =>
+const makeApiLayer = <E>(services: Layer.Layer<ApiServices, E>) =>
   HttpApiBuilder.layer(BloodworkApi, {
     openapiPath: "/api/openapi.json",
   }).pipe(

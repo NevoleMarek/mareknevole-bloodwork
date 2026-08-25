@@ -3,18 +3,13 @@ import * as Layer from "effect/Layer";
 import { describe, expect, it } from "vitest";
 
 import {
-  NotFoundError,
   PersistenceError,
   RequestDecodeError,
   ValidationError,
 } from "@/lib/effect/errors";
 import { readingCursor } from "@/lib/effect/query";
 import { Bloodwork, Dashboard } from "@/lib/effect/services";
-import {
-  deleteReadingEffect,
-  getReadingsEffect,
-  saveReadingEffect,
-} from "@/lib/effect/workflows";
+import { getReadingsEffect, saveReadingEffect } from "@/lib/effect/workflows";
 import type { ReadingCursor, ReadingPage } from "@/types/bloodwork";
 
 const unused = () => Effect.die("unused service operation");
@@ -31,14 +26,11 @@ const dashboard = (getReadingPage: Dashboard["Service"]["getReadingPage"]) =>
     getReadingPage,
   });
 
-const bloodwork = (
-  saveReading: Bloodwork["Service"]["saveReading"],
-  deleteReading: Bloodwork["Service"]["deleteReading"],
-) =>
+const bloodwork = (saveReading: Bloodwork["Service"]["saveReading"]) =>
   Bloodwork.of({
     getVocabulary: unused,
     saveReading,
-    deleteReading,
+    deleteReading: unused,
     createVocabulary: unused,
     updateVocabulary: unused,
     deleteVocabulary: unused,
@@ -134,7 +126,7 @@ describe("readings Effect workflows", () => {
         bloodwork((request) => {
           receivedDate = request.date;
           return Effect.succeed("reading-1");
-        }, unused),
+        }),
       ),
     );
 
@@ -157,23 +149,7 @@ describe("readings Effect workflows", () => {
         }),
         Layer.succeed(
           Bloodwork,
-          bloodwork(() => Effect.fail(failure), unused),
-        ),
-      ),
-    ).rejects.toBe(failure);
-  });
-
-  it("preserves a missing-reading failure", async () => {
-    const failure = new NotFoundError({
-      resource: "reading",
-      id: "missing",
-    });
-    await expect(
-      run(
-        deleteReadingEffect("missing"),
-        Layer.succeed(
-          Bloodwork,
-          bloodwork(unused, () => Effect.fail(failure)),
+          bloodwork(() => Effect.fail(failure)),
         ),
       ),
     ).rejects.toBe(failure);

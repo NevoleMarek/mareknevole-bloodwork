@@ -5,13 +5,11 @@ export type {
   ChangelogPage,
   DashboardSnapshot,
   LabOverview,
-  LatestPanel,
   Measurement,
   ReadingCursor,
   ReadingPage,
   ReadingWithMeasurements,
   ReadingSummary,
-  ReferenceRange,
   Status,
   Supplement,
   SupplementChangelog,
@@ -19,10 +17,7 @@ export type {
 } from "@/lib/schemas/domain";
 
 export type {
-  ExportData,
   HealthImportConfig,
-  HealthImportSummary,
-  SupplementsResponse,
   VocabularyResponse as Vocabulary,
 } from "@/lib/effect/api";
 
