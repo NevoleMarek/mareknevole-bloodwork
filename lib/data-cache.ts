@@ -10,6 +10,7 @@ import {
   getVocabulary,
 } from "@/db/queries";
 import { getCutoffDate } from "@/lib/period";
+import { toPublicDashboardSnapshot } from "@/lib/public-dashboard";
 import type { Period, TrendPeriod } from "@/lib/period";
 import type {
   BiomarkerTrendPoint,
@@ -30,7 +31,11 @@ export const getCachedDashboard = unstable_cache(
       getLabOverview(env.DB),
       getActiveSupplements(env.DB),
     ]);
-    return { vocabulary, labs, supplements };
+    return toPublicDashboardSnapshot({
+      vocabulary,
+      labs,
+      supplements,
+    });
   },
   [DASHBOARD_TAG],
   { tags: [DASHBOARD_TAG], revalidate: DAY },

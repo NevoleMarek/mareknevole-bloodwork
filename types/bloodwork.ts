@@ -13,6 +13,7 @@ export type {
   Status,
   Supplement,
   SupplementChangelog,
+  PublicVocabularyEntry,
   VocabularyEntry,
 } from "@/lib/schemas/domain";
 

@@ -201,6 +201,52 @@ describe("Bloodwork HttpApi", () => {
     });
   });
 
+  it("keeps hidden vocabulary available only to authenticated admin reads", async () => {
+    const hiddenEntry = {
+      key: "private_marker",
+      label: "Private marker",
+      unit: "secret-unit",
+      referenceRange: { min: 3, max: 4 },
+      description: "Private description",
+      featured: false,
+      visible: false,
+    };
+    const adminServices = Layer.merge(
+      services,
+      Layer.succeed(
+        Bloodwork,
+        Bloodwork.of({
+          getVocabulary: () => Effect.succeed([hiddenEntry]),
+          saveReading: unused,
+          deleteReading: unused,
+          createVocabulary: unused,
+          updateVocabulary: unused,
+          deleteVocabulary: unused,
+        }),
+      ),
+    );
+    const { dispose: disposeAdmin, handler: adminHandler } =
+      makeApiWebHandler(adminServices);
+    try {
+      const publicResponse = await adminHandler(
+        new Request("https://bloodwork.test/api/vocabulary"),
+      );
+      expect(publicResponse.status).toBe(401);
+
+      const authenticated = await adminHandler(
+        new Request("https://bloodwork.test/api/vocabulary", {
+          headers: { cookie: "bloodwork-session=test-session" },
+        }),
+      );
+      expect(authenticated.status).toBe(200);
+      await expect(authenticated.json()).resolves.toEqual({
+        entries: [hiddenEntry],
+      });
+    } finally {
+      await disposeAdmin();
+    }
+  });
+
   it("encodes JSON payloads through the generated client", async () => {
     await expect(
       runClient((client) =>

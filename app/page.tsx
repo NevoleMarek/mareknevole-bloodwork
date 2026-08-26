@@ -30,25 +30,23 @@ export default async function Home() {
       })
     : "";
 
-  const allMetrics = vocabulary
-    .filter((e) => e.visible)
-    .flatMap((entry) => {
-      const measurement = labs.latestMeasurements.find(
-        (candidate) => candidate.vocabularyKey === entry.key,
-      );
-      if (!measurement) return [];
-      return [
-        {
-          vocabularyKey: measurement.vocabularyKey,
-          label: entry.label,
-          value: measurement.value,
-          unit: measurement.unit,
-          min: entry.referenceRange.min,
-          max: entry.referenceRange.max,
-          status: measurement.status,
-        },
-      ];
-    });
+  const allMetrics = vocabulary.flatMap((entry) => {
+    const measurement = labs.latestMeasurements.find(
+      (candidate) => candidate.vocabularyKey === entry.key,
+    );
+    if (!measurement) return [];
+    return [
+      {
+        vocabularyKey: measurement.vocabularyKey,
+        label: entry.label,
+        value: measurement.value,
+        unit: measurement.unit,
+        min: entry.referenceRange.min,
+        max: entry.referenceRange.max,
+        status: measurement.status,
+      },
+    ];
+  });
 
   const featured = allMetrics.filter((m) => {
     const entry = vocabulary.find((e) => e.key === m.vocabularyKey);

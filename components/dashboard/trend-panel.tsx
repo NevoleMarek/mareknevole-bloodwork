@@ -10,7 +10,10 @@ import {
   YAxis,
 } from "recharts";
 
-import type { BiomarkerTrendPoint, VocabularyEntry } from "@/types/bloodwork";
+import type {
+  BiomarkerTrendPoint,
+  PublicVocabularyEntry,
+} from "@/types/bloodwork";
 
 export type TrendState =
   | { kind: "loading" }
@@ -34,7 +37,7 @@ function BiomarkerTrend({
   points,
   onRemove,
 }: {
-  entry: VocabularyEntry;
+  entry: PublicVocabularyEntry;
   points: BiomarkerTrendPoint[];
   onRemove: () => void;
 }) {
@@ -124,12 +127,12 @@ export function TrendPanel({
 }: {
   selectedKeys: string[];
   trends: Record<string, TrendState>;
-  vocabulary: VocabularyEntry[];
+  vocabulary: PublicVocabularyEntry[];
   onRemove: (key: string) => void;
   onRetry: (key: string) => void;
 }) {
   const vocabMap = useMemo(() => {
-    const map = new Map<string, VocabularyEntry>();
+    const map = new Map<string, PublicVocabularyEntry>();
     for (const v of vocabulary) map.set(v.key, v);
     return map;
   }, [vocabulary]);

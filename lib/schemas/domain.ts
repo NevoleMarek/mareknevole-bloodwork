@@ -39,6 +39,21 @@ export interface VocabularyEntry extends Schema.Schema.Type<
   readonly _schemaModel?: never;
 }
 
+/** Vocabulary fields needed by the public dashboard after visibility filtering. */
+export const PublicVocabularyEntry = Schema.Struct({
+  key: Schema.String,
+  label: Schema.String,
+  unit: Schema.String,
+  referenceRange: ReferenceRange,
+  description: Schema.NullOr(Schema.String),
+  featured: Schema.Boolean,
+}).annotate({ identifier: "PublicVocabularyEntry" });
+export interface PublicVocabularyEntry extends Schema.Schema.Type<
+  typeof PublicVocabularyEntry
+> {
+  readonly _schemaModel?: never;
+}
+
 export const Measurement = Schema.Struct({
   vocabularyKey: Schema.String,
   value: Schema.Number,
@@ -208,7 +223,7 @@ export interface HealthData extends Schema.Schema.Type<typeof HealthData> {
 }
 
 export const DashboardSnapshot = Schema.Struct({
-  vocabulary: Schema.mutable(Schema.Array(VocabularyEntry)),
+  vocabulary: Schema.mutable(Schema.Array(PublicVocabularyEntry)),
   labs: LabOverview,
   supplements: Schema.mutable(Schema.Array(Supplement)),
 }).annotate({ identifier: "DashboardSnapshot" });

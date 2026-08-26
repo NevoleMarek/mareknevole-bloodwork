@@ -8,7 +8,7 @@ import type { TrendState } from "@/components/dashboard/trend-panel";
 import { TrendPanel } from "@/components/dashboard/trend-panel";
 import { runApi } from "@/lib/effect/client";
 import { makeBiomarkerKey } from "@/lib/effect/api";
-import type { VocabularyEntry } from "@/types/bloodwork";
+import type { PublicVocabularyEntry } from "@/types/bloodwork";
 
 const MAX_SELECTED = 10;
 
@@ -19,7 +19,7 @@ export function MetricsSection({
 }: {
   featured: BiomarkerMetric[];
   nonFeatured: BiomarkerMetric[];
-  vocabulary: VocabularyEntry[];
+  vocabulary: PublicVocabularyEntry[];
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [trends, setTrends] = useState<Record<string, TrendState>>({});
