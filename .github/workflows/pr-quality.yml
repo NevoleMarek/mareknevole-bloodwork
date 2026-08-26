@@ -13,9 +13,9 @@ concurrency:
 
 jobs:
   quality:
-    name: Format, lint, and test
+    name: Format, lint, typecheck, test, and production verification
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
@@ -27,5 +27,11 @@ jobs:
         run: bun run format:check
       - name: Lint
         run: bun run lint
+      - name: Typecheck
+        run: bun run typecheck
       - name: Test
         run: bun run test
+      - name: Build OpenNext worker
+        run: bun run build:worker
+      - name: Verify deployment contract
+        run: bun run verify:deployment
