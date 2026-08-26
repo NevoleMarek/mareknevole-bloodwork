@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { readOpenNextCacheEntries } from "@/lib/opennext-cache";
+import { getSecurityHeaders } from "@/lib/security-headers";
 
 const root = process.cwd();
 const stack = read("alchemy.run.ts");
@@ -118,8 +119,30 @@ assert(
 
 assertFile(".open-next/server-functions/default/handler.mjs");
 
+// SAFETY: OpenNext's generated route manifest is validated below before use.
+const deploymentRoutesManifest = JSON.parse(
+  read(".open-next/server-functions/default/.next/routes-manifest.json"),
+) as {
+  headers?: Array<{
+    source?: string;
+    headers?: Array<{ key: string; value: string }>;
+  }>;
+};
+const securityHeaderRule = deploymentRoutesManifest.headers?.find(
+  (route) => route.source === "/(.*)",
+);
+assert(securityHeaderRule !== undefined, "deployment header rule exists");
+for (const expected of getSecurityHeaders(false)) {
+  assert(
+    securityHeaderRule.headers?.some(
+      ({ key, value }) => key === expected.key && value === expected.value,
+    ) === true,
+    `deployment header ${expected.key} is present with its production value`,
+  );
+}
+
 console.log(
-  `Effect Alchemy deployment contract verified. ${cacheEntries.length} cache entries and a bundled OpenNext Worker.`,
+  `Effect Alchemy deployment contract verified. ${cacheEntries.length} cache entries, ${getSecurityHeaders(false).length} security headers, and a bundled OpenNext Worker.`,
 );
 
 function read(path: string) {
