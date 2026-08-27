@@ -6,7 +6,11 @@ import { FetchHttpClient } from "effect/unstable/http";
 import { HttpApiClient, HttpApiError } from "effect/unstable/httpapi";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { BloodworkApi, makeBiomarkerKey } from "@/lib/effect/api";
+import {
+  BloodworkApi,
+  makeBiomarkerKey,
+  makeVocabularyKey,
+} from "@/lib/effect/api";
 import {
   ApiBadGateway,
   ApiBadRequest,
@@ -24,6 +28,7 @@ import {
   ConflictError,
   NotFoundError,
   PersistenceError,
+  ProviderError,
   ProviderRejected,
 } from "@/lib/effect/errors";
 import {
@@ -694,6 +699,12 @@ describe("Bloodwork HttpApi", () => {
         query: { period: "1Y" },
       }),
     ).toBe("/api/biomarkers/a%2Fb/trend?period=1Y");
+    expect(
+      urls.vocabulary.delete({
+        params: { key: makeVocabularyKey("glucose") },
+        query: { expectedVersion: 7 },
+      }),
+    ).toBe("/api/vocabulary/glucose?expectedVersion=7");
   });
 });
 
@@ -723,6 +734,67 @@ describe("HttpApi error projection", () => {
 });
 
 describe("Next request lifetime", () => {
+  it("maps persistence failures during service acquisition", async () => {
+    const acquisitionFailure = new PersistenceError({
+      operation: "Repository.acquire",
+      cause: new Error("d1 unavailable"),
+    });
+    const failingServices = Layer.merge(
+      services,
+      Layer.effect(Dashboard, Effect.fail(acquisitionFailure)),
+    );
+    const { dispose: disposeFailing, handler: failingHandler } =
+      makeApiWebHandler(failingServices);
+    try {
+      const response = await failingHandler(
+        new Request("https://bloodwork.test/api/readings/export", {
+          headers: { cookie: "bloodwork-session=test-session" },
+        }),
+      );
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({
+        _tag: "Bloodwork.ApiServiceUnavailable",
+        error: "Service unavailable",
+      });
+    } finally {
+      await disposeFailing();
+    }
+  });
+
+  it("maps provider failures during service acquisition", async () => {
+    const acquisitionFailure = new ProviderError({
+      operation: "Gemini.acquire",
+      cause: new Error("provider unavailable"),
+    });
+    const failingServices = Layer.merge(
+      services,
+      Layer.effect(ProviderWorkflows, Effect.fail(acquisitionFailure)),
+    );
+    const { dispose: disposeFailing, handler: failingHandler } =
+      makeApiWebHandler(failingServices);
+    try {
+      const response = await failingHandler(
+        new Request("https://bloodwork.test/api/import/map", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            cookie: "bloodwork-session=test-session",
+          },
+          body: JSON.stringify({ variables: [], vocabulary: [] }),
+        }),
+      );
+
+      expect(response.status).toBe(502);
+      await expect(response.json()).resolves.toEqual({
+        _tag: "Bloodwork.ApiBadGateway",
+        error: "Upstream provider unavailable",
+      });
+    } finally {
+      await disposeFailing();
+    }
+  });
+
   it("acquires and disposes application services for every request", async () => {
     let acquired = 0;
     let disposed = 0;
