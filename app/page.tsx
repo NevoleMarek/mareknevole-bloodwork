@@ -7,12 +7,15 @@ import { MetricsSection } from "@/components/dashboard/metrics-section";
 import { SectionNav } from "@/components/dashboard/section-nav";
 import { SupplementTable } from "@/components/dashboard/supplement-table";
 import { provideAppLayer, runAppEffect } from "@/lib/effect/run";
+import { PersistenceError } from "@/lib/effect/errors";
 import { Dashboard } from "@/lib/effect/services";
+import type { DashboardSnapshot } from "@/types/bloodwork";
 
-export default async function Home() {
-  await connection();
+type DashboardLoader = () => Promise<DashboardSnapshot>;
+type RequestConnection = () => Promise<void>;
 
-  const { vocabulary, labs, supplements } = await runAppEffect(
+const loadDashboard: DashboardLoader = () =>
+  runAppEffect(
     provideAppLayer(
       Effect.gen(function* () {
         const dashboard = yield* Dashboard;
@@ -20,6 +23,26 @@ export default async function Home() {
       }),
     ),
   );
+
+export async function renderHome(
+  dashboardLoader: DashboardLoader = loadDashboard,
+  connect: RequestConnection = async () => {
+    await connection();
+  },
+) {
+  await connect();
+
+  let dashboard: DashboardSnapshot;
+  try {
+    dashboard = await dashboardLoader();
+  } catch (error) {
+    if (error instanceof PersistenceError) {
+      return <PublicDashboardUnavailable />;
+    }
+    throw error;
+  }
+
+  const { vocabulary, labs, supplements } = dashboard;
 
   const latest = labs.latestPanel;
   const latestDate = latest
@@ -214,6 +237,46 @@ export default async function Home() {
         <p>Personal tracking, not clinical guidance.</p>
         <p>Built and maintained by Marek Nevole.</p>
       </footer>
+    </main>
+  );
+}
+
+export default function Home() {
+  return renderHome();
+}
+
+function PublicDashboardUnavailable() {
+  return (
+    <main
+      id="main-content"
+      className="mx-auto flex min-h-[70vh] w-full max-w-[1180px] items-center px-4 py-16 sm:px-6 lg:px-8"
+    >
+      <section
+        role="alert"
+        aria-labelledby="public-dashboard-error-title"
+        aria-describedby="public-dashboard-error-description"
+        className="surface-elevated w-full max-w-2xl px-5 py-8 sm:px-8 sm:py-10"
+      >
+        <p className="eyebrow">Service unavailable</p>
+        <h1
+          id="public-dashboard-error-title"
+          className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-zinc-950 sm:text-4xl"
+        >
+          Bloodwork is temporarily unavailable.
+        </h1>
+        <p
+          id="public-dashboard-error-description"
+          className="mt-4 max-w-xl text-sm leading-6 text-zinc-600 sm:text-base"
+        >
+          We couldn&apos;t load the public dashboard right now. Please try again
+          in a moment.
+        </p>
+        <form action="/" method="get" className="mt-6">
+          <button type="submit" className="button-primary">
+            Try again
+          </button>
+        </form>
+      </section>
     </main>
   );
 }
