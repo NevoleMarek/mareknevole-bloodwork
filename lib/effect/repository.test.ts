@@ -30,6 +30,7 @@ type VocabularyRow = {
   description: string | null;
   featured: number;
   visible: number;
+  version: number;
 };
 
 const VocabularyBindValues = Schema.Tuple([
@@ -126,6 +127,7 @@ class SaveReadingDatabase implements D1Database {
           description,
           featured,
           visible,
+          version: 1,
         });
       } else if (
         saveReadingStatement.query.startsWith("INSERT INTO readings")
@@ -210,6 +212,7 @@ describe("Repository.saveReading", () => {
           description: "A marker",
           featured,
           visible,
+          version: 1,
         },
       ]);
     },

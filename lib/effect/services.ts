@@ -47,7 +47,9 @@ import type {
   SupplementCreateInput,
   SupplementDeleteInput,
   SupplementUpdateInput,
+  VocabularyDeleteInput,
   VocabularyEntry,
+  VocabularyUpdateInput,
 } from "@/types/bloodwork";
 import type {
   HealthData,
@@ -178,11 +180,11 @@ export interface BloodworkContract {
     entry: VocabularyEntry,
   ) => Effect.Effect<void, PersistenceFailure>;
   readonly updateVocabulary: (
-    entry: VocabularyEntry,
-  ) => Effect.Effect<void, PersistenceFailure>;
+    entry: VocabularyUpdateInput,
+  ) => Effect.Effect<void, PersistenceFailure | ValidationError>;
   readonly deleteVocabulary: (
-    key: string,
-  ) => Effect.Effect<void, PersistenceError>;
+    input: VocabularyDeleteInput,
+  ) => Effect.Effect<void, PersistenceError | NotFoundError | ConflictError>;
 }
 
 export class Bloodwork extends Context.Service<Bloodwork, BloodworkContract>()(
@@ -217,15 +219,15 @@ export const bloodworkLayer = Layer.effect(
       yield* invalidate();
     });
     const updateVocabulary = Effect.fn("Bloodwork.updateVocabulary")(function* (
-      entry: VocabularyEntry,
+      entry: VocabularyUpdateInput,
     ) {
       yield* repository.updateVocabulary(entry);
       yield* invalidate();
     });
     const deleteVocabulary = Effect.fn("Bloodwork.deleteVocabulary")(function* (
-      key: string,
+      input: VocabularyDeleteInput,
     ) {
-      yield* repository.deleteVocabulary(key);
+      yield* repository.deleteVocabulary(input);
       yield* invalidate();
     });
     return Bloodwork.of({

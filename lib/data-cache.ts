@@ -2,9 +2,8 @@ import { revalidateTag, unstable_cache } from "next/cache";
 import { readCloudflareEnv } from "@/lib/effect/runtime";
 
 import {
-  getActiveSupplements,
+  getDashboardSnapshot,
   getBiomarkerTrend,
-  getLabOverview,
   getSupplementChangelogPage,
   getVisibleHealthMetrics,
   getVocabulary,
@@ -25,12 +24,7 @@ const DAY = 86_400;
 export const getCachedDashboard = unstable_cache(
   async (): Promise<DashboardSnapshot> => {
     const env = await readCloudflareEnv();
-    const [vocabulary, labs, supplements] = await Promise.all([
-      getVocabulary(env.DB),
-      getLabOverview(env.DB),
-      getActiveSupplements(env.DB),
-    ]);
-    return { vocabulary, labs, supplements };
+    return getDashboardSnapshot(env.DB);
   },
   [DASHBOARD_TAG],
   { tags: [DASHBOARD_TAG], revalidate: DAY },

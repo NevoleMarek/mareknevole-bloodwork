@@ -6,7 +6,11 @@ import { FetchHttpClient } from "effect/unstable/http";
 import { HttpApiClient, HttpApiError } from "effect/unstable/httpapi";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { BloodworkApi, makeBiomarkerKey } from "@/lib/effect/api";
+import {
+  BloodworkApi,
+  makeBiomarkerKey,
+  makeVocabularyKey,
+} from "@/lib/effect/api";
 import {
   ApiBadGateway,
   ApiBadRequest,
@@ -694,6 +698,12 @@ describe("Bloodwork HttpApi", () => {
         query: { period: "1Y" },
       }),
     ).toBe("/api/biomarkers/a%2Fb/trend?period=1Y");
+    expect(
+      urls.vocabulary.delete({
+        params: { key: makeVocabularyKey("glucose") },
+        query: { expectedVersion: 7 },
+      }),
+    ).toBe("/api/vocabulary/glucose?expectedVersion=7");
   });
 });
 

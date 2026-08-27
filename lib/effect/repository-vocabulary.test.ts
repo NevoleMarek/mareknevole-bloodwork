@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ConflictError, NotFoundError } from "@/lib/effect/errors";
 import { makeRepository } from "@/lib/effect/repository";
-import type { VocabularyEntry } from "@/types/bloodwork";
+import type { VocabularyUpdateInput } from "@/types/bloodwork";
 
 type VocabularyState = {
   key: string;
@@ -110,7 +110,7 @@ function updateDatabase({
   };
 }
 
-const vocabularyEntry: VocabularyEntry = {
+const vocabularyEntry: VocabularyUpdateInput = {
   key: "glucose",
   label: "Glucose",
   unit: "mg/dL",
@@ -118,6 +118,7 @@ const vocabularyEntry: VocabularyEntry = {
   description: null,
   featured: true,
   visible: true,
+  expectedVersion: 1,
 };
 
 describe("Repository.updateVocabulary", () => {

@@ -13,6 +13,7 @@ type SupplementRow = {
   stopped_at: string | null;
   created_at: string;
   updated_at: string;
+  version: number;
 };
 
 type ChangelogRow = {
@@ -44,11 +45,13 @@ type SupplementUpdateValues = readonly [
   startedAt: string,
   updatedAt: string,
   id: string,
+  expectedVersion: number,
 ];
 type SupplementStopValues = readonly [
   stoppedAt: string,
   updatedAt: string,
   id: string,
+  expectedVersion: number,
 ];
 
 const valuesAs = <T>(values: readonly unknown[]): T => {
@@ -113,6 +116,7 @@ class AtomicDatabase implements D1Database {
   readonly changelog = new Map<string, ChangelogRow>();
   private batchStatementIndex: number | null = null;
   private directStatementIndex = 0;
+  private lastChanges = 0;
 
   constructor(private readonly failAtStatement: number | null = null) {}
 
@@ -123,6 +127,7 @@ class AtomicDatabase implements D1Database {
   async batch<T = unknown>(
     statements: D1PreparedStatement[],
   ): Promise<D1Result<T>[]> {
+    this.lastChanges = 0;
     const supplementsSnapshot = new Map<string, SupplementRow>();
     for (const [id, row] of this.supplements) {
       supplementsSnapshot.set(id, { ...row });
@@ -161,10 +166,14 @@ class AtomicDatabase implements D1Database {
       // SAFETY: Repository.updateSupplement requests the complete persisted supplement row.
       return (supplement ?? null) as T | null;
     }
-    if (query.startsWith("SELECT name FROM supplements")) {
+    if (query.startsWith("SELECT name")) {
       if (!supplement) return null;
-      // SAFETY: Repository.deleteSupplement requests only the persisted supplement name.
-      return { name: supplement.name } as T;
+      // SAFETY: Repository.deleteSupplement requests the persisted deletion guard fields.
+      return {
+        name: supplement.name,
+        stopped_at: supplement.stopped_at,
+        version: supplement.version,
+      } as T;
     }
     throw new Error(`Unexpected first query: ${query}`);
   }
@@ -188,34 +197,49 @@ class AtomicDatabase implements D1Database {
         stopped_at: null,
         created_at: createdAt,
         updated_at: updatedAt,
+        version: 1,
       });
+      this.lastChanges = 1;
       return d1Result<T>(1);
     }
 
     if (query.startsWith("INSERT INTO supplement_changelog")) {
+      if (query.includes("WHERE changes() > 0") && this.lastChanges === 0) {
+        return d1Result<T>(0);
+      }
       const [id, date, description, createdAt] =
         valuesAs<ChangelogInsertValues>(values);
       this.changelog.set(id, { id, date, description, created_at: createdAt });
+      this.lastChanges = 1;
       return d1Result<T>(1);
     }
 
     if (query.startsWith("UPDATE supplements SET stopped_at")) {
-      const [stoppedAt, updatedAt, id] = valuesAs<SupplementStopValues>(values);
+      const [stoppedAt, updatedAt, id, expectedVersion] =
+        valuesAs<SupplementStopValues>(values);
       const supplement = this.supplements.get(id);
-      if (!supplement) return d1Result<T>(0);
+      if (!supplement || supplement.version !== expectedVersion) {
+        this.lastChanges = 0;
+        return d1Result<T>(0);
+      }
       this.supplements.set(id, {
         ...supplement,
         stopped_at: stoppedAt,
         updated_at: updatedAt,
+        version: supplement.version + 1,
       });
+      this.lastChanges = 1;
       return d1Result<T>(1);
     }
 
     if (query.startsWith("UPDATE supplements")) {
-      const [name, dose, frequency, startedAt, updatedAt, id] =
+      const [name, dose, frequency, startedAt, updatedAt, id, expectedVersion] =
         valuesAs<SupplementUpdateValues>(values);
       const supplement = this.supplements.get(id);
-      if (!supplement) return d1Result<T>(0);
+      if (!supplement || supplement.version !== expectedVersion) {
+        this.lastChanges = 0;
+        return d1Result<T>(0);
+      }
       this.supplements.set(id, {
         ...supplement,
         name,
@@ -223,7 +247,9 @@ class AtomicDatabase implements D1Database {
         frequency,
         started_at: startedAt,
         updated_at: updatedAt,
+        version: supplement.version + 1,
       });
+      this.lastChanges = 1;
       return d1Result<T>(1);
     }
 
@@ -254,6 +280,7 @@ const initialSupplement = (): SupplementRow => ({
   stopped_at: null,
   created_at: "2026-01-01T00:00:00.000Z",
   updated_at: "2026-01-01T00:00:00.000Z",
+  version: 1,
 });
 
 describe("Repository supplement mutation atomicity", () => {
@@ -286,6 +313,7 @@ describe("Repository supplement mutation atomicity", () => {
           frequency: "twice daily",
           startedAt: "2026-02-02",
           changelogDate: "2026-02-03",
+          expectedVersion: created.version,
         }),
       ),
     ).resolves.toBeUndefined();
@@ -303,6 +331,7 @@ describe("Repository supplement mutation atomicity", () => {
         repository.deleteSupplement({
           id: created.id,
           changelogDate: "2026-02-04",
+          expectedVersion: 2,
         }),
       ),
     ).resolves.toBeUndefined();
@@ -354,6 +383,7 @@ describe("Repository supplement mutation atomicity", () => {
       frequency: "twice daily",
       startedAt: "2026-02-01",
       changelogDate: "2026-02-02",
+      expectedVersion: original.version,
     });
 
     await expect(Effect.runPromise(operation)).rejects.toBeInstanceOf(
@@ -372,6 +402,7 @@ describe("Repository supplement mutation atomicity", () => {
     const operation = repository.deleteSupplement({
       id: original.id,
       changelogDate: "2026-02-02",
+      expectedVersion: original.version,
     });
 
     await expect(Effect.runPromise(operation)).rejects.toBeInstanceOf(
