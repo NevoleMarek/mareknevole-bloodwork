@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import PublicError from "@/app/error";
+import { PublicDashboardUnavailableError } from "@/lib/public-dashboard-error";
 
 describe("public error boundary", () => {
   it("renders a safe retryable state without exposing the error", () => {
@@ -9,7 +10,7 @@ describe("public error boundary", () => {
 
     render(
       <PublicError
-        error={new Error("D1 database binding is unavailable")}
+        error={new PublicDashboardUnavailableError()}
         reset={reset}
       />,
     );
@@ -22,5 +23,14 @@ describe("public error boundary", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(reset).toHaveBeenCalledOnce();
+  });
+
+  it("keeps unrelated errors out of the service-unavailable state", () => {
+    render(<PublicError error={new Error("render failed")} reset={() => {}} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "We couldn't load Bloodwork.",
+    );
+    expect(screen.queryByText(/Service unavailable/i)).not.toBeInTheDocument();
   });
 });

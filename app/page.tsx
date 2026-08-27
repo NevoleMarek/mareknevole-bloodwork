@@ -1,5 +1,7 @@
 import { connection } from "next/server";
+import { unstable_noStore } from "next/cache";
 import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
 
 import { ChangelogList } from "@/components/dashboard/changelog-list";
 import { HealthGrid } from "@/components/dashboard/health-grid";
@@ -7,22 +9,32 @@ import { MetricsSection } from "@/components/dashboard/metrics-section";
 import { SectionNav } from "@/components/dashboard/section-nav";
 import { SupplementTable } from "@/components/dashboard/supplement-table";
 import { provideAppLayer, runAppEffect } from "@/lib/effect/run";
-import { PersistenceError } from "@/lib/effect/errors";
+import { isPersistenceError } from "@/lib/effect/errors";
 import { Dashboard } from "@/lib/effect/services";
+import { PublicDashboardUnavailableError } from "@/lib/public-dashboard-error";
 import type { DashboardSnapshot } from "@/types/bloodwork";
+
+// The root page always reads request-time D1 state. Keeping this explicit
+// prevents an outage fallback from being retained by a page or CDN cache.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type DashboardLoader = () => Promise<DashboardSnapshot>;
 type RequestConnection = () => Promise<void>;
 
-const loadDashboard: DashboardLoader = () =>
-  runAppEffect(
-    provideAppLayer(
-      Effect.gen(function* () {
-        const dashboard = yield* Dashboard;
-        return yield* dashboard.getDashboard();
-      }),
-    ),
-  );
+const dashboardEffect = Effect.gen(function* () {
+  const dashboard = yield* Dashboard;
+  return yield* dashboard.getDashboard();
+});
+
+export const loadDashboard: DashboardLoader = () =>
+  runAppEffect(provideAppLayer(dashboardEffect));
+
+/** Run the same production Effect boundary with an explicitly supplied service layer. */
+export const loadDashboardWithLayer =
+  (layer: Layer.Layer<Dashboard>): DashboardLoader =>
+  () =>
+    runAppEffect(dashboardEffect.pipe(Effect.provide(layer)));
 
 export async function renderHome(
   dashboardLoader: DashboardLoader = loadDashboard,
@@ -31,13 +43,17 @@ export async function renderHome(
   },
 ) {
   await connect();
+  unstable_noStore();
 
   let dashboard: DashboardSnapshot;
   try {
     dashboard = await dashboardLoader();
   } catch (error) {
-    if (error instanceof PersistenceError) {
-      return <PublicDashboardUnavailable />;
+    if (error instanceof Error && isPersistenceError(error)) {
+      // Let Next's request error boundary own the response. That keeps an
+      // outage response non-cacheable and non-indexable while the boundary
+      // renders a safe, retryable message without the persistence cause.
+      throw new PublicDashboardUnavailableError();
     }
     throw error;
   }
@@ -243,40 +259,4 @@ export async function renderHome(
 
 export default function Home() {
   return renderHome();
-}
-
-function PublicDashboardUnavailable() {
-  return (
-    <main
-      id="main-content"
-      className="mx-auto flex min-h-[70vh] w-full max-w-[1180px] items-center px-4 py-16 sm:px-6 lg:px-8"
-    >
-      <section
-        role="alert"
-        aria-labelledby="public-dashboard-error-title"
-        aria-describedby="public-dashboard-error-description"
-        className="surface-elevated w-full max-w-2xl px-5 py-8 sm:px-8 sm:py-10"
-      >
-        <p className="eyebrow">Service unavailable</p>
-        <h1
-          id="public-dashboard-error-title"
-          className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-zinc-950 sm:text-4xl"
-        >
-          Bloodwork is temporarily unavailable.
-        </h1>
-        <p
-          id="public-dashboard-error-description"
-          className="mt-4 max-w-xl text-sm leading-6 text-zinc-600 sm:text-base"
-        >
-          We couldn&apos;t load the public dashboard right now. Please try again
-          in a moment.
-        </p>
-        <form action="/" method="get" className="mt-6">
-          <button type="submit" className="button-primary">
-            Try again
-          </button>
-        </form>
-      </section>
-    </main>
-  );
 }

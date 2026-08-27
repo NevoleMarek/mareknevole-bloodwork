@@ -24,6 +24,20 @@ export class PersistenceError extends Schema.TaggedErrorClass<PersistenceError>(
   },
 ) {}
 
+/**
+ * Check a persistence failure without relying only on `instanceof`.
+ *
+ * The server component and the OpenNext worker can load separate copies of
+ * the application bundle. In that case a tagged Effect error remains valid,
+ * but its prototype is not shared with this module's class.
+ */
+export function isPersistenceError(error: Error): error is PersistenceError {
+  return (
+    error instanceof PersistenceError ||
+    ("_tag" in error && error._tag === "Bloodwork.PersistenceError")
+  );
+}
+
 /** A provider SDK or provider response failed outside an HTTP status response. */
 export class ProviderError extends Schema.TaggedErrorClass<ProviderError>()(
   "Bloodwork.ProviderError",
