@@ -591,6 +591,26 @@ describe("Bloodwork HttpApi", () => {
     expect(response.status).toBe(400);
   });
 
+  it("rejects an invalid specimen date before calling the save service", async () => {
+    const response = await handler(
+      new Request("https://bloodwork.test/api/readings", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: "bloodwork-session=test-session",
+        },
+        body: JSON.stringify({
+          date: "2026-02-30",
+          source: "panel.pdf",
+          measurements: [],
+          newVocabulary: [],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+  });
+
   it("encodes multipart uploads through the generated client", async () => {
     const formData = new FormData();
     formData.append(

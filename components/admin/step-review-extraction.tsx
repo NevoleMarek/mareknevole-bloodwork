@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 
+import { isValidSpecimenDate } from "@/lib/date";
 import type { ExtractedVariable } from "@/types/wizard";
 
 type Props = {
-  date: string;
+  date: string | null;
   variables: ExtractedVariable[];
   onDateChange: (date: string) => void;
   onVariablesChange: (variables: ExtractedVariable[]) => void;
-  onNext: () => void;
+  onNext: (date: string) => void;
 };
 
 export function StepReviewExtraction({
@@ -20,6 +21,8 @@ export function StepReviewExtraction({
   onNext,
 }: Props) {
   const [latestAddedIndex, setLatestAddedIndex] = useState<number | null>(null);
+  const dateValue = date ?? "";
+  const validDate = isValidSpecimenDate(dateValue);
 
   function updateVariable(
     index: number,
@@ -51,15 +54,31 @@ export function StepReviewExtraction({
           htmlFor="test-date"
           className="mb-2 block text-xs font-semibold text-zinc-700"
         >
-          Test Date
+          Specimen collection date <span aria-hidden="true">(required)</span>
         </label>
+        <p id="test-date-help" className="mb-2 text-xs leading-5 text-zinc-500">
+          Enter the date the sample was collected. The file upload date is not
+          used as the specimen date.
+        </p>
         <input
           id="test-date"
           type="date"
-          value={date}
+          required
+          aria-describedby="test-date-help test-date-error"
+          aria-invalid={!validDate}
+          value={dateValue}
           onChange={(e) => onDateChange(e.target.value)}
           className="field text-sm"
         />
+        {!validDate && (
+          <p
+            id="test-date-error"
+            role="alert"
+            className="mt-2 text-xs text-red-700"
+          >
+            A valid specimen collection date is required before continuing.
+          </p>
+        )}
       </div>
 
       <h2 className="mb-3 text-sm font-semibold text-zinc-800">
@@ -152,8 +171,8 @@ export function StepReviewExtraction({
       <div className="mt-8 flex justify-end">
         <button
           type="button"
-          onClick={onNext}
-          disabled={variables.length === 0}
+          onClick={() => onNext(dateValue)}
+          disabled={variables.length === 0 || !validDate}
           className="button-primary disabled:opacity-40"
         >
           Next: Map Variables &rarr;

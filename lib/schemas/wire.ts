@@ -1,6 +1,7 @@
 import * as Schema from "effect/Schema";
 
 import { TREND_PERIODS } from "@/lib/period";
+import { SpecimenDate } from "@/lib/date";
 import {
   BloodworkReading,
   BiomarkerTrendPoint,
@@ -102,7 +103,7 @@ export interface HealthImportSummary extends Schema.Schema.Type<
 }
 
 export const ExtractResponse = Schema.Struct({
-  date: Schema.String,
+  date: Schema.NullOr(Schema.Union([Schema.Literal(""), SpecimenDate])),
   variables: Schema.mutable(Schema.Array(ExtractedVariable)),
 }).annotate({ identifier: "ExtractResponse" });
 export interface ExtractResponse extends Schema.Schema.Type<
@@ -145,7 +146,7 @@ export interface ResearchResponse extends Schema.Schema.Type<
 }
 
 export const SaveReadingRequest = Schema.Struct({
-  date: Schema.String,
+  date: SpecimenDate,
   source: Schema.String,
   measurements: Schema.mutable(Schema.Array(Measurement)),
   newVocabulary: Schema.mutable(Schema.Array(VocabularyEntry)),

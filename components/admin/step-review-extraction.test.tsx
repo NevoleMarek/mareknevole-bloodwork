@@ -23,6 +23,64 @@ function Harness() {
 }
 
 describe("StepReviewExtraction", () => {
+  it("requires an explicit specimen date when extraction did not find one", async () => {
+    const onNext = vi.fn();
+    render(
+      <StepReviewExtraction
+        date={null}
+        variables={[{ label: "Glucose", value: 5.1, unit: "mmol/L" }]}
+        onDateChange={vi.fn()}
+        onVariablesChange={vi.fn()}
+        onNext={onNext}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "A valid specimen collection date is required before continuing.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Next: Map Variables/ }),
+    ).toBeDisabled();
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: /Next: Map Variables/ }));
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it("passes the reviewed specimen date to the next step", async () => {
+    const user = userEvent.setup();
+    const onNext = vi.fn();
+    function DateHarness() {
+      const [date, setDate] = useState("");
+      return (
+        <StepReviewExtraction
+          date={date}
+          variables={[{ label: "Glucose", value: 5.1, unit: "mmol/L" }]}
+          onDateChange={setDate}
+          onVariablesChange={vi.fn()}
+          onNext={onNext}
+        />
+      );
+    }
+
+    render(<DateHarness />);
+    await user.type(
+      screen.getByLabelText(/Specimen collection date/),
+      "2026-07-28",
+    );
+    expect(
+      screen.getByRole("button", { name: /Next: Map Variables/ }),
+    ).toBeEnabled();
+
+    await user.click(
+      screen.getByRole("button", { name: /Next: Map Variables/ }),
+    );
+    expect(onNext).toHaveBeenCalledWith("2026-07-28");
+  });
+
   it("reveals only the latest appended row without delaying interaction", async () => {
     const user = userEvent.setup();
     render(<Harness />);

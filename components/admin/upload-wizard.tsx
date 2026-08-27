@@ -87,7 +87,9 @@ export function UploadWizard() {
         setState({
           step: "review-extraction",
           pdfUrl,
-          date: data.date,
+          // A missing provider date stays unknown until an administrator
+          // explicitly enters the specimen collection date.
+          date: data.date ?? "",
           variables: data.variables,
         });
       } catch (e) {
@@ -273,8 +275,8 @@ export function UploadWizard() {
                 onVariablesChange={(variables) =>
                   setState({ ...state, variables })
                 }
-                onNext={() =>
-                  handleMap(state.date, state.variables, state.pdfUrl)
+                onNext={(date) =>
+                  handleMap(date, state.variables, state.pdfUrl)
                 }
               />
             </>

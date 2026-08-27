@@ -4,6 +4,7 @@ import * as Layer from "effect/Layer";
 import * as Redacted from "effect/Redacted";
 
 import type { Period, TrendPeriod } from "@/lib/period";
+import { isValidSpecimenDate } from "@/lib/date";
 import {
   AuthenticationError,
   ConfigurationError,
@@ -194,6 +195,14 @@ export const bloodworkLayer = Layer.effect(
     const saveReading = Effect.fn("Bloodwork.saveReading")(function* (
       request: SaveReadingRequest,
     ) {
+      if (!isValidSpecimenDate(request.date)) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "Bloodwork.saveReading",
+            message: "A valid specimen date is required",
+          }),
+        );
+      }
       const id = yield* repository.saveReading(request);
       yield* invalidate();
       return id;
@@ -569,11 +578,14 @@ export const providerWorkflowsLayer = Layer.effect(
         "extract.response",
       );
       yield* requireNonEmpty(result.variables, "extract.variables");
-      if (result.date.length === 0) {
+      if (result.date === null || result.date === "") {
+        return { ...result, date: null };
+      }
+      if (!isValidSpecimenDate(result.date)) {
         return yield* Effect.fail(
           new ValidationError({
             operation: "extract.date",
-            message: "No date extracted",
+            message: "Invalid specimen date",
           }),
         );
       }

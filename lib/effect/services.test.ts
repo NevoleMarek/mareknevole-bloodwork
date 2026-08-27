@@ -79,6 +79,35 @@ const cache = (
   });
 
 describe("Effect application services", () => {
+  it("keeps an absent extracted specimen date unknown", async () => {
+    const gemini = Layer.succeed(
+      Gemini,
+      Gemini.of({
+        generate: () => Effect.succeed("provider response"),
+        decodeJson: <S extends Schema.Top>() =>
+          Effect.succeed(
+            // SAFETY: The test double returns the exact decoded response shape
+            // expected by the schema supplied to this generic method.
+            {
+              date: null,
+              variables: [{ label: "Glucose", value: 5.1, unit: "mmol/L" }],
+            } as S["Type"],
+          ),
+      }),
+    );
+    const workflows = providerWorkflowsLayer.pipe(Layer.provide(gemini));
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* ProviderWorkflows;
+        return yield* service.extract(
+          new File(["pdf"], "panel.pdf", { type: "application/pdf" }),
+        );
+      }).pipe(Effect.provide(workflows)),
+    );
+
+    expect(result.date).toBeNull();
+  });
+
   it("does not load changelog rows when listing supplements", async () => {
     let changelogReads = 0;
     const layer = supplementsLayer.pipe(
@@ -241,6 +270,33 @@ describe("Effect application services", () => {
 
     await expect(Effect.runPromise(program)).resolves.toBe("reading-1");
     expect(invalidations).toBe(1);
+  });
+
+  it("rejects an invalid specimen date before invoking persistence", async () => {
+    let repositoryCalls = 0;
+    const dependencies = Layer.mergeAll(
+      Layer.succeed(
+        Repository,
+        repository(() => {
+          repositoryCalls += 1;
+          return Effect.succeed("reading-1");
+        }),
+      ),
+      Layer.succeed(DataCache, cache(unused)),
+    );
+    const bloodwork = bloodworkLayer.pipe(Layer.provide(dependencies));
+    const program = Effect.gen(function* () {
+      const service = yield* Bloodwork;
+      return yield* service.saveReading({
+        ...emptyReading,
+        date: "2026-02-30",
+      });
+    }).pipe(Effect.provide(bloodwork));
+
+    await expect(Effect.runPromise(program)).rejects.toMatchObject({
+      message: "A valid specimen date is required",
+    });
+    expect(repositoryCalls).toBe(0);
   });
 
   it("keeps repository validation for empty readings as a typed failure", async () => {

@@ -31,6 +31,7 @@ import type {
 } from "@/types/bloodwork";
 import { getCutoffDate } from "@/lib/period";
 import type { TrendPeriod } from "@/lib/period";
+import { isValidSpecimenDate } from "@/lib/date";
 import type {
   HealthData,
   HealthMetric,
@@ -337,6 +338,14 @@ export const makeRepository = (database: D1Database) => {
   const saveReadingEffect = Effect.fn("Repository.saveReading")(function* (
     body: SaveReadingRequest,
   ) {
+    if (!isValidSpecimenDate(body.date)) {
+      return yield* Effect.fail(
+        new ValidationError({
+          operation: "Repository.saveReading",
+          message: "A valid specimen date is required",
+        }),
+      );
+    }
     if (body.measurements.length === 0) {
       return yield* Effect.fail(
         new ValidationError({
