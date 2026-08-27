@@ -16,12 +16,13 @@ export function HealthAdmin({
   const refresh = useCallback(async () => {
     const data = await runApi((client) => client.health.configs({}));
     setConfigs(data);
+    return data;
   }, []);
 
   return (
     <div className="flex flex-col gap-5">
       <HealthImport onImported={refresh} />
-      <HealthVisibility configs={configs} />
+      <HealthVisibility configs={configs} onRefresh={refresh} />
     </div>
   );
 }
