@@ -24,6 +24,7 @@ import {
   ConflictError,
   NotFoundError,
   PersistenceError,
+  ProviderError,
   ProviderRejected,
 } from "@/lib/effect/errors";
 import {
@@ -745,6 +746,39 @@ describe("Next request lifetime", () => {
       await expect(response.json()).resolves.toEqual({
         _tag: "Bloodwork.ApiServiceUnavailable",
         error: "Service unavailable",
+      });
+    } finally {
+      await disposeFailing();
+    }
+  });
+
+  it("maps provider failures during service acquisition", async () => {
+    const acquisitionFailure = new ProviderError({
+      operation: "Gemini.acquire",
+      cause: new Error("provider unavailable"),
+    });
+    const failingServices = Layer.merge(
+      services,
+      Layer.effect(ProviderWorkflows, Effect.fail(acquisitionFailure)),
+    );
+    const { dispose: disposeFailing, handler: failingHandler } =
+      makeApiWebHandler(failingServices);
+    try {
+      const response = await failingHandler(
+        new Request("https://bloodwork.test/api/import/map", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            cookie: "bloodwork-session=test-session",
+          },
+          body: JSON.stringify({ variables: [], vocabulary: [] }),
+        }),
+      );
+
+      expect(response.status).toBe(502);
+      await expect(response.json()).resolves.toEqual({
+        _tag: "Bloodwork.ApiBadGateway",
+        error: "Upstream provider unavailable",
       });
     } finally {
       await disposeFailing();

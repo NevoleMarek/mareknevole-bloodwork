@@ -20,6 +20,7 @@ import { toApiError, withApiErrors } from "@/lib/effect/api-errors";
 import {
   ConfigurationError,
   PersistenceError,
+  ProviderError,
   RequestDecodeError,
 } from "@/lib/effect/errors";
 import { appLayer } from "@/lib/effect/layers";
@@ -479,11 +480,14 @@ export const makeApiWebHandler = <E>(services: Layer.Layer<ApiServices, E>) => {
       } catch (cause) {
         if (
           cause instanceof ConfigurationError ||
-          cause instanceof PersistenceError
+          cause instanceof PersistenceError ||
+          cause instanceof ProviderError
         ) {
           const error = toApiError(cause);
           return HttpServerResponse.toWeb(
-            HttpServerResponse.jsonUnsafe(error, { status: 503 }),
+            HttpServerResponse.jsonUnsafe(error, {
+              status: error._tag === "Bloodwork.ApiBadGateway" ? 502 : 503,
+            }),
           );
         }
         throw cause;
