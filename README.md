@@ -120,9 +120,14 @@ while obscuring the resource contract.
 ## Verification
 
 ```sh
-bun run check        # fast: format + lint + typecheck + test
-bun run check:full   # fast suite + OpenNext Worker build + deployment contract
+bun run check        # non-mutating: format check + lint + typecheck + test
+bun run check:full   # non-mutating checks + OpenNext Worker build + deployment contract
 ```
+
+`bun run check` and `bun run check:full` do not rewrite tracked source files.
+The full check writes only ignored OpenNext build artifacts. Source-fixing
+commands are explicit: use `bun run format` for formatting, `bun run lint:fix`
+for lint fixes, or `bun run check:fix` to run both fixers and then verify.
 
 ## Deploy
 
