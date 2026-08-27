@@ -15,14 +15,26 @@ export const HealthAggregationSchema = Schema.Literals([
 ]).annotate({ identifier: "HealthAggregation" });
 
 export const ReferenceRange = Schema.Struct({
-  min: Schema.Number,
-  max: Schema.Number,
-}).annotate({ identifier: "ReferenceRange" });
+  min: Schema.Finite,
+  max: Schema.Finite,
+}).pipe(
+  Schema.check(
+    Schema.makeFilter(
+      (range) =>
+        range.min < range.max ||
+        "Reference range minimum must be less than its maximum",
+    ),
+  ),
+  Schema.annotate({ identifier: "ReferenceRange" }),
+);
 export interface ReferenceRange extends Schema.Schema.Type<
   typeof ReferenceRange
 > {
   readonly _schemaModel?: never;
 }
+
+/** Runtime guard for values that are safe to use for status derivation. */
+export const isValidReferenceRange = Schema.is(ReferenceRange);
 
 export const VocabularyEntry = Schema.Struct({
   key: Schema.String,
@@ -249,7 +261,7 @@ export const ResearchEntry = Schema.Struct({
   vocabularyKey: Schema.String,
   label: Schema.String,
   unit: Schema.String,
-  referenceRange: ReferenceRange,
+  referenceRange: Schema.optional(ReferenceRange),
 }).annotate({ identifier: "ResearchEntry" });
 export interface ResearchEntry extends Schema.Schema.Type<
   typeof ResearchEntry
@@ -260,7 +272,7 @@ export interface ResearchEntry extends Schema.Schema.Type<
 export const ResearchedEntry = Schema.Struct({
   vocabularyKey: Schema.String,
   description: Schema.String,
-  referenceRange: ReferenceRange,
+  referenceRange: Schema.optional(ReferenceRange),
 }).annotate({ identifier: "ResearchedEntry" });
 export interface ResearchedEntry extends Schema.Schema.Type<
   typeof ResearchedEntry

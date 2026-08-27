@@ -25,6 +25,6 @@ The JSON must match this exact structure:
 Rules:
 - "vocabularyKey": must match the input vocabularyKey exactly
 - "description": 1-2 sentences, factual, clinical significance
-- "referenceRange": standard reference range for healthy adults in the given unit
+- "referenceRange": standard reference range for healthy adults in the given unit when a trustworthy interval is available; omit it when no reviewed interval can be established
 - Maintain the same order as the input`;
 }

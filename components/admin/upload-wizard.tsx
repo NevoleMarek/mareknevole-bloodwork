@@ -6,11 +6,13 @@ import type {
   ExtractedVariable,
   MappedVariable,
   ResearchedEntry,
-  SaveReadingRequest,
   WizardState,
 } from "@/types/wizard";
-import { deriveStatus } from "@/lib/status";
 import { runApi } from "@/lib/effect/client";
+import {
+  assembleSaveReading,
+  mergeResearchEntries,
+} from "@/lib/upload-reading";
 
 import { StepUpload } from "@/components/admin/step-upload";
 import { StepReviewExtraction } from "@/components/admin/step-review-extraction";
@@ -136,58 +138,44 @@ export function UploadWizard() {
       researched: ResearchedEntry[],
       pdfUrl: string,
     ) => {
-      setState({ step: "saving", pdfUrl, date, mappings });
-
-      const researchByKey = new Map(
-        researched.map((r) => [r.vocabularyKey, r]),
-      );
-
-      const newVocabulary: VocabularyEntry[] = mappings
-        .filter((m) => m.isNew)
-        .map((m) => {
-          const research = researchByKey.get(m.vocabularyKey);
-          return {
-            key: m.vocabularyKey,
-            label: m.label,
-            unit: m.convertedUnit,
-            referenceRange: research?.referenceRange ??
-              m.referenceRange ?? { min: 0, max: 0 },
-            description: research?.description ?? null,
-            featured: false,
-            visible: true,
-          };
-        });
-
-      // Build measurements with derived status
-      const allVocab = [...vocabulary, ...newVocabulary];
-      const measurements: SaveReadingRequest["measurements"] = mappings.map(
-        (m) => {
-          const entry = allVocab.find((v) => v.key === m.vocabularyKey);
-          const range = entry?.referenceRange ?? { min: 0, max: 0 };
-          return {
-            vocabularyKey: m.vocabularyKey,
-            value: m.convertedValue,
-            unit: m.convertedUnit,
-            status: deriveStatus(m.convertedValue, range),
-          };
-        },
-      );
-
-      const body: SaveReadingRequest = {
+      const assembly = assembleSaveReading({
         date,
         source: fileName,
-        measurements,
-        newVocabulary,
-      };
+        mappings,
+        researched,
+        vocabulary,
+      });
+      const returnTo = mappings.some((mapping) => mapping.isNew)
+        ? {
+            step: "review-research" as const,
+            pdfUrl,
+            date,
+            mappings,
+            researched,
+          }
+        : { step: "review-mapping" as const, pdfUrl, date, mappings };
+
+      if (!assembly.ok) {
+        setState({
+          step: "error",
+          message: assembly.message,
+          returnTo,
+        });
+        return;
+      }
+
+      setState({ step: "saving", pdfUrl, date, mappings });
 
       try {
-        await runApi((client) => client.readings.create({ payload: body }));
+        await runApi((client) =>
+          client.readings.create({ payload: assembly.body }),
+        );
         setState({ step: "done" });
       } catch (e) {
         setState({
           step: "error",
           message: e instanceof Error ? e.message : "Save failed",
-          returnTo: { step: "review-mapping", pdfUrl, date, mappings },
+          returnTo,
         });
       }
     },
@@ -202,7 +190,7 @@ export function UploadWizard() {
           vocabularyKey: m.vocabularyKey,
           label: m.label,
           unit: m.convertedUnit,
-          referenceRange: m.referenceRange ?? { min: 0, max: 0 },
+          referenceRange: m.referenceRange,
         }));
 
       if (newEntries.length === 0) {
@@ -221,7 +209,7 @@ export function UploadWizard() {
           pdfUrl,
           date,
           mappings,
-          researched: data.entries,
+          researched: mergeResearchEntries(mappings, data.entries),
         });
       } catch (e) {
         setState({
