@@ -31,7 +31,10 @@ import type { HealthData, HealthMetricConfig } from "@/types/health";
 // -- Row mappers --
 
 export function mapVocabularyRow(row: VocabularyRow): VocabularyEntry {
-  return {
+  const source = row.interpretation_source;
+  const reviewStatus = row.interpretation_review_status;
+  const version = row.interpretation_version;
+  const mapped = {
     key: row.key,
     label: row.label,
     unit: row.unit,
@@ -39,6 +42,26 @@ export function mapVocabularyRow(row: VocabularyRow): VocabularyEntry {
     description: row.description,
     featured: row.featured === 1,
     visible: row.visible === 1,
+  };
+  if (
+    source === undefined ||
+    reviewStatus === undefined ||
+    version === undefined
+  ) {
+    return mapped;
+  }
+  return {
+    ...mapped,
+    interpretation: {
+      source,
+      model: row.interpretation_model ?? null,
+      generatedAt: row.interpretation_generated_at ?? null,
+      version,
+      reviewStatus,
+      reviewedAt: row.interpretation_reviewed_at ?? null,
+      reviewedBy: row.interpretation_reviewed_by ?? null,
+      updatedAt: row.interpretation_updated_at ?? null,
+    },
   };
 }
 
@@ -117,7 +140,14 @@ export async function getVocabulary(
 ): Promise<VocabularyEntry[]> {
   const result = await db
     .prepare(
-      "SELECT key, label, unit, reference_min, reference_max, description, featured, visible FROM vocabulary ORDER BY label",
+      `SELECT key, label, unit, reference_min, reference_max, description,
+              interpretation_source, interpretation_model,
+              interpretation_generated_at, interpretation_version,
+              interpretation_review_status, interpretation_reviewed_at,
+              interpretation_reviewed_by, interpretation_updated_at,
+              featured, visible
+       FROM vocabulary
+       ORDER BY label`,
     )
     .all<VocabularyRow>();
   const rows = await decodeRows(VocabularyRow, resultsOf("vocabulary", result));

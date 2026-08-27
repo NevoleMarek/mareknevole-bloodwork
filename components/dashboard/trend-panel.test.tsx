@@ -14,6 +14,16 @@ const vocabulary: VocabularyEntry[] = [
     description: "Fasting glucose measures blood sugar.",
     featured: false,
     visible: true,
+    interpretation: {
+      source: "ai",
+      model: "gemini-3.1-pro-preview",
+      generatedAt: "2026-01-02T00:00:00Z",
+      version: 2,
+      reviewStatus: "approved",
+      reviewedAt: "2026-01-03T00:00:00Z",
+      reviewedBy: "admin",
+      updatedAt: "2026-01-03T00:00:00Z",
+    },
   },
   {
     key: "ldl",
@@ -85,6 +95,26 @@ describe("TrendPanel", () => {
     );
     expect(screen.getAllByText("Glucose")).toHaveLength(2);
     expect(screen.getAllByText("LDL")).toHaveLength(2);
+  });
+
+  it("keeps AI provenance and the non-diagnostic context beside a description", () => {
+    render(
+      <TrendPanel
+        selectedKeys={["glucose"]}
+        trends={trends}
+        vocabulary={vocabulary}
+        onRemove={() => {}}
+        onRetry={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("AI-assisted · Reviewed")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Model: gemini-3.1-pro-preview/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/not a diagnosis or medical advice/),
+    ).toBeInTheDocument();
   });
 
   it("shows loading and error states", () => {

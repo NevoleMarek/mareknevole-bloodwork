@@ -1,5 +1,5 @@
 export function researchVariablesPrompt(entries: string): string {
-  return `You are a medical reference assistant. Research the following blood test biomarkers and provide reference ranges and descriptions.
+  return `You are a medical reference assistant. Research the following blood test biomarkers and provide reference ranges and descriptions for a personal tracking dashboard.
 
 BIOMARKERS TO RESEARCH:
 ${entries}
@@ -26,5 +26,6 @@ Rules:
 - "vocabularyKey": must match the input vocabularyKey exactly
 - "description": 1-2 sentences, factual, clinical significance
 - "referenceRange": standard reference range for healthy adults in the given unit
+- Do not diagnose, recommend treatment, or imply that an individual result confirms a condition
 - Maintain the same order as the input`;
 }

@@ -158,6 +158,47 @@ describe("row mappers", () => {
     });
   });
 
+  it("maps persisted interpretation provenance without losing review metadata", () => {
+    const row = {
+      key: "glucose",
+      label: "Glucose",
+      unit: "mg/dL",
+      reference_min: 70,
+      reference_max: 100,
+      description: "Measures blood sugar.",
+      interpretation_source: "ai" as const,
+      interpretation_model: "gemini-3.1-pro-preview",
+      interpretation_generated_at: "2026-01-02T00:00:00Z",
+      interpretation_version: 2,
+      interpretation_review_status: "approved" as const,
+      interpretation_reviewed_at: "2026-01-03T00:00:00Z",
+      interpretation_reviewed_by: "admin",
+      interpretation_updated_at: "2026-01-03T00:00:00Z",
+      featured: 0,
+      visible: 1,
+    };
+
+    expect(mapVocabularyRow(row)).toEqual({
+      key: "glucose",
+      label: "Glucose",
+      unit: "mg/dL",
+      referenceRange: { min: 70, max: 100 },
+      description: "Measures blood sugar.",
+      interpretation: {
+        source: "ai",
+        model: "gemini-3.1-pro-preview",
+        generatedAt: "2026-01-02T00:00:00Z",
+        version: 2,
+        reviewStatus: "approved",
+        reviewedAt: "2026-01-03T00:00:00Z",
+        reviewedBy: "admin",
+        updatedAt: "2026-01-03T00:00:00Z",
+      },
+      featured: false,
+      visible: true,
+    });
+  });
+
   it("maps reading row", () => {
     const row = { id: "r1", date: "2025-06-15", source: "test.pdf" };
     expect(mapReadingRow(row)).toEqual({

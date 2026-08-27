@@ -48,6 +48,7 @@ import type {
   SupplementDeleteInput,
   SupplementUpdateInput,
   VocabularyEntry,
+  VocabularyUpdateInput,
 } from "@/types/bloodwork";
 import type {
   HealthData,
@@ -172,7 +173,7 @@ export interface BloodworkContract {
     entry: VocabularyEntry,
   ) => Effect.Effect<void, PersistenceFailure>;
   readonly updateVocabulary: (
-    entry: VocabularyEntry,
+    entry: VocabularyUpdateInput,
   ) => Effect.Effect<void, PersistenceFailure>;
   readonly deleteVocabulary: (
     key: string,
@@ -610,7 +611,23 @@ export const providerWorkflowsLayer = Layer.effect(
         "research.response",
       );
       yield* requireNonEmpty(result.entries, "research.results");
-      return result;
+      const generatedAt = new Date().toISOString();
+      return {
+        ...result,
+        entries: result.entries.map((entry) => ({
+          ...entry,
+          interpretation: {
+            source: "ai" as const,
+            model: PRO_MODEL,
+            generatedAt,
+            version: 1,
+            reviewStatus: "pending_review" as const,
+            reviewedAt: null,
+            reviewedBy: null,
+            updatedAt: generatedAt,
+          },
+        })),
+      };
     });
     return ProviderWorkflows.of({ extract, map, research });
   }),

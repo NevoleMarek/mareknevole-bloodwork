@@ -24,6 +24,42 @@ export interface ReferenceRange extends Schema.Schema.Type<
   readonly _schemaModel?: never;
 }
 
+export const InterpretationSourceSchema = Schema.Literals([
+  "ai",
+  "manual",
+  "legacy",
+]).annotate({ identifier: "InterpretationSource" });
+export type InterpretationSource = typeof InterpretationSourceSchema.Type;
+
+export const InterpretationReviewStatusSchema = Schema.Literals([
+  "unreviewed",
+  "pending_review",
+  "approved",
+]).annotate({ identifier: "InterpretationReviewStatus" });
+export type InterpretationReviewStatus =
+  typeof InterpretationReviewStatusSchema.Type;
+
+/**
+ * The provenance attached to an interpretation is deliberately a value
+ * object, so it travels with the vocabulary entry everywhere descriptions are
+ * displayed or edited.
+ */
+export const InterpretationProvenance = Schema.Struct({
+  source: InterpretationSourceSchema,
+  model: Schema.NullOr(Schema.String),
+  generatedAt: Schema.NullOr(Schema.String),
+  version: Schema.Number,
+  reviewStatus: InterpretationReviewStatusSchema,
+  reviewedAt: Schema.NullOr(Schema.String),
+  reviewedBy: Schema.NullOr(Schema.String),
+  updatedAt: Schema.NullOr(Schema.String),
+}).annotate({ identifier: "InterpretationProvenance" });
+export interface InterpretationProvenance extends Schema.Schema.Type<
+  typeof InterpretationProvenance
+> {
+  readonly _schemaModel?: never;
+}
+
 export const VocabularyEntry = Schema.Struct({
   key: Schema.String,
   label: Schema.String,
@@ -32,6 +68,7 @@ export const VocabularyEntry = Schema.Struct({
   description: Schema.NullOr(Schema.String),
   featured: Schema.Boolean,
   visible: Schema.Boolean,
+  interpretation: Schema.optional(InterpretationProvenance),
 }).annotate({ identifier: "VocabularyEntry" });
 export interface VocabularyEntry extends Schema.Schema.Type<
   typeof VocabularyEntry
@@ -261,6 +298,7 @@ export const ResearchedEntry = Schema.Struct({
   vocabularyKey: Schema.String,
   description: Schema.String,
   referenceRange: ReferenceRange,
+  interpretation: Schema.optional(InterpretationProvenance),
 }).annotate({ identifier: "ResearchedEntry" });
 export interface ResearchedEntry extends Schema.Schema.Type<
   typeof ResearchedEntry

@@ -13,11 +13,14 @@ import {
   getSupplementChangelogPage,
   getVisibleHealthMetrics,
   getVocabulary,
+  mapVocabularyRow,
 } from "@/db/queries";
 import type {
   BiomarkerTrendPoint,
   ChangelogCursor,
   ChangelogPage,
+  InterpretationProvenance,
+  InterpretationReviewStatus,
   LabOverview,
   ReadingCursor,
   ReadingPage,
@@ -27,6 +30,7 @@ import type {
   SupplementDeleteInput,
   SupplementUpdateInput,
   VocabularyEntry,
+  VocabularyUpdateInput,
   HealthImportConfig,
 } from "@/types/bloodwork";
 import { getCutoffDate } from "@/lib/period";
@@ -43,7 +47,11 @@ import {
   PersistenceError,
   ValidationError,
 } from "@/lib/effect/errors";
-import { SupplementNameRow, SupplementUpdateRow } from "@/lib/schemas/rows";
+import {
+  SupplementNameRow,
+  SupplementUpdateRow,
+  VocabularyRow,
+} from "@/lib/schemas/rows";
 import { CloudflareRuntime } from "@/lib/effect/runtime";
 
 export interface RepositoryContract {
@@ -109,7 +117,7 @@ export interface RepositoryContract {
     entry: VocabularyEntry,
   ) => Effect.Effect<void, PersistenceError | ConflictError>;
   readonly updateVocabulary: (
-    entry: VocabularyEntry,
+    entry: VocabularyUpdateInput,
   ) => Effect.Effect<void, PersistenceError | NotFoundError>;
   readonly deleteVocabulary: (
     key: string,
@@ -164,6 +172,176 @@ const decodePersisted = <S extends Schema.ConstraintDecoder<unknown, never>>(
   Schema.decodeUnknownEffect(schema)(value).pipe(
     Effect.mapError((cause) => new PersistenceError({ operation, cause })),
   );
+
+const REVIEWED_BY = "admin";
+
+function fallbackInterpretation(): InterpretationProvenance {
+  return {
+    source: "legacy",
+    model: null,
+    generatedAt: null,
+    version: 1,
+    reviewStatus: "unreviewed",
+    reviewedAt: null,
+    reviewedBy: null,
+    updatedAt: null,
+  };
+}
+
+function currentInterpretation(
+  entry: VocabularyEntry,
+): InterpretationProvenance {
+  return entry.interpretation ?? fallbackInterpretation();
+}
+
+function interpretationForNewEntry(
+  entry: VocabularyEntry,
+  now: string,
+): InterpretationProvenance {
+  const supplied = entry.interpretation;
+  const source = supplied?.source === "ai" ? "ai" : "manual";
+  const reviewStatus: InterpretationReviewStatus =
+    source === "ai"
+      ? (supplied?.reviewStatus ?? "pending_review")
+      : (supplied?.reviewStatus ?? "approved");
+  return {
+    source,
+    model: source === "ai" ? (supplied?.model ?? null) : null,
+    generatedAt: source === "ai" ? (supplied?.generatedAt ?? now) : null,
+    version: 1,
+    reviewStatus,
+    reviewedAt:
+      reviewStatus === "approved" ? (supplied?.reviewedAt ?? now) : null,
+    reviewedBy:
+      reviewStatus === "approved"
+        ? (supplied?.reviewedBy ?? REVIEWED_BY)
+        : null,
+    updatedAt: now,
+  };
+}
+
+type InterpretationUpdate = {
+  value: InterpretationProvenance;
+  changed: boolean;
+};
+
+function interpretationForUpdate(
+  previousEntry: VocabularyEntry,
+  nextEntry: VocabularyEntry,
+  requestedStatus: InterpretationReviewStatus | undefined,
+  now: string,
+): InterpretationUpdate {
+  const previous = currentInterpretation(previousEntry);
+  const descriptionChanged =
+    previousEntry.description !== nextEntry.description;
+  const rangeChanged =
+    previousEntry.referenceRange.min !== nextEntry.referenceRange.min ||
+    previousEntry.referenceRange.max !== nextEntry.referenceRange.max;
+  const statusChanged =
+    requestedStatus !== undefined && requestedStatus !== previous.reviewStatus;
+  const changed = descriptionChanged || rangeChanged || statusChanged;
+  if (!changed) return { value: previous, changed: false };
+
+  const contentChanged = descriptionChanged || rangeChanged;
+  const source =
+    previous.source === "ai"
+      ? "ai"
+      : contentChanged
+        ? "manual"
+        : previous.source;
+  const defaultStatus: InterpretationReviewStatus =
+    previous.source === "ai" && contentChanged
+      ? "pending_review"
+      : previous.source === "legacy" && contentChanged
+        ? "approved"
+        : previous.reviewStatus;
+  const reviewStatus = requestedStatus ?? defaultStatus;
+  return {
+    changed: true,
+    value: {
+      source,
+      model: source === "ai" ? previous.model : null,
+      generatedAt: source === "ai" ? previous.generatedAt : null,
+      version: previous.version + 1,
+      reviewStatus,
+      reviewedAt:
+        reviewStatus === "approved"
+          ? reviewStatus === previous.reviewStatus && !contentChanged
+            ? (previous.reviewedAt ?? now)
+            : now
+          : null,
+      reviewedBy:
+        reviewStatus === "approved"
+          ? reviewStatus === previous.reviewStatus && !contentChanged
+            ? (previous.reviewedBy ?? REVIEWED_BY)
+            : REVIEWED_BY
+          : null,
+      updatedAt: now,
+    },
+  };
+}
+
+function vocabularyInsertStatements(
+  database: D1Database,
+  entry: VocabularyEntry,
+  now: string,
+): D1PreparedStatement[] {
+  const interpretation = interpretationForNewEntry(entry, now);
+  return [
+    database
+      .prepare(
+        `INSERT INTO vocabulary (
+           key, label, unit, reference_min, reference_max, description,
+           interpretation_source, interpretation_model,
+           interpretation_generated_at, interpretation_version,
+           interpretation_review_status, interpretation_reviewed_at,
+           interpretation_reviewed_by, interpretation_updated_at,
+           featured, visible
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        entry.key,
+        entry.label,
+        entry.unit,
+        entry.referenceRange.min,
+        entry.referenceRange.max,
+        entry.description,
+        interpretation.source,
+        interpretation.model,
+        interpretation.generatedAt,
+        interpretation.version,
+        interpretation.reviewStatus,
+        interpretation.reviewedAt,
+        interpretation.reviewedBy,
+        interpretation.updatedAt,
+        entry.featured ? 1 : 0,
+        entry.visible ? 1 : 0,
+      ),
+    database
+      .prepare(
+        `INSERT INTO vocabulary_interpretation_history (
+           id, vocabulary_key, version, description, reference_min,
+           reference_max, source, model, generated_at, review_status,
+           reviewed_at, reviewed_by, changed_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        crypto.randomUUID(),
+        entry.key,
+        interpretation.version,
+        entry.description,
+        entry.referenceRange.min,
+        entry.referenceRange.max,
+        interpretation.source,
+        interpretation.model,
+        interpretation.generatedAt,
+        interpretation.reviewStatus,
+        interpretation.reviewedAt,
+        interpretation.reviewedBy,
+        interpretation.updatedAt,
+      ),
+  ];
+}
 
 export const makeRepository = (database: D1Database) => {
   const getVocabularyEffect = Effect.fn("Repository.getVocabulary")(
@@ -346,25 +524,13 @@ export const makeRepository = (database: D1Database) => {
       );
     }
     const readingId = crypto.randomUUID();
+    const now = new Date().toISOString();
     yield* d1Mutation(
       "Repository.saveReading",
       (db) => {
         const statements: D1PreparedStatement[] = [];
         for (const entry of body.newVocabulary) {
-          statements.push(
-            db
-              .prepare(
-                "INSERT INTO vocabulary (key, label, unit, reference_min, reference_max, description) VALUES (?, ?, ?, ?, ?, ?)",
-              )
-              .bind(
-                entry.key,
-                entry.label,
-                entry.unit,
-                entry.referenceRange.min,
-                entry.referenceRange.max,
-                entry.description,
-              ),
-          );
+          statements.push(...vocabularyInsertStatements(db, entry, now));
         }
         statements.push(
           db
@@ -397,56 +563,129 @@ export const makeRepository = (database: D1Database) => {
   });
   const createVocabularyEffect = Effect.fn("Repository.createVocabulary")(
     function* (entry: VocabularyEntry) {
+      const now = new Date().toISOString();
       yield* d1Mutation(
         "Repository.createVocabulary",
-        (db) =>
-          db
-            .prepare(
-              "INSERT INTO vocabulary (key, label, unit, reference_min, reference_max, description, featured, visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            )
-            .bind(
-              entry.key,
-              entry.label,
-              entry.unit,
-              entry.referenceRange.min,
-              entry.referenceRange.max,
-              entry.description,
-              entry.featured ? 1 : 0,
-              entry.visible ? 1 : 0,
-            )
-            .run(),
+        (db) => db.batch(vocabularyInsertStatements(db, entry, now)),
         database,
         { resource: "vocabulary", id: entry.key },
       );
     },
   );
   const updateVocabularyEffect = Effect.fn("Repository.updateVocabulary")(
-    function* (entry: VocabularyEntry) {
-      const result = yield* d1(
-        "Repository.updateVocabulary",
+    function* (entry: VocabularyUpdateInput) {
+      const oldUnknown = yield* d1(
+        "Repository.updateVocabulary.read",
         (db) =>
           db
-            .prepare(
-              "UPDATE vocabulary SET label = ?, unit = ?, reference_min = ?, reference_max = ?, description = ?, featured = ?, visible = ? WHERE key = ?",
-            )
-            .bind(
-              entry.label,
-              entry.unit,
-              entry.referenceRange.min,
-              entry.referenceRange.max,
-              entry.description,
-              entry.featured ? 1 : 0,
-              entry.visible ? 1 : 0,
-              entry.key,
-            )
-            .run(),
+            .prepare("SELECT * FROM vocabulary WHERE key = ?")
+            .bind(entry.key)
+            .first<Schema.Json>(),
         database,
       );
-      if (result.meta.changes === 0) {
+      const oldRow = oldUnknown
+        ? yield* decodePersisted(
+            VocabularyRow,
+            oldUnknown,
+            "Repository.updateVocabulary.decode",
+          )
+        : null;
+      if (!oldRow) {
         return yield* Effect.fail(
           new NotFoundError({ resource: "vocabulary", id: entry.key }),
         );
       }
+      const oldEntry = mapVocabularyRow(oldRow);
+      const now = new Date().toISOString();
+      const interpretation = interpretationForUpdate(
+        oldEntry,
+        entry,
+        entry.interpretationReviewStatus,
+        now,
+      );
+      yield* d1(
+        "Repository.updateVocabulary",
+        async (db) => {
+          const update = interpretation.changed
+            ? db
+                .prepare(
+                  `UPDATE vocabulary SET
+                     label = ?, unit = ?, reference_min = ?, reference_max = ?,
+                     description = ?, interpretation_source = ?,
+                     interpretation_model = ?, interpretation_generated_at = ?,
+                     interpretation_version = ?, interpretation_review_status = ?,
+                     interpretation_reviewed_at = ?, interpretation_reviewed_by = ?,
+                     interpretation_updated_at = ?, featured = ?, visible = ?
+                   WHERE key = ?`,
+                )
+                .bind(
+                  entry.label,
+                  entry.unit,
+                  entry.referenceRange.min,
+                  entry.referenceRange.max,
+                  entry.description,
+                  interpretation.value.source,
+                  interpretation.value.model,
+                  interpretation.value.generatedAt,
+                  interpretation.value.version,
+                  interpretation.value.reviewStatus,
+                  interpretation.value.reviewedAt,
+                  interpretation.value.reviewedBy,
+                  interpretation.value.updatedAt,
+                  entry.featured ? 1 : 0,
+                  entry.visible ? 1 : 0,
+                  entry.key,
+                )
+            : db
+                .prepare(
+                  `UPDATE vocabulary SET
+                     label = ?, unit = ?, reference_min = ?, reference_max = ?,
+                     description = ?, featured = ?, visible = ?
+                   WHERE key = ?`,
+                )
+                .bind(
+                  entry.label,
+                  entry.unit,
+                  entry.referenceRange.min,
+                  entry.referenceRange.max,
+                  entry.description,
+                  entry.featured ? 1 : 0,
+                  entry.visible ? 1 : 0,
+                  entry.key,
+                );
+          if (!interpretation.changed) {
+            await update.run();
+            return;
+          }
+          await db.batch([
+            update,
+            db
+              .prepare(
+                `INSERT INTO vocabulary_interpretation_history (
+                   id, vocabulary_key, version, description, reference_min,
+                   reference_max, source, model, generated_at, review_status,
+                   reviewed_at, reviewed_by, changed_at
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              )
+              .bind(
+                crypto.randomUUID(),
+                entry.key,
+                interpretation.value.version,
+                entry.description,
+                entry.referenceRange.min,
+                entry.referenceRange.max,
+                interpretation.value.source,
+                interpretation.value.model,
+                interpretation.value.generatedAt,
+                interpretation.value.reviewStatus,
+                interpretation.value.reviewedAt,
+                interpretation.value.reviewedBy,
+                interpretation.value.updatedAt,
+              ),
+          ]);
+        },
+        database,
+      );
     },
   );
   const deleteVocabularyEffect = Effect.fn("Repository.deleteVocabulary")(

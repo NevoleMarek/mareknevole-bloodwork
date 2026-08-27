@@ -1,6 +1,11 @@
 import * as Schema from "effect/Schema";
 
-import { HealthAggregationSchema, StatusSchema } from "@/lib/schemas/domain";
+import {
+  HealthAggregationSchema,
+  InterpretationReviewStatusSchema,
+  InterpretationSourceSchema,
+  StatusSchema,
+} from "@/lib/schemas/domain";
 
 export const VocabularyRow = Schema.Struct({
   key: Schema.String,
@@ -9,6 +14,16 @@ export const VocabularyRow = Schema.Struct({
   reference_min: Schema.Number,
   reference_max: Schema.Number,
   description: Schema.NullOr(Schema.String),
+  interpretation_source: Schema.optional(InterpretationSourceSchema),
+  interpretation_model: Schema.optional(Schema.NullOr(Schema.String)),
+  interpretation_generated_at: Schema.optional(Schema.NullOr(Schema.String)),
+  interpretation_version: Schema.optional(Schema.Number),
+  interpretation_review_status: Schema.optional(
+    InterpretationReviewStatusSchema,
+  ),
+  interpretation_reviewed_at: Schema.optional(Schema.NullOr(Schema.String)),
+  interpretation_reviewed_by: Schema.optional(Schema.NullOr(Schema.String)),
+  interpretation_updated_at: Schema.optional(Schema.NullOr(Schema.String)),
   featured: Schema.Number,
   visible: Schema.Number,
 });

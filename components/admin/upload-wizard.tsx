@@ -146,7 +146,7 @@ export function UploadWizard() {
         .filter((m) => m.isNew)
         .map((m) => {
           const research = researchByKey.get(m.vocabularyKey);
-          return {
+          const entry = {
             key: m.vocabularyKey,
             label: m.label,
             unit: m.convertedUnit,
@@ -156,6 +156,10 @@ export function UploadWizard() {
             featured: false,
             visible: true,
           };
+          if (research?.interpretation) {
+            return { ...entry, interpretation: research.interpretation };
+          }
+          return entry;
         });
 
       // Build measurements with derived status

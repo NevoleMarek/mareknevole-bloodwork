@@ -1,5 +1,9 @@
 "use client";
 
+import type {
+  InterpretationProvenance,
+  InterpretationReviewStatus,
+} from "@/types/bloodwork";
 import type { ResearchedEntry } from "@/types/wizard";
 
 type Props = {
@@ -10,6 +14,12 @@ type Props = {
   saving: boolean;
 };
 
+function isInterpretationReviewStatus(
+  value: string,
+): value is InterpretationReviewStatus {
+  return value === "pending_review" || value === "approved";
+}
+
 export function StepReviewResearch({
   researched,
   onResearchedChange,
@@ -17,6 +27,25 @@ export function StepReviewResearch({
   onSave,
   saving,
 }: Props) {
+  function setReviewStatus(
+    entry: ResearchedEntry,
+    reviewStatus: InterpretationReviewStatus,
+  ): InterpretationProvenance {
+    const current = entry.interpretation;
+    return {
+      source: current?.source ?? "ai",
+      model: current?.model ?? null,
+      generatedAt: current?.generatedAt ?? null,
+      version: current?.version ?? 1,
+      reviewStatus,
+      reviewedAt:
+        reviewStatus === "approved" ? (current?.reviewedAt ?? null) : null,
+      reviewedBy:
+        reviewStatus === "approved" ? (current?.reviewedBy ?? null) : null,
+      updatedAt: current?.updatedAt ?? null,
+    };
+  }
+
   function updateEntry(index: number, patch: Partial<ResearchedEntry>) {
     onResearchedChange(
       researched.map((e, i) => (i === index ? { ...e, ...patch } : e)),
@@ -28,6 +57,11 @@ export function StepReviewResearch({
       <h2 className="mb-3 text-sm font-semibold text-zinc-800">
         New Biomarker Research
       </h2>
+      <p className="mb-5 max-w-2xl text-xs leading-5 text-zinc-600">
+        Research is AI-assisted and starts as pending review. Edit the context
+        if needed, then approve it explicitly before it is presented as reviewed
+        information.
+      </p>
       <div className="space-y-4">
         {researched.map((entry, i) => (
           <div
@@ -46,6 +80,25 @@ export function StepReviewResearch({
               rows={2}
               className="field mb-4 w-full text-sm text-zinc-900"
             />
+            <label className="mb-4 block sm:max-w-md">
+              <span className="mb-1.5 block text-xs font-semibold text-zinc-700">
+                Review state
+              </span>
+              <select
+                aria-label={`${entry.vocabularyKey} interpretation review state`}
+                value={entry.interpretation?.reviewStatus ?? "pending_review"}
+                onChange={(event) => {
+                  if (!isInterpretationReviewStatus(event.target.value)) return;
+                  updateEntry(i, {
+                    interpretation: setReviewStatus(entry, event.target.value),
+                  });
+                }}
+                className="field w-full text-sm"
+              >
+                <option value="pending_review">Pending review</option>
+                <option value="approved">Approve for display</option>
+              </select>
+            </label>
             <div className="grid grid-cols-2 gap-3 sm:max-w-md">
               <label>
                 <span className="mb-1.5 block text-xs font-semibold text-zinc-700">

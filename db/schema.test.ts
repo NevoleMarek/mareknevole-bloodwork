@@ -3,7 +3,11 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const schema = ["0001_schema.sql", "0002_measurement_reading_date.sql"]
+const schema = [
+  "0001_schema.sql",
+  "0002_measurement_reading_date.sql",
+  "0003_interpretation_provenance.sql",
+]
   .map((file) => readFileSync(resolve("db/migrations", file), "utf8"))
   .join("\n");
 
@@ -26,5 +30,16 @@ describe("D1 indexes", () => {
       "ALTER TABLE measurements ADD COLUMN reading_date",
     );
     expect(schema).toContain("WHERE readings.id = measurements.reading_id");
+  });
+
+  it("keeps interpretation provenance and an append-only revision trail", () => {
+    expect(schema).toContain(
+      "ALTER TABLE vocabulary ADD COLUMN interpretation_source",
+    );
+    expect(schema).toContain(
+      "CREATE TABLE IF NOT EXISTS vocabulary_interpretation_history",
+    );
+    expect(schema).toContain("UNIQUE(vocabulary_key, version)");
+    expect(schema).toContain("idx_interpretation_history_key_version");
   });
 });

@@ -29,6 +29,35 @@ function buildChartData(
   }));
 }
 
+function interpretationStatusLabel(
+  source: "ai" | "manual" | "legacy",
+  reviewStatus: "unreviewed" | "pending_review" | "approved",
+): string {
+  if (source === "ai") {
+    return reviewStatus === "approved"
+      ? "AI-assisted · Reviewed"
+      : "AI-assisted · Pending review";
+  }
+  if (source === "manual") {
+    return reviewStatus === "approved"
+      ? "Manually authored · Reviewed"
+      : "Manually authored · Pending review";
+  }
+  return "Legacy record · Review status not recorded";
+}
+
+function formatProvenanceDate(value: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? null
+    : date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+}
+
 function BiomarkerTrend({
   entry,
   points,
@@ -185,6 +214,40 @@ export function TrendPanel({
               </div>
               <div className="mt-1 text-xs leading-5 text-zinc-600">
                 {entry.description}
+              </div>
+              <div className="mt-3 rounded-xl border border-amber-900/10 bg-amber-50/70 px-3 py-2.5 text-[0.68rem] leading-5 text-amber-950">
+                <div className="font-semibold">
+                  {entry.interpretation
+                    ? interpretationStatusLabel(
+                        entry.interpretation.source,
+                        entry.interpretation.reviewStatus,
+                      )
+                    : "Interpretation provenance not recorded"}
+                </div>
+                {entry.interpretation && (
+                  <div className="text-amber-900/80">
+                    {entry.interpretation.model && (
+                      <span>Model: {entry.interpretation.model} · </span>
+                    )}
+                    Version {entry.interpretation.version}
+                    {formatProvenanceDate(entry.interpretation.generatedAt) && (
+                      <span>
+                        {" · "}Generated{" "}
+                        {formatProvenanceDate(entry.interpretation.generatedAt)}
+                      </span>
+                    )}
+                    {entry.interpretation.reviewedAt && (
+                      <span>
+                        {" · "}Reviewed{" "}
+                        {formatProvenanceDate(entry.interpretation.reviewedAt)}
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div className="mt-1 font-medium">
+                  Context only — not a diagnosis or medical advice. Verify
+                  against the source lab report and a qualified clinician.
+                </div>
               </div>
             </div>
           );

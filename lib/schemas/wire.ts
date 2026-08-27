@@ -10,6 +10,7 @@ import {
   HealthData,
   HealthMetricConfig,
   HealthMetric,
+  InterpretationReviewStatusSchema,
   MappedVariable,
   Measurement,
   ResearchedEntry,
@@ -197,6 +198,7 @@ export const VocabularyUpdateRequest = Schema.Struct({
   unit: VocabularyEntry.fields.unit,
   referenceRange: VocabularyEntry.fields.referenceRange,
   description: VocabularyEntry.fields.description,
+  interpretationReviewStatus: Schema.optional(InterpretationReviewStatusSchema),
   featured: VocabularyEntry.fields.featured,
   visible: VocabularyEntry.fields.visible,
 }).annotate({ identifier: "VocabularyUpdateRequest" });

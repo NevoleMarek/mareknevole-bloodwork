@@ -4,6 +4,9 @@ export type {
   ChangelogCursor,
   ChangelogPage,
   DashboardSnapshot,
+  InterpretationProvenance,
+  InterpretationReviewStatus,
+  InterpretationSource,
   LabOverview,
   Measurement,
   ReadingCursor,
@@ -13,6 +16,11 @@ export type {
   Status,
   Supplement,
   SupplementChangelog,
+  VocabularyEntry,
+} from "@/lib/schemas/domain";
+
+import type {
+  InterpretationReviewStatus,
   VocabularyEntry,
 } from "@/lib/schemas/domain";
 
@@ -34,4 +42,9 @@ export type SupplementUpdateInput = SupplementUpdateRequest & {
 };
 export type SupplementDeleteInput = SupplementDeleteQuery & {
   readonly id: string;
+};
+
+/** Vocabulary updates carry review intent separately from the persisted value. */
+export type VocabularyUpdateInput = VocabularyEntry & {
+  readonly interpretationReviewStatus?: InterpretationReviewStatus;
 };

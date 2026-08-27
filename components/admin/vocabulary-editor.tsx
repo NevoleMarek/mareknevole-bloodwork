@@ -4,21 +4,63 @@ import { useState } from "react";
 
 import { runApi } from "@/lib/effect/client";
 import { makeVocabularyKey } from "@/lib/effect/api";
-import type { VocabularyEntry } from "@/types/bloodwork";
+import type {
+  InterpretationReviewStatus,
+  VocabularyEntry,
+} from "@/types/bloodwork";
 
 type EditingState =
   | { kind: "none" }
   | { kind: "editing"; entry: VocabularyEntry }
   | { kind: "adding" };
 
-const updatePayload = (entry: VocabularyEntry) => ({
-  label: entry.label,
-  unit: entry.unit,
-  referenceRange: entry.referenceRange,
-  description: entry.description,
-  featured: entry.featured,
-  visible: entry.visible,
-});
+type VocabularyUpdatePayload = {
+  label: string;
+  unit: string;
+  referenceRange: VocabularyEntry["referenceRange"];
+  description: VocabularyEntry["description"];
+  interpretationReviewStatus?: InterpretationReviewStatus;
+  featured: boolean;
+  visible: boolean;
+};
+
+type VocabularyForm = {
+  key: string;
+  label: string;
+  unit: string;
+  min: string;
+  max: string;
+  description: string;
+  reviewStatus: InterpretationReviewStatus;
+};
+
+function isInterpretationReviewStatus(
+  value: string,
+): value is InterpretationReviewStatus {
+  return (
+    value === "unreviewed" || value === "pending_review" || value === "approved"
+  );
+}
+
+const updatePayload = (
+  entry: VocabularyEntry,
+  interpretationReviewStatus?: InterpretationReviewStatus,
+): VocabularyUpdatePayload => {
+  const payload: VocabularyUpdatePayload = {
+    label: entry.label,
+    unit: entry.unit,
+    referenceRange: entry.referenceRange,
+    description: entry.description,
+    featured: entry.featured,
+    visible: entry.visible,
+  };
+  if (interpretationReviewStatus !== undefined) {
+    payload.interpretationReviewStatus = interpretationReviewStatus;
+  } else if (entry.interpretation) {
+    payload.interpretationReviewStatus = entry.interpretation.reviewStatus;
+  }
+  return payload;
+};
 
 export function VocabularyEditor({
   entries,
@@ -28,16 +70,26 @@ export function VocabularyEditor({
   onRefresh: () => void;
 }) {
   const [editing, setEditing] = useState<EditingState>({ kind: "none" });
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<VocabularyForm>({
     key: "",
     label: "",
     unit: "",
     min: "",
     max: "",
+    description: "",
+    reviewStatus: "approved",
   });
 
   function startAdd() {
-    setForm({ key: "", label: "", unit: "", min: "", max: "" });
+    setForm({
+      key: "",
+      label: "",
+      unit: "",
+      min: "",
+      max: "",
+      description: "",
+      reviewStatus: "approved",
+    });
     setEditing({ kind: "adding" });
   }
 
@@ -48,6 +100,8 @@ export function VocabularyEditor({
       unit: entry.unit,
       min: String(entry.referenceRange.min),
       max: String(entry.referenceRange.max),
+      description: entry.description ?? "",
+      reviewStatus: entry.interpretation?.reviewStatus ?? "unreviewed",
     });
     setEditing({ kind: "editing", entry });
   }
@@ -73,22 +127,39 @@ export function VocabularyEditor({
   }
 
   async function handleSave() {
-    const entry: VocabularyEntry = {
+    const entryBase = {
       key: form.key,
       label: form.label,
       unit: form.unit,
       referenceRange: { min: Number(form.min), max: Number(form.max) },
-      description:
-        editing.kind === "editing" ? editing.entry.description : null,
+      description: form.description.trim() || null,
       featured: editing.kind === "editing" ? editing.entry.featured : false,
       visible: editing.kind === "editing" ? editing.entry.visible : true,
     };
+    const entry =
+      editing.kind === "editing" && editing.entry.interpretation
+        ? { ...entryBase, interpretation: editing.entry.interpretation }
+        : editing.kind === "adding"
+          ? {
+              ...entryBase,
+              interpretation: {
+                source: "manual" as const,
+                model: null,
+                generatedAt: null,
+                version: 1,
+                reviewStatus: form.reviewStatus,
+                reviewedAt: null,
+                reviewedBy: null,
+                updatedAt: null,
+              },
+            }
+          : entryBase;
     await runApi((client) =>
       editing.kind === "adding"
         ? client.vocabulary.create({ payload: entry })
         : client.vocabulary.update({
             params: { key: makeVocabularyKey(entry.key) },
-            payload: updatePayload(entry),
+            payload: updatePayload(entry, form.reviewStatus),
           }),
     );
     setEditing({ kind: "none" });
@@ -121,6 +192,9 @@ export function VocabularyEditor({
               <th scope="col" className="px-4 py-3 text-left">
                 Range
               </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Interpretation
+              </th>
               <th scope="col" className="px-4 py-3 text-center">
                 Visible
               </th>
@@ -142,6 +216,23 @@ export function VocabularyEditor({
                 <td className="px-4 py-3 text-zinc-600">{e.unit}</td>
                 <td className="data-value px-4 py-3 text-zinc-600">
                   {e.referenceRange.min}–{e.referenceRange.max}
+                </td>
+                <td className="px-4 py-3 text-xs text-zinc-600">
+                  <div>
+                    {e.interpretation?.source === "ai"
+                      ? "AI-assisted"
+                      : e.interpretation?.source === "manual"
+                        ? "Manual"
+                        : "Legacy"}
+                  </div>
+                  <div className="text-zinc-500">
+                    {e.interpretation?.reviewStatus === "approved"
+                      ? "Reviewed"
+                      : e.interpretation?.reviewStatus === "pending_review"
+                        ? "Pending review"
+                        : "Unreviewed"}
+                    {e.interpretation && ` · v${e.interpretation.version}`}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <input
@@ -199,6 +290,38 @@ export function VocabularyEditor({
             onChange={(e) => setForm({ ...form, label: e.target.value })}
             className="field w-full"
           />
+          <label className="sm:col-span-2 lg:col-span-5">
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-700">
+              Interpretation context
+            </span>
+            <textarea
+              aria-label="Interpretation context"
+              value={form.description}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
+              rows={3}
+              className="field w-full"
+            />
+          </label>
+          <label className="sm:col-span-2 lg:col-span-2">
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-700">
+              Review state
+            </span>
+            <select
+              aria-label="Interpretation review state"
+              value={form.reviewStatus}
+              onChange={(e) =>
+                isInterpretationReviewStatus(e.target.value) &&
+                setForm({ ...form, reviewStatus: e.target.value })
+              }
+              className="field w-full"
+            >
+              <option value="unreviewed">Unreviewed</option>
+              <option value="pending_review">Pending review</option>
+              <option value="approved">Approved for display</option>
+            </select>
+          </label>
           <input
             placeholder="unit"
             aria-label="Unit"
