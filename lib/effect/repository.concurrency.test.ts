@@ -54,6 +54,9 @@ function fakeDatabase(options: {
       };
       return statement;
     },
+    async batch<T>(statements: D1PreparedStatement[]) {
+      return Promise.all(statements.map((statement) => statement.run<T>()));
+    },
   } as D1Database;
   return { database, queries, binds };
 }
@@ -99,7 +102,8 @@ describe("repository optimistic concurrency", () => {
       "supplement-1",
       1,
     ]);
-    expect(queries).toHaveLength(2);
+    expect(queries).toHaveLength(3);
+    expect(queries[2]).toContain("WHERE changes() > 0");
   });
 
   it("updates only the requested vocabulary flag", async () => {
@@ -127,7 +131,15 @@ describe("repository optimistic concurrency", () => {
 
   it("returns a conflict instead of accepting a stale vocabulary patch", async () => {
     const { database } = fakeDatabase({
-      first: [{ key: "glucose" }],
+      first: [
+        {
+          key: "glucose",
+          unit: "mg/dL",
+          reference_min: 70,
+          reference_max: 100,
+          has_measurements: 1,
+        },
+      ],
       run: d1Result([], 0),
     });
     const repository = makeRepository(database);

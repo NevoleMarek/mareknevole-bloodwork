@@ -42,6 +42,20 @@ export interface MeasurementRow extends Schema.Schema.Type<
   readonly _schemaModel?: never;
 }
 
+/** State needed to classify a vocabulary update without losing history. */
+export const VocabularyMutationStateRow = Schema.Struct({
+  key: Schema.String,
+  unit: Schema.String,
+  reference_min: Schema.Number,
+  reference_max: Schema.Number,
+  has_measurements: Schema.Number,
+});
+export interface VocabularyMutationStateRow extends Schema.Schema.Type<
+  typeof VocabularyMutationStateRow
+> {
+  readonly _schemaModel?: never;
+}
+
 export const SupplementRow = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
