@@ -678,6 +678,14 @@ export const makeRepository = (database: D1Database) => {
           new NotFoundError({ resource: "supplement", id: input.id }),
         );
       }
+      if (supplement.stopped_at !== null) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "Repository.deleteSupplement",
+            message: "A supplement already has a stop date",
+          }),
+        );
+      }
       if (
         !isSupplementActive(
           { startedAt: supplement.started_at, stoppedAt: null },
@@ -693,28 +701,39 @@ export const makeRepository = (database: D1Database) => {
         );
       }
       const now = new Date().toISOString();
-      yield* d1(
-        "Repository.deleteSupplement",
+      const updateResult = yield* d1(
+        "Repository.deleteSupplement.update",
         (db) =>
           db
             .prepare(
-              "UPDATE supplements SET stopped_at = ?, updated_at = ? WHERE id = ?",
+              "UPDATE supplements SET stopped_at = ?, updated_at = ? WHERE id = ? AND stopped_at IS NULL",
             )
             .bind(now, now, input.id)
-            .run()
-            .then(() =>
-              db
-                .prepare(
-                  "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
-                )
-                .bind(
-                  crypto.randomUUID(),
-                  input.changelogDate,
-                  `Removed ${supplement.name}`,
-                  now,
-                )
-                .run(),
-            ),
+            .run(),
+        database,
+      );
+      if (updateResult.meta.changes === 0) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "Repository.deleteSupplement",
+            message: "A supplement was already stopped",
+          }),
+        );
+      }
+      yield* d1(
+        "Repository.deleteSupplement.changelog",
+        (db) =>
+          db
+            .prepare(
+              "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
+            )
+            .bind(
+              crypto.randomUUID(),
+              input.changelogDate,
+              `Removed ${supplement.name}`,
+              now,
+            )
+            .run(),
         database,
       );
     },
