@@ -39,6 +39,9 @@ const repository = (
   saveReading: Repository["Service"]["saveReading"],
   getActiveSupplements: Repository["Service"]["getActiveSupplements"] = unused,
   getSupplementChangelogPage: Repository["Service"]["getSupplementChangelogPage"] = unused,
+  createSession: Repository["Service"]["createSession"] = unused,
+  hasSession: Repository["Service"]["hasSession"] = unused,
+  revokeSession: Repository["Service"]["revokeSession"] = unused,
 ) =>
   Repository.of({
     getVocabulary: unused,
@@ -63,6 +66,9 @@ const repository = (
     createSupplement: unused,
     updateSupplement: unused,
     deleteSupplement: unused,
+    createSession,
+    hasSession,
+    revokeSession,
   });
 
 const cache = (
@@ -123,7 +129,11 @@ describe("Effect application services", () => {
           Effect.fail(new ConfigurationError({ key: "GEMINI_API_KEY" })),
       }),
     );
-    const auth = authLayer.pipe(Layer.provide(config));
+    const auth = authLayer.pipe(
+      Layer.provide(
+        Layer.merge(config, Layer.succeed(Repository, repository(unused))),
+      ),
+    );
     const program = Effect.gen(function* () {
       const service = yield* Auth;
       return yield* service.authenticate("secret");
@@ -146,7 +156,11 @@ describe("Effect application services", () => {
           Effect.fail(new ConfigurationError({ key: "GEMINI_API_KEY" })),
       }),
     );
-    const auth = authLayer.pipe(Layer.provide(config));
+    const auth = authLayer.pipe(
+      Layer.provide(
+        Layer.merge(config, Layer.succeed(Repository, repository(unused))),
+      ),
+    );
     const program = Effect.gen(function* () {
       const service = yield* Auth;
       return yield* service.authenticate("wrong");
@@ -158,6 +172,7 @@ describe("Effect application services", () => {
   });
 
   it("validates signed session tokens without trusting cookie presence", async () => {
+    const activeSessions = new Set<string>();
     const config = Layer.succeed(
       ApplicationConfig,
       ApplicationConfig.of({
@@ -169,7 +184,24 @@ describe("Effect application services", () => {
           Effect.fail(new ConfigurationError({ key: "GEMINI_API_KEY" })),
       }),
     );
-    const auth = authLayer.pipe(Layer.provide(config));
+    const auth = authLayer.pipe(
+      Layer.provide(
+        Layer.merge(
+          config,
+          Layer.succeed(
+            Repository,
+            repository(
+              unused,
+              unused,
+              unused,
+              (id) => Effect.sync(() => void activeSessions.add(id)),
+              (id) => Effect.succeed(activeSessions.has(id)),
+              (id) => Effect.sync(() => void activeSessions.delete(id)),
+            ),
+          ),
+        ),
+      ),
+    );
     const token = await Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* Auth;
@@ -178,6 +210,31 @@ describe("Effect application services", () => {
         return session.token;
       }).pipe(Effect.provide(auth)),
     );
+    const secondToken = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* Auth;
+        return (yield* service.authenticate("secret")).token;
+      }).pipe(Effect.provide(auth)),
+    );
+
+    await expect(
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const service = yield* Auth;
+          yield* service.revoke(token);
+          yield* service.validate(token);
+        }).pipe(Effect.provide(auth)),
+      ),
+    ).rejects.toMatchObject({ reason: "invalid-session" });
+
+    await expect(
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const service = yield* Auth;
+          yield* service.validate(secondToken);
+        }).pipe(Effect.provide(auth)),
+      ),
+    ).resolves.toBeUndefined();
 
     await expect(
       Effect.runPromise(

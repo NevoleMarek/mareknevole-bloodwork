@@ -123,6 +123,12 @@ export interface RepositoryContract {
   readonly deleteSupplement: (
     input: SupplementDeleteInput,
   ) => Effect.Effect<void, PersistenceError | NotFoundError>;
+  readonly createSession: (
+    id: string,
+    expiresAt: number,
+  ) => Effect.Effect<void, PersistenceError>;
+  readonly hasSession: (id: string) => Effect.Effect<boolean, PersistenceError>;
+  readonly revokeSession: (id: string) => Effect.Effect<void, PersistenceError>;
 }
 
 export class Repository extends Context.Service<
@@ -617,6 +623,46 @@ export const makeRepository = (database: D1Database) => {
       );
     },
   );
+  const createSessionEffect = Effect.fn("Repository.createSession")(function* (
+    id: string,
+    expiresAt: number,
+  ) {
+    yield* d1(
+      "Repository.createSession",
+      (db) =>
+        db
+          .prepare("INSERT INTO sessions (id, expires_at) VALUES (?, ?)")
+          .bind(id, expiresAt)
+          .run(),
+      database,
+    );
+  });
+  const hasSessionEffect = Effect.fn("Repository.hasSession")(function* (
+    id: string,
+  ) {
+    const now = Math.floor(Date.now() / 1000);
+    const result = yield* d1(
+      "Repository.hasSession",
+      (db) =>
+        db
+          .prepare(
+            "SELECT 1 AS active FROM sessions WHERE id = ? AND expires_at > ? LIMIT 1",
+          )
+          .bind(id, now)
+          .all<{ active: number }>(),
+      database,
+    );
+    return result.results.length > 0;
+  });
+  const revokeSessionEffect = Effect.fn("Repository.revokeSession")(function* (
+    id: string,
+  ) {
+    yield* d1(
+      "Repository.revokeSession",
+      (db) => db.prepare("DELETE FROM sessions WHERE id = ?").bind(id).run(),
+      database,
+    );
+  });
 
   return Repository.of({
     getVocabulary: getVocabularyEffect,
@@ -641,6 +687,9 @@ export const makeRepository = (database: D1Database) => {
     createSupplement: createSupplementEffect,
     updateSupplement: updateSupplementEffect,
     deleteSupplement: deleteSupplementEffect,
+    createSession: createSessionEffect,
+    hasSession: hasSessionEffect,
+    revokeSession: revokeSessionEffect,
   });
 };
 

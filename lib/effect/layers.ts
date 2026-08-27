@@ -30,7 +30,9 @@ const healthLive = healthLayer.pipe(
 const supplementsLive = supplementsLayer.pipe(
   Layer.provide(Layer.mergeAll(repositoryLive, cacheLayer)),
 );
-const authLive = authLayer.pipe(Layer.provide(configLive));
+const authLive = authLayer.pipe(
+  Layer.provide(Layer.merge(configLive, repositoryLive)),
+);
 const providerWorkflowsLive = providerWorkflowsLayer.pipe(
   Layer.provide(providerLive),
 );

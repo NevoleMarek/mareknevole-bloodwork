@@ -255,6 +255,7 @@ const sessionGroup = HttpApiGroup.make("session").add(
   }),
   HttpApiEndpoint.delete("delete", "/api/session", {
     success: HttpApiSchema.NoContent,
+    error: unavailableErrors,
   }),
 );
 

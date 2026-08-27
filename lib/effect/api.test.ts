@@ -2,11 +2,16 @@
 
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Redacted from "effect/Redacted";
 import { FetchHttpClient } from "effect/unstable/http";
 import { HttpApiClient, HttpApiError } from "effect/unstable/httpapi";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { BloodworkApi, makeBiomarkerKey } from "@/lib/effect/api";
+import {
+  BloodworkApi,
+  makeBiomarkerKey,
+  sessionSecurity,
+} from "@/lib/effect/api";
 import {
   ApiBadGateway,
   ApiBadRequest,
@@ -15,17 +20,20 @@ import {
   ApiServiceUnavailable,
   toApiError,
 } from "@/lib/effect/api-errors";
+import { ApplicationConfig } from "@/lib/effect/config";
 import {
   handleApiRequestWith,
   makeApiWebHandler,
 } from "@/lib/effect/api-server";
 import {
   AuthenticationError,
+  ConfigurationError,
   ConflictError,
   NotFoundError,
   PersistenceError,
   ProviderRejected,
 } from "@/lib/effect/errors";
+import { Repository } from "@/lib/effect/repository";
 import {
   Auth,
   Bloodwork,
@@ -34,9 +42,63 @@ import {
   Health,
   ProviderWorkflows,
   Supplements,
+  authLayer,
 } from "@/lib/effect/services";
 
 const unused = () => Effect.die("unused service operation");
+
+const makeSessionRepository = (sessions: Map<string, number>) =>
+  Repository.of({
+    getVocabulary: unused,
+    getLabOverview: unused,
+    getBiomarkerTrend: unused,
+    getReadingsWithMeasurements: unused,
+    getReadingPage: unused,
+    getActiveSupplements: unused,
+    getSupplementChangelogPage: unused,
+    getVisibleHealthMetrics: unused,
+    getHealthMetricConfigs: unused,
+    getVisibleVocabularyKeys: unused,
+    updateChangelog: unused,
+    deleteChangelog: unused,
+    updateHealthVisibility: unused,
+    importHealth: unused,
+    deleteReading: unused,
+    saveReading: unused,
+    createVocabulary: unused,
+    updateVocabulary: unused,
+    deleteVocabulary: unused,
+    createSupplement: unused,
+    updateSupplement: unused,
+    deleteSupplement: unused,
+    createSession: (id, expiresAt) =>
+      Effect.sync(() => {
+        sessions.set(id, expiresAt);
+      }),
+    hasSession: (id) =>
+      Effect.sync(() => {
+        const expiresAt = sessions.get(id);
+        return (
+          expiresAt !== undefined && expiresAt > Math.floor(Date.now() / 1000)
+        );
+      }),
+    revokeSession: (id) =>
+      Effect.sync(() => {
+        sessions.delete(id);
+      }),
+  });
+
+const sessionConfig = Layer.succeed(
+  ApplicationConfig,
+  ApplicationConfig.of({
+    adminPassword: Redacted.make("secret"),
+    geminiApiKey: undefined,
+    nodeEnvironment: "test",
+    requireAdminPassword: () => Effect.succeed(Redacted.make("secret")),
+    requireGeminiApiKey: () =>
+      Effect.fail(new ConfigurationError({ key: "GEMINI_API_KEY" })),
+  }),
+);
 
 const makeDashboard = (
   getData: DashboardContract["getData"],
@@ -104,6 +166,7 @@ const sharedServices = Layer.mergeAll(
         token === "test-session"
           ? Effect.succeed(undefined)
           : Effect.fail(new AuthenticationError({ reason: "invalid-session" })),
+      revoke: () => Effect.succeed(undefined),
     }),
   ),
   Layer.succeed(
@@ -553,6 +616,7 @@ describe("Bloodwork HttpApi", () => {
               new AuthenticationError({ reason: "invalid-password" }),
             ),
           validate: () => Effect.succeed(undefined),
+          revoke: () => Effect.succeed(undefined),
         }),
       ),
     );
@@ -645,6 +709,71 @@ describe("Bloodwork HttpApi", () => {
     expect(response.headers.get("set-cookie")).toContain(
       "bloodwork-session=; Max-Age=0",
     );
+  });
+
+  it("revokes a captured session token on logout before clearing its cookie", async () => {
+    const activeSessions = new Map<string, number>();
+    const revocableServices = Layer.merge(
+      services,
+      authLayer.pipe(
+        Layer.provide(
+          Layer.merge(
+            sessionConfig,
+            Layer.succeed(Repository, makeSessionRepository(activeSessions)),
+          ),
+        ),
+      ),
+    );
+    const { dispose: disposeRevocable, handler: revocableHandler } =
+      makeApiWebHandler(revocableServices);
+
+    try {
+      const login = await revocableHandler(
+        new Request("https://bloodwork.test/api/session", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ password: "secret" }),
+        }),
+      );
+      expect(login.status).toBe(200);
+      const token = login.headers
+        .get("set-cookie")
+        ?.match(new RegExp(`${sessionSecurity.key}=([^;]+)`))?.[1];
+      expect(token).toBeDefined();
+      if (token === undefined) throw new Error("Login did not set a session");
+      const capturedCookie = { cookie: `${sessionSecurity.key}=${token}` };
+
+      const beforeLogout = await revocableHandler(
+        new Request("https://bloodwork.test/api/readings/export", {
+          headers: capturedCookie,
+        }),
+      );
+      expect(beforeLogout.status).toBe(200);
+
+      const logout = await revocableHandler(
+        new Request("https://bloodwork.test/api/session", {
+          method: "DELETE",
+          headers: capturedCookie,
+        }),
+      );
+      expect(logout.status).toBe(204);
+      expect(logout.headers.get("set-cookie")).toContain(
+        "bloodwork-session=; Max-Age=0",
+      );
+
+      const replay = await revocableHandler(
+        new Request("https://bloodwork.test/api/readings/export", {
+          headers: capturedCookie,
+        }),
+      );
+      expect(replay.status).toBe(401);
+      await expect(replay.json()).resolves.toEqual({
+        _tag: "Bloodwork.ApiUnauthorized",
+        error: "Invalid session",
+      });
+    } finally {
+      await disposeRevocable();
+    }
   });
 
   it("serves OpenAPI from the same contract", async () => {

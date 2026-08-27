@@ -3,7 +3,11 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const schema = ["0001_schema.sql", "0002_measurement_reading_date.sql"]
+const schema = [
+  "0001_schema.sql",
+  "0002_measurement_reading_date.sql",
+  "0003_sessions.sql",
+]
   .map((file) => readFileSync(resolve("db/migrations", file), "utf8"))
   .join("\n");
 
@@ -17,6 +21,7 @@ describe("D1 indexes", () => {
     "idx_supplement_changelog_date",
     "idx_visible_health_config",
     "idx_health_metrics_metric_date",
+    "idx_sessions_expires_at",
   ])("keeps the %s access path", (index) => {
     expect(schema).toContain(`CREATE INDEX IF NOT EXISTS ${index}`);
   });

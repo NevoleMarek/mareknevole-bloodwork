@@ -150,7 +150,11 @@ const sessionHandlers = HttpApiBuilder.group(
         )
         .handle(
           "delete",
-          Effect.fn("HttpApi.session.delete")(function* () {
+          Effect.fn("HttpApi.session.delete")(function* ({ request }) {
+            const token = request.cookies[SESSION_COOKIE];
+            if (token !== undefined) {
+              yield* auth.revoke(token).pipe(withApiErrors);
+            }
             yield* HttpEffect.appendPreResponseHandler((_request, response) =>
               // The cookie name and path are server-owned constants.
               Effect.sync(() =>
