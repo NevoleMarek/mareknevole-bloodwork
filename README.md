@@ -139,3 +139,98 @@ The first production migration is intentionally manual. Review the plan, confirm
 After adoption, pushes to `main` deploy through
 `.github/workflows/deploy-production.yml`. Its GitHub `production` environment
 supplies the same four values.
+
+## Production verification and recovery
+
+Every production deploy runs `bun run smoke:production` after Alchemy reports a
+successful publish. The probe sends only bounded, credential-free `GET`
+requests to the public root, `/api/openapi.json`, and the protected
+`/api/readings` endpoint (without a cookie and with a deliberately invalid
+cookie). It checks the HTML root, the generated OpenAPI operations and session
+security metadata, and `401` responses from the authentication boundary. It
+does not log response bodies, cookies, headers, or deployment secrets. Requests
+have a timeout and at most five attempts with capped exponential backoff; a
+failed probe fails the workflow.
+
+### Worker rollback
+
+If the smoke test fails, pause subsequent production deploys and inspect the
+failed check and Worker logs. A rollback is an operator action, not an automatic
+workflow step:
+
+1. Identify a known-good version in the Cloudflare dashboard under **Workers &
+   Pages → bloodwork → Deployments**, or list recent versions with
+   `bunx wrangler versions list --name bloodwork`.
+2. Confirm that the target version is compatible with the current D1 schema and
+   still points at the adopted `bloodwork-db` and `NEXT_INC_CACHE_KV` resources.
+   Cloudflare only exposes the 100 most recently published versions for
+   rollback, and a rollback does not restore or change connected resources.
+3. Roll back the Worker version, recording the incident reason:
+
+   ```sh
+   bunx wrangler rollback <known-good-version-id> --name bloodwork \
+     --message "rollback after production smoke failure"
+   ```
+
+   Authenticate Wrangler with the production-scoped `CLOUDFLARE_ACCOUNT_ID`
+   and `CLOUDFLARE_API_TOKEN` in the operator environment; never put token
+   values in this command, a workflow log, or a commit.
+
+4. Rerun the read-only probe and inspect the public root, OpenAPI, and auth
+   results before resuming deploys:
+
+   ```sh
+   PRODUCTION_URL=https://bloodwork.mareknevole.com bun run smoke:production
+   ```
+
+   If Cloudflare rejects the rollback because a connected resource changed or
+   was deleted, do not repeatedly force the old Worker. Ship a forward fix that
+   understands the current bindings and schema instead. A Worker rollback
+   changes the active code deployment; it is not a database rollback.
+
+### D1 recovery
+
+D1 migrations are forward-only in this repository. Alchemy owns the adopted
+production D1 resource and applies the ordered files in `db/migrations` during
+deployment. Never edit or remove an applied migration, reuse its number, or
+expect a Worker rollback to undo SQL. For a schema or compatibility defect:
+
+1. Keep the Worker and schema compatible while the incident is contained. If
+   the old Worker cannot run against the current schema, deploy a compatible
+   Worker first.
+2. Add the next numbered migration under `db/migrations/` (for example,
+   `0003_restore_compatibility.sql`) that safely repairs the schema or data.
+   Review it locally, run `bun run plan:production`, and deploy it through the
+   normal reviewed Alchemy path. Confirm the migration and smoke results before
+   resuming ordinary changes.
+3. For accidental data changes or a migration that cannot be repaired forward,
+   stop writes and obtain explicit operator approval before using D1 Time
+   Travel. Confirm that `bloodwork-db` is a production-backend D1 database
+   before relying on Time Travel, then capture the current bookmark and the
+   incident timestamp:
+
+   ```sh
+   bunx wrangler d1 info bloodwork-db
+   bunx wrangler d1 time-travel info bloodwork-db
+   bunx wrangler d1 time-travel info bloodwork-db \
+     --timestamp="<RFC3339-timestamp>"
+   ```
+
+   Then, only after checking the target point and blast radius, restore the
+   remote database:
+
+   ```sh
+   bunx wrangler d1 time-travel restore bloodwork-db --bookmark=<bookmark>
+   ```
+
+   This is a destructive in-place overwrite that cancels in-flight queries;
+   retain the returned previous bookmark so the restore can be undone if
+   required. Retention is plan-dependent: up to 30 days on Workers Paid and up
+   to 7 days on Workers Free. A restore is separate from the repository's
+   migration workflow, so verify the restored schema and migration records,
+   then deploy a forward-compatible Worker after recovery.
+
+See Cloudflare's [Worker rollback guidance](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/),
+[D1 migration guidance](https://developers.cloudflare.com/d1/reference/migrations/),
+and [D1 Time Travel guidance](https://developers.cloudflare.com/d1/reference/time-travel/)
+for platform limits and confirmation prompts.

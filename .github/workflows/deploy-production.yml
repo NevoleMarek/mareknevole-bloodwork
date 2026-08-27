@@ -35,3 +35,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Smoke test production
+        run: bun run smoke:production
+        env:
+          PRODUCTION_URL: https://bloodwork.mareknevole.com
