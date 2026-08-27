@@ -9,11 +9,34 @@ function isLocalDevelopment() {
   return environment === "development" || environment === "test";
 }
 
+function getLocalDevelopmentOrigin(req: NextRequest) {
+  if (!isLocalDevelopment()) return;
+
+  const { hostname, origin, protocol } = req.nextUrl;
+  if (
+    !LOCAL_HOSTNAMES.has(hostname) ||
+    (protocol !== "http:" && protocol !== "https:")
+  ) {
+    return;
+  }
+
+  try {
+    const parsedOrigin = new URL(origin);
+    if (
+      parsedOrigin.protocol !== protocol ||
+      !LOCAL_HOSTNAMES.has(parsedOrigin.hostname)
+    ) {
+      return;
+    }
+
+    return parsedOrigin;
+  } catch {
+    return;
+  }
+}
+
 function getLoginUrl(req: NextRequest) {
-  const origin =
-    isLocalDevelopment() && LOCAL_HOSTNAMES.has(req.nextUrl.hostname)
-      ? req.nextUrl.origin
-      : PRODUCTION_ORIGIN;
+  const origin = getLocalDevelopmentOrigin(req) ?? PRODUCTION_ORIGIN;
 
   return new URL("/admin", origin);
 }
