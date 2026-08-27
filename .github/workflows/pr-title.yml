@@ -16,7 +16,7 @@ jobs:
     name: Conventional PR title
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Install convco
         run: |
           curl -sSfL "https://github.com/convco/convco/releases/download/${CONVCO_VERSION}/convco-ubuntu.zip" \
