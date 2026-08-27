@@ -358,7 +358,7 @@ export const makeRepository = (database: D1Database) => {
           statements.push(
             db
               .prepare(
-                "INSERT INTO vocabulary (key, label, unit, reference_min, reference_max, description) VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO vocabulary (key, label, unit, reference_min, reference_max, description, featured, visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
               )
               .bind(
                 entry.key,
@@ -367,6 +367,8 @@ export const makeRepository = (database: D1Database) => {
                 entry.referenceRange.min,
                 entry.referenceRange.max,
                 entry.description,
+                entry.featured ? 1 : 0,
+                entry.visible ? 1 : 0,
               ),
           );
         }
