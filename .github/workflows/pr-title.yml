@@ -10,6 +10,8 @@ permissions:
 
 env:
   CONVCO_VERSION: v0.4.2
+  # SHA-256 of convco-ubuntu.zip for CONVCO_VERSION.
+  CONVCO_ARCHIVE_SHA256: b83ca3aff647ac3cd17c1b68f15005244a7f9022f4fadbcf76bc9e3461905a11
 
 jobs:
   validate:
@@ -19,10 +21,14 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Install convco
         run: |
-          curl -sSfL "https://github.com/convco/convco/releases/download/${CONVCO_VERSION}/convco-ubuntu.zip" \
-            | zcat \
-            > /usr/local/bin/convco
-          chmod +x /usr/local/bin/convco
+          convco_archive="${RUNNER_TEMP}/convco-${CONVCO_VERSION}.zip"
+          curl -sSfL \
+            "https://github.com/convco/convco/releases/download/${CONVCO_VERSION}/convco-ubuntu.zip" \
+            --output "$convco_archive"
+          printf '%s  %s\n' "$CONVCO_ARCHIVE_SHA256" "$convco_archive" \
+            | sha256sum --check --strict
+          unzip -p "$convco_archive" convco > "${RUNNER_TEMP}/convco"
+          install -m 0755 "${RUNNER_TEMP}/convco" /usr/local/bin/convco
       - name: Check PR title is conventional
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
