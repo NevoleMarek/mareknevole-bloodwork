@@ -129,38 +129,89 @@ function accumulateRecord(r: RawRecord, state: AccState) {
 
 /**
  * Deduplicate overlapping intervals for sum metrics.
- * Sort by start time, then walk through: when intervals overlap,
- * keep the one with the higher value rate (value/duration) and
- * discard the covered portion. Non-overlapping intervals sum normally.
+ * Sweep every interval boundary and use the highest value rate
+ * (value/duration) for each segment. Non-overlapping intervals sum normally.
  */
 export function deduplicateIntervals(intervals: Interval[]): number {
-  if (intervals.length === 0) return 0;
-
-  // Sort by start, then by end descending (longer intervals first)
-  const sorted = [...intervals].sort(
-    (a, b) => a.start - b.start || b.end - a.end,
+  const valid = intervals.filter(
+    (interval) =>
+      Number.isFinite(interval.start) &&
+      Number.isFinite(interval.end) &&
+      interval.end > interval.start &&
+      Number.isFinite(interval.value),
   );
+  if (valid.length === 0) return 0;
 
-  let total = 0;
-  let coveredUntil = -Infinity;
+  const rates = valid.map(
+    (interval) => interval.value / (interval.end - interval.start),
+  );
+  const events = valid.flatMap((interval, index) => [
+    { time: interval.start, index, kind: "start" as const },
+    { time: interval.end, index, kind: "end" as const },
+  ]);
+  events.sort((a, b) => a.time - b.time);
 
-  for (const iv of sorted) {
-    if (iv.end <= coveredUntil) {
-      // Fully covered by a previous interval — skip
-      continue;
+  const active: number[] = [];
+  const compareRates = (left: number, right: number) =>
+    rates[left] - rates[right];
+  const pushActive = (index: number) => {
+    active.push(index);
+    let child = active.length - 1;
+    while (child > 0) {
+      const parent = Math.floor((child - 1) / 2);
+      if (compareRates(active[parent], active[child]) >= 0) break;
+      [active[parent], active[child]] = [active[child], active[parent]];
+      child = parent;
     }
-    if (iv.start >= coveredUntil) {
-      // No overlap — take full value
-      total += iv.value;
-    } else {
-      // Partial overlap — take proportional value for uncovered portion
-      const duration = iv.end - iv.start;
-      if (duration > 0) {
-        const uncovered = iv.end - coveredUntil;
-        total += iv.value * (uncovered / duration);
+  };
+  const popActive = () => {
+    const top = active[0];
+    const last = active.pop();
+    if (active.length > 0 && last !== undefined) {
+      active[0] = last;
+      let parent = 0;
+      while (true) {
+        const left = parent * 2 + 1;
+        const right = left + 1;
+        let largest = parent;
+        if (
+          left < active.length &&
+          compareRates(active[left], active[largest]) > 0
+        ) {
+          largest = left;
+        }
+        if (
+          right < active.length &&
+          compareRates(active[right], active[largest]) > 0
+        ) {
+          largest = right;
+        }
+        if (largest === parent) break;
+        [active[parent], active[largest]] = [active[largest], active[parent]];
+        parent = largest;
       }
     }
-    coveredUntil = iv.end;
+    return top;
+  };
+
+  let total = 0;
+  let eventIndex = 0;
+  while (eventIndex < events.length) {
+    const time = events[eventIndex].time;
+    while (eventIndex < events.length && events[eventIndex].time === time) {
+      const event = events[eventIndex];
+      if (event.kind === "start") pushActive(event.index);
+      eventIndex += 1;
+    }
+
+    while (active.length > 0 && valid[active[0]].end <= time) {
+      popActive();
+    }
+
+    const nextTime = events[eventIndex]?.time;
+    if (nextTime !== undefined && active.length > 0) {
+      total += rates[active[0]] * (nextTime - time);
+    }
   }
 
   return total;

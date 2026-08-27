@@ -256,8 +256,10 @@ const vocabularyHandlers = HttpApiBuilder.group(
         )
         .handle(
           "delete",
-          Effect.fn("HttpApi.vocabulary.delete")(function* ({ params }) {
-            yield* bloodwork.deleteVocabulary(params.key).pipe(withApiErrors);
+          Effect.fn("HttpApi.vocabulary.delete")(function* ({ params, query }) {
+            yield* bloodwork
+              .deleteVocabulary({ ...query, key: params.key })
+              .pipe(withApiErrors);
             return undefined;
           }),
         );
