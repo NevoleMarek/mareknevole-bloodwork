@@ -522,36 +522,35 @@ export const makeRepository = (database: D1Database) => {
   const createSupplementEffect = Effect.fn("Repository.createSupplement")(
     function* (input: SupplementCreateInput) {
       const now = new Date().toISOString();
+      const supplementId = crypto.randomUUID();
       yield* d1Mutation(
         "Repository.createSupplement",
-        (db) =>
-          db
+        (db) => {
+          const supplement = db
             .prepare(
               "INSERT INTO supplements (id, name, dose, frequency, started_at, stopped_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)",
             )
             .bind(
-              crypto.randomUUID(),
+              supplementId,
               input.name,
               input.dose,
               input.frequency,
               input.startedAt,
               now,
               now,
+            );
+          const changelog = db
+            .prepare(
+              "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
             )
-            .run()
-            .then(() =>
-              db
-                .prepare(
-                  "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
-                )
-                .bind(
-                  crypto.randomUUID(),
-                  input.changelogDate,
-                  `Added ${input.name} ${input.dose}`,
-                  now,
-                )
-                .run(),
-            ),
+            .bind(
+              crypto.randomUUID(),
+              input.changelogDate,
+              `Added ${input.name} ${input.dose}`,
+              now,
+            );
+          return db.batch([supplement, changelog]).then(() => undefined);
+        },
         database,
         { resource: "supplement", id: input.name },
       );
@@ -594,8 +593,8 @@ export const makeRepository = (database: D1Database) => {
         changes.push(`Changed ${old.name} start date to ${input.startedAt}`);
       yield* d1(
         "Repository.updateSupplement",
-        (db) =>
-          db
+        (db) => {
+          const supplement = db
             .prepare(
               "UPDATE supplements SET name = ?, dose = ?, frequency = ?, started_at = ?, updated_at = ? WHERE id = ?",
             )
@@ -606,23 +605,16 @@ export const makeRepository = (database: D1Database) => {
               input.startedAt,
               now,
               input.id,
-            )
-            .run()
-            .then(async () => {
-              for (const description of changes) {
-                await db
-                  .prepare(
-                    "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
-                  )
-                  .bind(
-                    crypto.randomUUID(),
-                    input.changelogDate,
-                    description,
-                    now,
-                  )
-                  .run();
-              }
-            }),
+            );
+          const changelog = changes.map((description) =>
+            db
+              .prepare(
+                "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
+              )
+              .bind(crypto.randomUUID(), input.changelogDate, description, now),
+          );
+          return db.batch([supplement, ...changelog]).then(() => undefined);
+        },
         database,
       );
     },
@@ -653,26 +645,24 @@ export const makeRepository = (database: D1Database) => {
       const now = new Date().toISOString();
       yield* d1(
         "Repository.deleteSupplement",
-        (db) =>
-          db
+        (db) => {
+          const supplementUpdate = db
             .prepare(
               "UPDATE supplements SET stopped_at = ?, updated_at = ? WHERE id = ?",
             )
-            .bind(now, now, input.id)
-            .run()
-            .then(() =>
-              db
-                .prepare(
-                  "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
-                )
-                .bind(
-                  crypto.randomUUID(),
-                  input.changelogDate,
-                  `Removed ${supplement.name}`,
-                  now,
-                )
-                .run(),
-            ),
+            .bind(now, now, input.id);
+          const changelog = db
+            .prepare(
+              "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
+            )
+            .bind(
+              crypto.randomUUID(),
+              input.changelogDate,
+              `Removed ${supplement.name}`,
+              now,
+            );
+          return db.batch([supplementUpdate, changelog]).then(() => undefined);
+        },
         database,
       );
     },
