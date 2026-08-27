@@ -723,6 +723,34 @@ describe("HttpApi error projection", () => {
 });
 
 describe("Next request lifetime", () => {
+  it("maps persistence failures during service acquisition", async () => {
+    const acquisitionFailure = new PersistenceError({
+      operation: "Repository.acquire",
+      cause: new Error("d1 unavailable"),
+    });
+    const failingServices = Layer.merge(
+      services,
+      Layer.effect(Dashboard, Effect.fail(acquisitionFailure)),
+    );
+    const { dispose: disposeFailing, handler: failingHandler } =
+      makeApiWebHandler(failingServices);
+    try {
+      const response = await failingHandler(
+        new Request("https://bloodwork.test/api/readings/export", {
+          headers: { cookie: "bloodwork-session=test-session" },
+        }),
+      );
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({
+        _tag: "Bloodwork.ApiServiceUnavailable",
+        error: "Service unavailable",
+      });
+    } finally {
+      await disposeFailing();
+    }
+  });
+
   it("acquires and disposes application services for every request", async () => {
     let acquired = 0;
     let disposed = 0;

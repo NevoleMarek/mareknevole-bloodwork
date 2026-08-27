@@ -16,8 +16,12 @@ import {
   BloodworkApi,
   sessionSecurity,
 } from "@/lib/effect/api";
-import { withApiErrors } from "@/lib/effect/api-errors";
-import { RequestDecodeError } from "@/lib/effect/errors";
+import { toApiError, withApiErrors } from "@/lib/effect/api-errors";
+import {
+  ConfigurationError,
+  PersistenceError,
+  RequestDecodeError,
+} from "@/lib/effect/errors";
 import { appLayer } from "@/lib/effect/layers";
 import { changelogCursor, readingCursor } from "@/lib/effect/query";
 import {
@@ -461,8 +465,32 @@ const makeApiLayer = <E>(services: Layer.Layer<ApiServices, E>) =>
     Layer.provide(HttpServer.layerServices),
   );
 
-export const makeApiWebHandler = <E>(services: Layer.Layer<ApiServices, E>) =>
-  HttpRouter.toWebHandler(makeApiLayer(services), { disableLogger: true });
+export const makeApiWebHandler = <E>(services: Layer.Layer<ApiServices, E>) => {
+  const webHandler = HttpRouter.toWebHandler(makeApiLayer(services), {
+    disableLogger: true,
+  });
+  return {
+    dispose: webHandler.dispose,
+    handler: async (
+      ...args: Parameters<typeof webHandler.handler>
+    ): Promise<Response> => {
+      try {
+        return await webHandler.handler(...args);
+      } catch (cause) {
+        if (
+          cause instanceof ConfigurationError ||
+          cause instanceof PersistenceError
+        ) {
+          const error = toApiError(cause);
+          return HttpServerResponse.toWeb(
+            HttpServerResponse.jsonUnsafe(error, { status: 503 }),
+          );
+        }
+        throw cause;
+      }
+    },
+  };
+};
 
 export const handleApiRequestWith = async <E>(
   request: Request,
