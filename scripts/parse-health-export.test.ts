@@ -179,6 +179,32 @@ describe("deduplicateIntervals", () => {
     expect(result).toBe(300);
   });
 
+  it("uses the higher rate for each partial-overlap segment", () => {
+    const result = deduplicateIntervals([
+      { start: 0, end: 20, value: 100 }, // rate: 5/unit
+      { start: 10, end: 30, value: 200 }, // rate: 10/unit
+    ]);
+    // 50 from 0-10 and 200 from 10-30.
+    expect(result).toBe(250);
+  });
+
+  it("treats intervals that only share a boundary as non-overlapping", () => {
+    const result = deduplicateIntervals([
+      { start: 0, end: 10, value: 100 },
+      { start: 10, end: 20, value: 200 },
+    ]);
+    expect(result).toBe(300);
+  });
+
+  it("uses the nested interval rate only within its boundaries", () => {
+    const result = deduplicateIntervals([
+      { start: 0, end: 30, value: 300 }, // rate: 10/unit
+      { start: 10, end: 20, value: 400 }, // rate: 40/unit
+    ]);
+    // 100 from 0-10, 400 from 10-20, and 100 from 20-30.
+    expect(result).toBe(600);
+  });
+
   it("returns 0 for empty input", () => {
     expect(deduplicateIntervals([])).toBe(0);
   });

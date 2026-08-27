@@ -6,6 +6,7 @@ import { HealthGrid } from "@/components/dashboard/health-grid";
 import { MetricsSection } from "@/components/dashboard/metrics-section";
 import { SectionNav } from "@/components/dashboard/section-nav";
 import { SupplementTable } from "@/components/dashboard/supplement-table";
+import { formatDisplayDate } from "@/lib/date-format";
 import { provideAppLayer, runAppEffect } from "@/lib/effect/run";
 import { Dashboard } from "@/lib/effect/services";
 
@@ -23,7 +24,7 @@ export default async function Home() {
 
   const latest = labs.latestPanel;
   const latestDate = latest
-    ? new Date(latest.date).toLocaleDateString("en-US", {
+    ? formatDisplayDate(latest.date, {
         month: "short",
         day: "numeric",
         year: "numeric",

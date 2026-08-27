@@ -3,7 +3,11 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const schema = ["0001_schema.sql", "0002_measurement_reading_date.sql"]
+const schema = [
+  "0001_schema.sql",
+  "0002_measurement_reading_date.sql",
+  "0003_optimistic_concurrency.sql",
+]
   .map((file) => readFileSync(resolve("db/migrations", file), "utf8"))
   .join("\n");
 
@@ -26,5 +30,14 @@ describe("D1 indexes", () => {
       "ALTER TABLE measurements ADD COLUMN reading_date",
     );
     expect(schema).toContain("WHERE readings.id = measurements.reading_id");
+  });
+
+  it("adds monotonic versions to mutable admin rows", () => {
+    expect(schema).toContain(
+      "ALTER TABLE vocabulary ADD COLUMN version INTEGER NOT NULL DEFAULT 1",
+    );
+    expect(schema).toContain(
+      "ALTER TABLE supplements ADD COLUMN version INTEGER NOT NULL DEFAULT 1",
+    );
   });
 });
