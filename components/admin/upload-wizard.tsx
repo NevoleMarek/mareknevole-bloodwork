@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { VocabularyEntry } from "@/types/bloodwork";
 import type {
   ExtractedVariable,
@@ -48,18 +48,73 @@ function StepIndicator({
   );
 }
 
+type ActivePdf = {
+  id: number;
+  fileName: string;
+  pdfUrl: string;
+};
+
 export function UploadWizard() {
   const [state, setState] = useState<WizardState>({ step: "upload" });
-  const [fileName, setFileName] = useState("");
   const [vocabulary, setVocabulary] = useState<VocabularyEntry[]>([]);
   const vocabularyRequest = useRef<Promise<VocabularyEntry[]> | null>(null);
+  const activePdf = useRef<ActivePdf | null>(null);
+  const nextPdfId = useRef(0);
+  const previewUrls = useRef(new Set<string>());
+  const mounted = useRef(true);
+
+  const revokePreviewUrls = useCallback(() => {
+    for (const url of previewUrls.current) URL.revokeObjectURL(url);
+    previewUrls.current.clear();
+  }, []);
+
+  const releaseActivePdf = useCallback(
+    (selection?: ActivePdf) => {
+      if (selection !== undefined && activePdf.current?.id !== selection.id) {
+        return;
+      }
+      activePdf.current = null;
+      revokePreviewUrls();
+    },
+    [revokePreviewUrls],
+  );
+
+  const selectPdf = useCallback(
+    (file: File): ActivePdf => {
+      revokePreviewUrls();
+      const selection = {
+        id: nextPdfId.current,
+        fileName: file.name,
+        pdfUrl: URL.createObjectURL(file),
+      };
+      nextPdfId.current += 1;
+      activePdf.current = selection;
+      previewUrls.current.add(selection.pdfUrl);
+      return selection;
+    },
+    [revokePreviewUrls],
+  );
+
+  const isCurrentPdf = useCallback(
+    (selection: ActivePdf) =>
+      mounted.current && activePdf.current?.id === selection.id,
+    [],
+  );
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      releaseActivePdf();
+    };
+  }, [releaseActivePdf]);
 
   const loadVocabulary = useCallback(() => {
     if (!vocabularyRequest.current) {
       vocabularyRequest.current = (async () => {
         try {
           const data = await runApi((client) => client.vocabulary.list({}));
-          setVocabulary(data.entries);
+          if (mounted.current) setVocabulary(data.entries);
           return data.entries;
         } catch (error) {
           vocabularyRequest.current = null;
@@ -72,10 +127,9 @@ export function UploadWizard() {
 
   const handleUpload = useCallback(
     async (file: File) => {
+      const selection = selectPdf(file);
       void loadVocabulary().catch(() => {});
-      const pdfUrl = URL.createObjectURL(file);
-      setFileName(file.name);
-      setState({ step: "extracting", pdfUrl });
+      setState({ step: "extracting", pdfUrl: selection.pdfUrl });
 
       const formData = new FormData();
       formData.append("pdf", file);
@@ -84,13 +138,16 @@ export function UploadWizard() {
         const data = await runApi((client) =>
           client.import.extract({ payload: formData }),
         );
+        if (!isCurrentPdf(selection)) return;
         setState({
           step: "review-extraction",
-          pdfUrl,
+          pdfUrl: selection.pdfUrl,
           date: data.date,
           variables: data.variables,
         });
       } catch (e) {
+        if (!isCurrentPdf(selection)) return;
+        releaseActivePdf(selection);
         setState({
           step: "error",
           message: e instanceof Error ? e.message : "Extraction failed",
@@ -98,20 +155,24 @@ export function UploadWizard() {
         });
       }
     },
-    [loadVocabulary],
+    [isCurrentPdf, loadVocabulary, releaseActivePdf, selectPdf],
   );
 
   const handleMap = useCallback(
     async (date: string, variables: ExtractedVariable[], pdfUrl: string) => {
+      const selection = activePdf.current;
+      if (!selection || selection.pdfUrl !== pdfUrl) return;
       setState({ step: "mapping", pdfUrl, date, variables });
 
       try {
         const entries = await loadVocabulary();
+        if (!isCurrentPdf(selection)) return;
         const data = await runApi((client) =>
           client.import.map({
             payload: { variables, vocabulary: entries },
           }),
         );
+        if (!isCurrentPdf(selection)) return;
         setState({
           step: "review-mapping",
           pdfUrl,
@@ -119,6 +180,7 @@ export function UploadWizard() {
           mappings: data.mappings,
         });
       } catch (e) {
+        if (!isCurrentPdf(selection)) return;
         setState({
           step: "error",
           message: e instanceof Error ? e.message : "Mapping failed",
@@ -126,7 +188,7 @@ export function UploadWizard() {
         });
       }
     },
-    [loadVocabulary],
+    [isCurrentPdf, loadVocabulary],
   );
 
   const handleSave = useCallback(
@@ -136,6 +198,8 @@ export function UploadWizard() {
       researched: ResearchedEntry[],
       pdfUrl: string,
     ) => {
+      const selection = activePdf.current;
+      if (!selection || selection.pdfUrl !== pdfUrl) return;
       setState({ step: "saving", pdfUrl, date, mappings });
 
       const researchByKey = new Map(
@@ -175,15 +239,18 @@ export function UploadWizard() {
 
       const body: SaveReadingRequest = {
         date,
-        source: fileName,
+        source: selection.fileName,
         measurements,
         newVocabulary,
       };
 
       try {
         await runApi((client) => client.readings.create({ payload: body }));
+        if (!isCurrentPdf(selection)) return;
+        releaseActivePdf(selection);
         setState({ step: "done" });
       } catch (e) {
+        if (!isCurrentPdf(selection)) return;
         setState({
           step: "error",
           message: e instanceof Error ? e.message : "Save failed",
@@ -191,11 +258,13 @@ export function UploadWizard() {
         });
       }
     },
-    [fileName, vocabulary],
+    [isCurrentPdf, releaseActivePdf, vocabulary],
   );
 
   const handleResearch = useCallback(
     async (date: string, mappings: MappedVariable[], pdfUrl: string) => {
+      const selection = activePdf.current;
+      if (!selection || selection.pdfUrl !== pdfUrl) return;
       const newEntries = mappings
         .filter((m) => m.isNew)
         .map((m) => ({
@@ -216,6 +285,7 @@ export function UploadWizard() {
         const data = await runApi((client) =>
           client.import.research({ payload: { newEntries } }),
         );
+        if (!isCurrentPdf(selection)) return;
         setState({
           step: "review-research",
           pdfUrl,
@@ -224,6 +294,7 @@ export function UploadWizard() {
           researched: data.entries,
         });
       } catch (e) {
+        if (!isCurrentPdf(selection)) return;
         setState({
           step: "error",
           message: e instanceof Error ? e.message : "Research failed",
@@ -231,7 +302,7 @@ export function UploadWizard() {
         });
       }
     },
-    [handleSave],
+    [handleSave, isCurrentPdf],
   );
 
   // Determine if we should show PDF preview
@@ -258,9 +329,12 @@ export function UploadWizard() {
           {state.step === "upload" && <StepUpload onUpload={handleUpload} />}
 
           {state.step === "extracting" && (
-            <p role="status" className="text-sm text-zinc-600">
-              Extracting variables from PDF…
-            </p>
+            <>
+              <p role="status" className="text-sm text-zinc-600">
+                Extracting variables from PDF…
+              </p>
+              <StepUpload onUpload={handleUpload} />
+            </>
           )}
 
           {state.step === "review-extraction" && (
