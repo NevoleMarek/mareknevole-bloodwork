@@ -34,10 +34,39 @@ describe("StepUpload", () => {
       type: "application/pdf",
     });
 
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /understand what is sent/ }),
+    );
     fireEvent.dragEnter(label!);
     fireEvent.drop(label!, { dataTransfer: { files: [file] } });
 
     expect(shell).toHaveAttribute("data-drag-active", "false");
+    expect(onUpload).toHaveBeenCalledWith(file);
+  });
+
+  it("does not pass a PDF to extraction until processing is confirmed", () => {
+    const onUpload = vi.fn();
+    render(<StepUpload onUpload={onUpload} />);
+
+    const title = screen.getByText("Add a lab report");
+    const label = title.closest("label");
+    const file = new File(["pdf"], "panel.pdf", {
+      type: "application/pdf",
+    });
+
+    fireEvent.drop(label!, { dataTransfer: { files: [file] } });
+
+    expect(onUpload).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Confirm the processing notice",
+    );
+    expect(screen.getByText("Choose file")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /understand what is sent/ }),
+    );
+    fireEvent.drop(label!, { dataTransfer: { files: [file] } });
+
     expect(onUpload).toHaveBeenCalledWith(file);
   });
 });

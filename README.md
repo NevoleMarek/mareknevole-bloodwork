@@ -139,3 +139,28 @@ The first production migration is intentionally manual. Review the plan, confirm
 After adoption, pushes to `main` deploy through
 `.github/workflows/deploy-production.yml`. Its GitHub `production` environment
 supplies the same four values.
+
+## PDF import privacy
+
+PDF extraction is an explicit, versioned, per-upload opt-in in the
+administrator UI. The complete PDF is sent to the Bloodwork API and then to
+Google Gemini, a third-party AI service, so it may include names, dates of
+birth, addresses, record numbers, and other sensitive health information.
+Bloodwork does not intentionally persist the PDF in D1 or file storage; the
+bytes can still exist transiently in request and provider infrastructure. The
+extraction request asks Gemini to return only the report date and laboratory
+results, never identifying fields, and the application accepts only that
+structured response.
+
+Google's [Gemini API abuse-monitoring policy](https://ai.google.dev/gemini-api/docs/usage-policies)
+currently says submitted prompts, context (including files), and outputs may
+be retained for up to 55 days. Its [Gemini API terms](https://ai.google.dev/gemini-api/terms)
+have different paid and unpaid usage rules; unpaid usage may use submitted
+content to improve services and involve human review. These provider terms and
+settings can change, and Bloodwork cannot delete provider copies. Review the
+current terms and verify this project's billing before consenting.
+
+Before uploading, remove or redact identifiers that are not needed and confirm
+that you are authorized to share the report. Cancelling extraction aborts the
+request, revokes the local preview URL, and discards the in-progress extraction
+state.

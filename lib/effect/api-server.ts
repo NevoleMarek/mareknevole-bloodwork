@@ -21,6 +21,11 @@ import { RequestDecodeError } from "@/lib/effect/errors";
 import { appLayer } from "@/lib/effect/layers";
 import { changelogCursor, readingCursor } from "@/lib/effect/query";
 import {
+  PDF_PROCESSING_CONSENT_FIELD,
+  PDF_PROCESSING_CONSENT_VERSION,
+  PdfProcessingConsent,
+} from "@/lib/privacy/pdf-processing";
+import {
   Auth,
   Bloodwork,
   Dashboard,
@@ -384,6 +389,17 @@ const readPdf = Effect.fn("HttpApi.import.readPdf")(function* (
         message: "Invalid multipart body",
       }),
   });
+  yield* Schema.decodeUnknownEffect(PdfProcessingConsent)(
+    formData.get(PDF_PROCESSING_CONSENT_FIELD),
+  ).pipe(
+    Effect.mapError(
+      () =>
+        new RequestDecodeError({
+          operation: "extract.consent",
+          message: `Explicit consent is required before sending a PDF to Google Gemini (${PDF_PROCESSING_CONSENT_VERSION}).`,
+        }),
+    ),
+  );
   return yield* Schema.decodeUnknownEffect(PdfFile)(formData.get("pdf")).pipe(
     Effect.mapError(
       () =>

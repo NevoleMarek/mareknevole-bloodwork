@@ -20,4 +20,5 @@ Rules:
 - "label": translate the test name to its well-known English medical abbreviation or term (e.g. "Glukóza" → "Glucose", "Bílé krvinky" → "WBC", "Červené krvinky" → "RBC", "Trombocyty" → "Platelets", "Hematokrit" → "Hematocrit"). Use standard medical abbreviations when they exist (WBC, RBC, HbA1c, TSH, ALT, AST, GGT, CRP, HDL, LDL, etc.)
 - "value": numeric value only
 - "unit": unit string as written in the report
-- Include every individual test result; do not omit any`;
+- Include every individual test result; do not omit any
+- Return only the date and laboratory results. Never return names, dates of birth, addresses, record numbers, or any other identifying information.`;

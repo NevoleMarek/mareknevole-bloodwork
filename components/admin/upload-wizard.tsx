@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { VocabularyEntry } from "@/types/bloodwork";
 import type {
   ExtractedVariable,
@@ -11,6 +11,10 @@ import type {
 } from "@/types/wizard";
 import { deriveStatus } from "@/lib/status";
 import { runApi } from "@/lib/effect/client";
+import {
+  PDF_PROCESSING_CONSENT_FIELD,
+  PDF_PROCESSING_CONSENT_VERSION,
+} from "@/lib/privacy/pdf-processing";
 
 import { StepUpload } from "@/components/admin/step-upload";
 import { StepReviewExtraction } from "@/components/admin/step-review-extraction";
@@ -53,6 +57,25 @@ export function UploadWizard() {
   const [fileName, setFileName] = useState("");
   const [vocabulary, setVocabulary] = useState<VocabularyEntry[]>([]);
   const vocabularyRequest = useRef<Promise<VocabularyEntry[]> | null>(null);
+  const activePdfUrl = useRef<string | null>(null);
+  const extractionRequest = useRef<{
+    controller: AbortController;
+    pdfUrl: string;
+  } | null>(null);
+
+  const releasePdfUrl = useCallback((pdfUrl: string) => {
+    URL.revokeObjectURL(pdfUrl);
+    if (activePdfUrl.current === pdfUrl) activePdfUrl.current = null;
+  }, []);
+
+  useEffect(
+    () => () => {
+      extractionRequest.current?.controller.abort();
+      const pdfUrl = activePdfUrl.current;
+      if (pdfUrl !== null) releasePdfUrl(pdfUrl);
+    },
+    [releasePdfUrl],
+  );
 
   const loadVocabulary = useCallback(() => {
     if (!vocabularyRequest.current) {
@@ -73,17 +96,39 @@ export function UploadWizard() {
   const handleUpload = useCallback(
     async (file: File) => {
       void loadVocabulary().catch(() => {});
+      const previousRequest = extractionRequest.current;
+      if (previousRequest !== null) {
+        previousRequest.controller.abort();
+        extractionRequest.current = null;
+      }
+      if (activePdfUrl.current !== null) {
+        releasePdfUrl(activePdfUrl.current);
+      }
       const pdfUrl = URL.createObjectURL(file);
+      activePdfUrl.current = pdfUrl;
+      const controller = new AbortController();
+      extractionRequest.current = { controller, pdfUrl };
       setFileName(file.name);
       setState({ step: "extracting", pdfUrl });
 
       const formData = new FormData();
       formData.append("pdf", file);
+      formData.append(
+        PDF_PROCESSING_CONSENT_FIELD,
+        PDF_PROCESSING_CONSENT_VERSION,
+      );
 
       try {
-        const data = await runApi((client) =>
-          client.import.extract({ payload: formData }),
+        const data = await runApi(
+          (client) => client.import.extract({ payload: formData }),
+          { signal: controller.signal },
         );
+        if (
+          controller.signal.aborted ||
+          extractionRequest.current?.controller !== controller
+        ) {
+          return;
+        }
         setState({
           step: "review-extraction",
           pdfUrl,
@@ -91,15 +136,37 @@ export function UploadWizard() {
           variables: data.variables,
         });
       } catch (e) {
+        if (
+          controller.signal.aborted ||
+          extractionRequest.current?.controller !== controller
+        ) {
+          return;
+        }
+        releasePdfUrl(pdfUrl);
+        setFileName("");
         setState({
           step: "error",
           message: e instanceof Error ? e.message : "Extraction failed",
           returnTo: { step: "upload" },
         });
+      } finally {
+        if (extractionRequest.current?.controller === controller) {
+          extractionRequest.current = null;
+        }
       }
     },
-    [loadVocabulary],
+    [loadVocabulary, releasePdfUrl],
   );
+
+  const cancelExtraction = useCallback(() => {
+    const request = extractionRequest.current;
+    if (request === null) return;
+    request.controller.abort();
+    extractionRequest.current = null;
+    releasePdfUrl(request.pdfUrl);
+    setFileName("");
+    setState({ step: "upload" });
+  }, [releasePdfUrl]);
 
   const handleMap = useCallback(
     async (date: string, variables: ExtractedVariable[], pdfUrl: string) => {
@@ -182,6 +249,7 @@ export function UploadWizard() {
 
       try {
         await runApi((client) => client.readings.create({ payload: body }));
+        releasePdfUrl(pdfUrl);
         setState({ step: "done" });
       } catch (e) {
         setState({
@@ -191,7 +259,7 @@ export function UploadWizard() {
         });
       }
     },
-    [fileName, vocabulary],
+    [fileName, releasePdfUrl, vocabulary],
   );
 
   const handleResearch = useCallback(
@@ -258,9 +326,18 @@ export function UploadWizard() {
           {state.step === "upload" && <StepUpload onUpload={handleUpload} />}
 
           {state.step === "extracting" && (
-            <p role="status" className="text-sm text-zinc-600">
-              Extracting variables from PDF…
-            </p>
+            <div className="flex items-center justify-between gap-4">
+              <p role="status" className="text-sm text-zinc-600">
+                Extracting variables from PDF…
+              </p>
+              <button
+                type="button"
+                onClick={cancelExtraction}
+                className="button-secondary min-h-9 px-3 text-xs"
+              >
+                Cancel
+              </button>
+            </div>
           )}
 
           {state.step === "review-extraction" && (

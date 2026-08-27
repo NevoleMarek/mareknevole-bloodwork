@@ -35,6 +35,10 @@ import {
   ProviderWorkflows,
   Supplements,
 } from "@/lib/effect/services";
+import {
+  PDF_PROCESSING_CONSENT_FIELD,
+  PDF_PROCESSING_CONSENT_VERSION,
+} from "@/lib/privacy/pdf-processing";
 
 const unused = () => Effect.die("unused service operation");
 
@@ -597,10 +601,65 @@ describe("Bloodwork HttpApi", () => {
       "pdf",
       new File(["pdf"], "panel.pdf", { type: "application/pdf" }),
     );
+    formData.append(
+      PDF_PROCESSING_CONSENT_FIELD,
+      PDF_PROCESSING_CONSENT_VERSION,
+    );
 
     await expect(
       runClient((client) => client.import.extract({ payload: formData })),
     ).resolves.toEqual({ date: "2026-08-24", variables: [] });
+  });
+
+  it("rejects PDF extraction without the versioned processing consent", async () => {
+    let extractionCalls = 0;
+    const consentServices = Layer.merge(
+      services,
+      Layer.succeed(
+        ProviderWorkflows,
+        ProviderWorkflows.of({
+          extract: () => {
+            extractionCalls += 1;
+            return Effect.succeed({ date: "2026-08-24", variables: [] });
+          },
+          map: unused,
+          research: unused,
+        }),
+      ),
+    );
+    const { dispose: disposeConsent, handler: consentHandler } =
+      makeApiWebHandler(consentServices);
+
+    try {
+      for (const consent of [undefined, "unrelated-consent-version"]) {
+        const formData = new FormData();
+        formData.append(
+          "pdf",
+          new File(["pdf"], "panel.pdf", { type: "application/pdf" }),
+        );
+        if (consent !== undefined) {
+          formData.append(PDF_PROCESSING_CONSENT_FIELD, consent);
+        }
+
+        const response = await consentHandler(
+          new Request("https://bloodwork.test/api/import/extract", {
+            method: "POST",
+            headers: { cookie: "bloodwork-session=test-session" },
+            body: formData,
+          }),
+        );
+
+        expect(response.status).toBe(400);
+        await expect(response.json()).resolves.toMatchObject({
+          _tag: "Bloodwork.ApiBadRequest",
+          error: expect.stringContaining("Explicit consent is required"),
+        });
+      }
+    } finally {
+      await disposeConsent();
+    }
+
+    expect(extractionCalls).toBe(0);
   });
 
   it("maps malformed multipart bodies to the declared bad request", async () => {
