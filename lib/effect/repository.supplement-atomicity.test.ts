@@ -256,7 +256,7 @@ const initialSupplement = (): SupplementRow => ({
   updated_at: "2026-01-01T00:00:00.000Z",
 });
 
-describe("supplement mutation atomicity", () => {
+describe("Repository supplement mutation atomicity", () => {
   it("commits each supplement mutation with all of its changelog rows", async () => {
     const database = new AtomicDatabase();
     const repository = makeRepository(database);
