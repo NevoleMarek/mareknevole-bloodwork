@@ -108,14 +108,59 @@ one of the bounded `1M`, `6M`, or `1Y` windows (the chart currently requests
 administrator-maintained dictionary and active supplements are bounded current
 state, so they remain ordinary list resources. Full data export is a separate
 explicit `/api/readings/export` operation because it is expensive and not needed
-for the summaries view. API authentication is enforced by the shared HttpApi
-cookie-security middleware with signed, expiring session tokens; Next middleware
-only performs page redirects. This is a private, same-origin, single-user
-frontend API: idempotency-key plumbing, automated retries, client rate-limit
-metadata, and a per-client kill switch are intentionally omitted. Mutations are
-not automatically retried, and the browser only retries explicit user actions;
-adding those controls would add no meaningful protection for this deployment
-while obscuring the resource contract.
+for the summaries view.
+
+### API access and threat model
+
+The API is not private or same-origin-only. It intentionally combines public
+dashboard reads, unauthenticated session-management endpoints, and operations
+that require an administrator session. The browser client uses the same-origin
+API URL, but that is a client usage convention—not an authorization boundary.
+The public dashboard reads are:
+
+- `GET /api/dashboard/health?period=1M|6M|1Y|ALL`
+- `GET /api/biomarkers/:key/trend?period=1M|6M|1Y`
+- `GET /api/changelog` (optionally with its cursor query)
+
+These endpoints require no session and can be requested directly by any network
+client. Dashboard responses are selected for public display: biomarker and
+health visibility settings are intentional disclosure decisions, and the public
+changelog is exposed by design. Do not store sensitive information in data that
+is configured for the dashboard or changelog. `GET /api/openapi.json` is also
+public and describes the API contract.
+
+The following operations require a valid `bloodwork-session` cookie and are the
+administrator surface:
+
+- readings: `GET /api/readings`, `GET /api/readings/export`, `POST /api/readings`,
+  and `DELETE /api/readings/:id`
+- changelog writes: `PUT /api/changelog/:id` and `DELETE /api/changelog/:id`
+- vocabulary: `GET /api/vocabulary`, `POST /api/vocabulary`,
+  `PUT /api/vocabulary/:key`, and `DELETE /api/vocabulary/:key`
+- supplements: `GET /api/supplements`, `POST /api/supplements`,
+  `PUT /api/supplements/:id`, and `DELETE /api/supplements/:id`
+- health administration: `GET /api/health/metrics`,
+  `PATCH /api/health/metrics/:metric`, and `POST /api/health/import`
+- import and provider workflows: `POST /api/import/extract`,
+  `POST /api/import/map`, and `POST /api/import/research`
+
+`POST /api/session` is the unauthenticated login endpoint: it accepts the
+administrator password and sets the session cookie. `DELETE /api/session` is
+also unguarded and expires that cookie. The shared HttpApi security middleware
+validates the cookie's signed HMAC token and seven-day expiry on every protected
+request. The cookie is `HttpOnly`, `SameSite=Strict`, and `Secure` outside
+development. There is one administrator password and no per-user roles. Next
+middleware only redirects `/admin` pages when the cookie is absent; it does not
+authenticate API requests, and a present-but-invalid cookie is rejected by the
+API middleware.
+
+Production operations must therefore treat the public endpoints as internet
+facing and the administrator cookie/password as sensitive credentials. The
+application does not provide API-level rate limiting, origin allowlisting,
+client-specific kill switches, idempotency keys, or automatic mutation retries;
+platform or edge controls are responsible for any additional abuse protection.
+Mutations are not automatically retried, and the browser only retries explicit
+user actions.
 
 ## Verification
 
