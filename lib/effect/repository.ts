@@ -26,6 +26,7 @@ import type {
   SupplementCreateInput,
   SupplementDeleteInput,
   SupplementUpdateInput,
+  VocabularyDeleteInput,
   VocabularyEntry,
   VocabularyUpdateInput,
   HealthImportConfig,
@@ -116,8 +117,8 @@ export interface RepositoryContract {
     PersistenceError | NotFoundError | ConflictError | ValidationError
   >;
   readonly deleteVocabulary: (
-    key: string,
-  ) => Effect.Effect<void, PersistenceError>;
+    input: VocabularyDeleteInput,
+  ) => Effect.Effect<void, PersistenceError | NotFoundError | ConflictError>;
   readonly createSupplement: (
     input: SupplementCreateInput,
   ) => Effect.Effect<void, PersistenceError | ConflictError>;
@@ -501,13 +502,32 @@ export const makeRepository = (database: D1Database) => {
     },
   );
   const deleteVocabularyEffect = Effect.fn("Repository.deleteVocabulary")(
-    function* (key: string) {
-      yield* d1(
+    function* (input: VocabularyDeleteInput) {
+      const result = yield* d1(
         "Repository.deleteVocabulary",
         (db) =>
-          db.prepare("DELETE FROM vocabulary WHERE key = ?").bind(key).run(),
+          db
+            .prepare("DELETE FROM vocabulary WHERE key = ? AND version = ?")
+            .bind(input.key, input.expectedVersion)
+            .run(),
         database,
       );
+      if (result.meta.changes === 0) {
+        const current = yield* d1(
+          "Repository.deleteVocabulary.check",
+          (db) =>
+            db
+              .prepare("SELECT key FROM vocabulary WHERE key = ?")
+              .bind(input.key)
+              .first<Schema.Json>(),
+          database,
+        );
+        return yield* Effect.fail(
+          current
+            ? new ConflictError({ resource: "vocabulary", id: input.key })
+            : new NotFoundError({ resource: "vocabulary", id: input.key }),
+        );
+      }
     },
   );
   const createSupplementEffect = Effect.fn("Repository.createSupplement")(

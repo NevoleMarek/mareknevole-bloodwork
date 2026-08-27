@@ -37,6 +37,7 @@ import {
   SupplementUpdateRequest,
   SupplementsResponse,
   TrendQuery,
+  VocabularyDeleteQuery,
   VocabularyEntryRequest,
   VocabularyUpdateRequest,
   VocabularyResponse,
@@ -303,6 +304,7 @@ const vocabularyGroup = HttpApiGroup.make("vocabulary").add(
   }).middleware(ApiSessionMiddleware),
   HttpApiEndpoint.delete("delete", "/api/vocabulary/:key", {
     params: VocabularyParams,
+    query: VocabularyDeleteQuery,
     success: HttpApiSchema.NoContent,
     error: protectedPersistenceMutationErrors,
   }).middleware(ApiSessionMiddleware),
@@ -425,6 +427,7 @@ export {
   SupplementUpdateRequest,
   SupplementsResponse,
   TrendQuery,
+  VocabularyDeleteQuery,
   VocabularyEntryRequest,
   VocabularyUpdateRequest,
   VocabularyResponse,

@@ -86,8 +86,8 @@ invalidation semantics; it is not an in-memory cache substitute.
 The public dashboard cache reads vocabulary, lab metadata/measurements, and
 active supplements in one D1 batch so a response cannot combine rows from
 different commits. Mutable vocabulary and supplement rows carry monotonic
-versions; authenticated updates include the version they read and receive a
-`409 Conflict` when another request has already changed that row. Vocabulary
+versions; authenticated mutations include the version they read and receive
+a `409 Conflict` when another request has already changed that row. Vocabulary
 updates use partial PATCH semantics so flag toggles do not replay stale
 metadata.
 `lib/effect/api-server.ts` composes the contract, handler groups, platform

@@ -219,6 +219,15 @@ export interface VocabularyUpdateRequest extends Schema.Schema.Type<
   readonly _schemaModel?: never;
 }
 
+export const VocabularyDeleteQuery = Schema.Struct({
+  expectedVersion: Schema.Int,
+}).annotate({ identifier: "VocabularyDeleteQuery" });
+export interface VocabularyDeleteQuery extends Schema.Schema.Type<
+  typeof VocabularyDeleteQuery
+> {
+  readonly _schemaModel?: never;
+}
+
 export const SupplementCreateRequest = Schema.Struct({
   name: Schema.String,
   dose: Schema.String,

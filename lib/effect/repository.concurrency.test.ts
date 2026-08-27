@@ -142,4 +142,52 @@ describe("repository optimistic concurrency", () => {
       ),
     ).rejects.toBeInstanceOf(ConflictError);
   });
+
+  it("rejects a stale vocabulary deletion instead of removing newer state", async () => {
+    const { database, queries, binds } = fakeDatabase({
+      first: [{ key: "glucose" }],
+      run: d1Result([], 0),
+    });
+    const repository = makeRepository(database);
+
+    await expect(
+      Effect.runPromise(
+        repository.deleteVocabulary({
+          key: "glucose",
+          expectedVersion: 2,
+        }),
+      ),
+    ).rejects.toBeInstanceOf(ConflictError);
+
+    // SAFETY: A zero-row conditional delete is classified as a conflict when
+    // the key still exists, proving the stale request cannot remove it.
+    expect(queries[0]).toContain(
+      "DELETE FROM vocabulary WHERE key = ? AND version = ?",
+    );
+    expect(binds[0]).toEqual(["glucose", 2]);
+    expect(queries).toHaveLength(2);
+  });
+
+  it("deletes vocabulary when the expected version is current", async () => {
+    const { database, queries, binds } = fakeDatabase({
+      first: null,
+      run: d1Result([], 1),
+    });
+    const repository = makeRepository(database);
+
+    await expect(
+      Effect.runPromise(
+        repository.deleteVocabulary({
+          key: "glucose",
+          expectedVersion: 3,
+        }),
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(queries).toHaveLength(1);
+    expect(queries[0]).toContain(
+      "DELETE FROM vocabulary WHERE key = ? AND version = ?",
+    );
+    expect(binds[0]).toEqual(["glucose", 3]);
+  });
 });

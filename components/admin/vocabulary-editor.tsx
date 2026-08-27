@@ -108,9 +108,12 @@ export function VocabularyEditor({
     onRefresh();
   }
 
-  async function handleDelete(key: string) {
+  async function handleDelete(entry: VocabularyEntry) {
     await runApi((client) =>
-      client.vocabulary.delete({ params: { key: makeVocabularyKey(key) } }),
+      client.vocabulary.delete({
+        params: { key: makeVocabularyKey(entry.key) },
+        query: { expectedVersion: entry.version ?? 1 },
+      }),
     );
     onRefresh();
   }
@@ -182,7 +185,7 @@ export function VocabularyEditor({
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDelete(e.key)}
+                    onClick={() => handleDelete(e)}
                     className="min-h-9 rounded-full px-2 text-xs font-semibold text-red-700"
                     aria-label={`Delete ${e.label}`}
                   >
