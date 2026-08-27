@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { VocabularyEntry } from "@/types/bloodwork";
 import type {
   ExtractedVariable,
@@ -16,6 +16,10 @@ import { StepUpload } from "@/components/admin/step-upload";
 import { StepReviewExtraction } from "@/components/admin/step-review-extraction";
 import { StepReviewMapping } from "@/components/admin/step-review-mapping";
 import { StepReviewResearch } from "@/components/admin/step-review-research";
+
+type UploadWizardProps = {
+  apiRunner?: typeof runApi;
+};
 
 function StepIndicator({
   active,
@@ -48,17 +52,51 @@ function StepIndicator({
   );
 }
 
-export function UploadWizard() {
+function getStepAnnouncement(state: WizardState): string {
+  switch (state.step) {
+    case "upload":
+      return "Upload a lab report.";
+    case "extracting":
+      return "Extracting variables from the PDF.";
+    case "review-extraction":
+      return "Review the extracted variables.";
+    case "mapping":
+      return "Mapping variables to vocabulary.";
+    case "review-mapping":
+      return "Review the variable mapping.";
+    case "researching":
+      return "Researching new biomarkers.";
+    case "review-research":
+      return "Review the new biomarker research.";
+    case "saving":
+      return "Saving the reading.";
+    case "done":
+      return "Reading saved successfully.";
+    case "error":
+      return `Error: ${state.message}`;
+  }
+}
+
+export function UploadWizard({ apiRunner = runApi }: UploadWizardProps) {
   const [state, setState] = useState<WizardState>({ step: "upload" });
   const [fileName, setFileName] = useState("");
   const [vocabulary, setVocabulary] = useState<VocabularyEntry[]>([]);
   const vocabularyRequest = useRef<Promise<VocabularyEntry[]> | null>(null);
+  const stateShellRef = useRef<HTMLDivElement>(null);
+  const previousStep = useRef<WizardState["step"]>(state.step);
+  const stepHeadingId = useId();
+
+  useEffect(() => {
+    if (previousStep.current === state.step) return;
+    previousStep.current = state.step;
+    stateShellRef.current?.focus();
+  }, [state.step]);
 
   const loadVocabulary = useCallback(() => {
     if (!vocabularyRequest.current) {
       vocabularyRequest.current = (async () => {
         try {
-          const data = await runApi((client) => client.vocabulary.list({}));
+          const data = await apiRunner((client) => client.vocabulary.list({}));
           setVocabulary(data.entries);
           return data.entries;
         } catch (error) {
@@ -68,7 +106,7 @@ export function UploadWizard() {
       })();
     }
     return vocabularyRequest.current;
-  }, []);
+  }, [apiRunner]);
 
   const handleUpload = useCallback(
     async (file: File) => {
@@ -81,7 +119,7 @@ export function UploadWizard() {
       formData.append("pdf", file);
 
       try {
-        const data = await runApi((client) =>
+        const data = await apiRunner((client) =>
           client.import.extract({ payload: formData }),
         );
         setState({
@@ -98,7 +136,7 @@ export function UploadWizard() {
         });
       }
     },
-    [loadVocabulary],
+    [apiRunner, loadVocabulary],
   );
 
   const handleMap = useCallback(
@@ -107,7 +145,7 @@ export function UploadWizard() {
 
       try {
         const entries = await loadVocabulary();
-        const data = await runApi((client) =>
+        const data = await apiRunner((client) =>
           client.import.map({
             payload: { variables, vocabulary: entries },
           }),
@@ -126,7 +164,7 @@ export function UploadWizard() {
         });
       }
     },
-    [loadVocabulary],
+    [apiRunner, loadVocabulary],
   );
 
   const handleSave = useCallback(
@@ -181,7 +219,7 @@ export function UploadWizard() {
       };
 
       try {
-        await runApi((client) => client.readings.create({ payload: body }));
+        await apiRunner((client) => client.readings.create({ payload: body }));
         setState({ step: "done" });
       } catch (e) {
         setState({
@@ -191,7 +229,7 @@ export function UploadWizard() {
         });
       }
     },
-    [fileName, vocabulary],
+    [apiRunner, fileName, vocabulary],
   );
 
   const handleResearch = useCallback(
@@ -213,7 +251,7 @@ export function UploadWizard() {
       setState({ step: "researching", pdfUrl, date, mappings });
 
       try {
-        const data = await runApi((client) =>
+        const data = await apiRunner((client) =>
           client.import.research({ payload: { newEntries } }),
         );
         setState({
@@ -231,7 +269,7 @@ export function UploadWizard() {
         });
       }
     },
-    [handleSave],
+    [apiRunner, handleSave],
   );
 
   // Determine if we should show PDF preview
@@ -250,11 +288,27 @@ export function UploadWizard() {
     "mappings" in state &&
     state.mappings.some((m) => m.isNew);
 
+  const stepAnnouncement = getStepAnnouncement(state);
+
   return (
     <div className={`grid gap-6 ${pdfUrl ? "md:grid-cols-2" : ""}`}>
+      <p aria-live="polite" aria-atomic="true" className="sr-only">
+        {stepAnnouncement}
+      </p>
+
       {/* Left panel */}
       <div className="min-w-0">
-        <div key={state.step} className="admin-state-shell">
+        <div
+          key={state.step}
+          ref={stateShellRef}
+          tabIndex={-1}
+          role="region"
+          aria-labelledby={stepHeadingId}
+          className="admin-state-shell"
+        >
+          <h2 id={stepHeadingId} className="sr-only">
+            {stepAnnouncement}
+          </h2>
           {state.step === "upload" && <StepUpload onUpload={handleUpload} />}
 
           {state.step === "extracting" && (
