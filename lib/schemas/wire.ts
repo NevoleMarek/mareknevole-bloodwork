@@ -183,9 +183,15 @@ export interface HealthVisibilityRequest extends Schema.Schema.Type<
   readonly _schemaModel?: never;
 }
 
-export const VocabularyEntryRequest = VocabularyEntry.annotate({
-  identifier: "VocabularyEntryRequest",
-});
+export const VocabularyEntryRequest = Schema.Struct({
+  key: VocabularyEntry.fields.key,
+  label: VocabularyEntry.fields.label,
+  unit: VocabularyEntry.fields.unit,
+  referenceRange: VocabularyEntry.fields.referenceRange,
+  description: VocabularyEntry.fields.description,
+  featured: VocabularyEntry.fields.featured,
+  visible: VocabularyEntry.fields.visible,
+}).annotate({ identifier: "VocabularyEntryRequest" });
 export interface VocabularyEntryRequest extends Schema.Schema.Type<
   typeof VocabularyEntryRequest
 > {
@@ -193,12 +199,19 @@ export interface VocabularyEntryRequest extends Schema.Schema.Type<
 }
 
 export const VocabularyUpdateRequest = Schema.Struct({
-  label: VocabularyEntry.fields.label,
-  unit: VocabularyEntry.fields.unit,
-  referenceRange: VocabularyEntry.fields.referenceRange,
-  description: VocabularyEntry.fields.description,
-  featured: VocabularyEntry.fields.featured,
-  visible: VocabularyEntry.fields.visible,
+  // PATCH semantics: omitted fields are left untouched. This is important
+  // for flag toggles, which must not replay stale label/range metadata.
+  label: Schema.optionalKey(VocabularyEntry.fields.label),
+  unit: Schema.optionalKey(VocabularyEntry.fields.unit),
+  // Re-declare the range shape so wrapping it as optional does not register
+  // the domain schema's `ReferenceRange` OpenAPI identifier twice.
+  referenceRange: Schema.optionalKey(
+    Schema.Struct({ min: Schema.Number, max: Schema.Number }),
+  ),
+  description: Schema.optionalKey(VocabularyEntry.fields.description),
+  featured: Schema.optionalKey(VocabularyEntry.fields.featured),
+  visible: Schema.optionalKey(VocabularyEntry.fields.visible),
+  expectedVersion: Schema.Int,
 }).annotate({ identifier: "VocabularyUpdateRequest" });
 export interface VocabularyUpdateRequest extends Schema.Schema.Type<
   typeof VocabularyUpdateRequest
@@ -225,6 +238,7 @@ export const SupplementUpdateRequest = Schema.Struct({
   frequency: Schema.String,
   startedAt: Schema.String,
   changelogDate: Schema.String,
+  expectedVersion: Schema.Int,
 }).annotate({ identifier: "SupplementUpdateRequest" });
 export interface SupplementUpdateRequest extends Schema.Schema.Type<
   typeof SupplementUpdateRequest
@@ -234,6 +248,7 @@ export interface SupplementUpdateRequest extends Schema.Schema.Type<
 
 export const SupplementDeleteQuery = Schema.Struct({
   changelogDate: Schema.String,
+  expectedVersion: Schema.Int,
 }).annotate({ identifier: "SupplementDeleteQuery" });
 export interface SupplementDeleteQuery extends Schema.Schema.Type<
   typeof SupplementDeleteQuery

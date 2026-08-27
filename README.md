@@ -83,6 +83,13 @@ and aggregation enums—before mapping them to canonical domain schemas.
 and the finite flash/pro model handles, while each request remains
 interruptible. `DataCache` preserves Next/OpenNext `unstable_cache` and tag
 invalidation semantics; it is not an in-memory cache substitute.
+The public dashboard cache reads vocabulary, lab metadata/measurements, and
+active supplements in one D1 batch so a response cannot combine rows from
+different commits. Mutable vocabulary and supplement rows carry monotonic
+versions; authenticated updates include the version they read and receive a
+`409 Conflict` when another request has already changed that row. Vocabulary
+updates use partial PATCH semantics so flag toggles do not replay stale
+metadata.
 `lib/effect/api-server.ts` composes the contract, handler groups, platform
 services, and application layer into the Fetch handler consumed by Next.
 `lib/effect/client.ts` uses `HttpApiClient` so browser calls share the same URL,

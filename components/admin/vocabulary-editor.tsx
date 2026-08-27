@@ -11,13 +11,14 @@ type EditingState =
   | { kind: "editing"; entry: VocabularyEntry }
   | { kind: "adding" };
 
-const updatePayload = (entry: VocabularyEntry) => ({
+const updatePayload = (
+  entry: VocabularyEntry,
+  expectedVersion = entry.version ?? 1,
+) => ({
   label: entry.label,
   unit: entry.unit,
   referenceRange: entry.referenceRange,
-  description: entry.description,
-  featured: entry.featured,
-  visible: entry.visible,
+  expectedVersion,
 });
 
 export function VocabularyEditor({
@@ -56,7 +57,10 @@ export function VocabularyEditor({
     await runApi((client) =>
       client.vocabulary.update({
         params: { key: makeVocabularyKey(entry.key) },
-        payload: updatePayload({ ...entry, visible: !entry.visible }),
+        payload: {
+          visible: !entry.visible,
+          expectedVersion: entry.version ?? 1,
+        },
       }),
     );
     onRefresh();
@@ -66,7 +70,10 @@ export function VocabularyEditor({
     await runApi((client) =>
       client.vocabulary.update({
         params: { key: makeVocabularyKey(entry.key) },
-        payload: updatePayload({ ...entry, featured: !entry.featured }),
+        payload: {
+          featured: !entry.featured,
+          expectedVersion: entry.version ?? 1,
+        },
       }),
     );
     onRefresh();
@@ -88,7 +95,13 @@ export function VocabularyEditor({
         ? client.vocabulary.create({ payload: entry })
         : client.vocabulary.update({
             params: { key: makeVocabularyKey(entry.key) },
-            payload: updatePayload(entry),
+            // The form only edits metadata. Omitting flags makes this a
+            // field-specific PATCH even if another admin toggles a flag
+            // while the form is open.
+            payload: updatePayload(
+              entry,
+              editing.kind === "editing" ? (editing.entry.version ?? 1) : 1,
+            ),
           }),
     );
     setEditing({ kind: "none" });

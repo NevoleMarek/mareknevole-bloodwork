@@ -192,6 +192,10 @@ const protectedSaveReadingErrors = [
   ApiConflict,
   ApiServiceUnavailable,
 ] as const;
+const protectedVocabularyUpdateErrors = [
+  ApiBadRequest,
+  ...protectedPersistenceMutationErrors,
+] as const;
 const trendErrors = [
   ApiBadRequest,
   ...protocolBadRequestErrors,
@@ -291,11 +295,11 @@ const vocabularyGroup = HttpApiGroup.make("vocabulary").add(
     success: HttpApiSchema.NoContent,
     error: protectedPersistenceMutationErrors,
   }).middleware(ApiSessionMiddleware),
-  HttpApiEndpoint.put("update", "/api/vocabulary/:key", {
+  HttpApiEndpoint.patch("update", "/api/vocabulary/:key", {
     params: VocabularyParams,
     payload: VocabularyUpdateRequest,
     success: HttpApiSchema.NoContent,
-    error: protectedPersistenceMutationErrors,
+    error: protectedVocabularyUpdateErrors,
   }).middleware(ApiSessionMiddleware),
   HttpApiEndpoint.delete("delete", "/api/vocabulary/:key", {
     params: VocabularyParams,

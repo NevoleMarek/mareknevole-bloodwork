@@ -25,6 +25,7 @@ import type {
   SupplementCreateRequest,
   SupplementDeleteQuery,
   SupplementUpdateRequest,
+  VocabularyUpdateRequest,
 } from "@/lib/effect/api";
 
 /** Service inputs add the resource identity supplied by the URL path. */
@@ -34,4 +35,9 @@ export type SupplementUpdateInput = SupplementUpdateRequest & {
 };
 export type SupplementDeleteInput = SupplementDeleteQuery & {
   readonly id: string;
+};
+
+/** Service input adds the resource identity supplied by the URL path. */
+export type VocabularyUpdateInput = VocabularyUpdateRequest & {
+  readonly key: string;
 };

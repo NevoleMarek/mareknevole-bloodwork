@@ -11,6 +11,7 @@ export const VocabularyRow = Schema.Struct({
   description: Schema.NullOr(Schema.String),
   featured: Schema.Number,
   visible: Schema.Number,
+  version: Schema.Number,
 });
 export interface VocabularyRow extends Schema.Schema.Type<
   typeof VocabularyRow
@@ -50,6 +51,7 @@ export const SupplementRow = Schema.Struct({
   stopped_at: Schema.NullOr(Schema.String),
   created_at: Schema.String,
   updated_at: Schema.String,
+  version: Schema.Number,
 });
 export interface SupplementRow extends Schema.Schema.Type<
   typeof SupplementRow
@@ -128,6 +130,7 @@ export const SupplementUpdateRow = Schema.Struct({
   dose: Schema.String,
   frequency: Schema.String,
   started_at: Schema.String,
+  version: Schema.Number,
 });
 export interface SupplementUpdateRow extends Schema.Schema.Type<
   typeof SupplementUpdateRow
@@ -135,7 +138,11 @@ export interface SupplementUpdateRow extends Schema.Schema.Type<
   readonly _schemaModel?: never;
 }
 
-export const SupplementNameRow = Schema.Struct({ name: Schema.String });
+export const SupplementNameRow = Schema.Struct({
+  name: Schema.String,
+  stopped_at: Schema.NullOr(Schema.String),
+  version: Schema.Number,
+});
 export interface SupplementNameRow extends Schema.Schema.Type<
   typeof SupplementNameRow
 > {

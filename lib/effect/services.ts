@@ -48,6 +48,7 @@ import type {
   SupplementDeleteInput,
   SupplementUpdateInput,
   VocabularyEntry,
+  VocabularyUpdateInput,
 } from "@/types/bloodwork";
 import type {
   HealthData,
@@ -172,8 +173,8 @@ export interface BloodworkContract {
     entry: VocabularyEntry,
   ) => Effect.Effect<void, PersistenceFailure>;
   readonly updateVocabulary: (
-    entry: VocabularyEntry,
-  ) => Effect.Effect<void, PersistenceFailure>;
+    entry: VocabularyUpdateInput,
+  ) => Effect.Effect<void, PersistenceFailure | ValidationError>;
   readonly deleteVocabulary: (
     key: string,
   ) => Effect.Effect<void, PersistenceError>;
@@ -211,7 +212,7 @@ export const bloodworkLayer = Layer.effect(
       yield* invalidate();
     });
     const updateVocabulary = Effect.fn("Bloodwork.updateVocabulary")(function* (
-      entry: VocabularyEntry,
+      entry: VocabularyUpdateInput,
     ) {
       yield* repository.updateVocabulary(entry);
       yield* invalidate();
