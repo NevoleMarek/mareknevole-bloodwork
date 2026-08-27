@@ -10,8 +10,12 @@ const supplements: Supplement[] = [
     name: "Creatine",
     dose: "5 g",
     frequency: "daily",
-    startedAt: "Jun 2025",
+    startedAt: "2025-06",
     stoppedAt: null,
+    ingredientForm: "creatine monohydrate, powder",
+    interactionNotes: "Not checked",
+    contraindicationNotes: "Not checked",
+    clinicianReview: "Not reviewed",
     createdAt: "2025-06-01T00:00:00Z",
     updatedAt: "2025-06-01T00:00:00Z",
   },
@@ -20,8 +24,12 @@ const supplements: Supplement[] = [
     name: "Vitamin D3",
     dose: "5000 IU",
     frequency: "daily",
-    startedAt: "Jan 2025",
+    startedAt: "2025-01",
     stoppedAt: null,
+    ingredientForm: "cholecalciferol, tablet",
+    interactionNotes: "Not checked",
+    contraindicationNotes: "Not checked",
+    clinicianReview: "Not reviewed",
     createdAt: "2025-01-01T00:00:00Z",
     updatedAt: "2025-01-01T00:00:00Z",
   },
@@ -34,5 +42,26 @@ describe("SupplementTable", () => {
     expect(screen.getByText("Vitamin D3")).toBeInTheDocument();
     expect(screen.getByText("5 g")).toBeInTheDocument();
     expect(screen.getByText("5000 IU")).toBeInTheDocument();
+  });
+
+  it("shows safety context and distinguishes missing review from clearance", () => {
+    render(
+      <SupplementTable
+        supplements={[
+          {
+            ...supplements[0],
+            interactionNotes: "",
+            contraindicationNotes: "",
+            clinicianReview: "",
+          },
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Personal log, not medical advice/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Ingredient\/form:/)).toBeInTheDocument();
+    expect(screen.getAllByText("Not recorded")).toHaveLength(3);
   });
 });

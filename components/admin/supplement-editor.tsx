@@ -4,6 +4,10 @@ import { useState } from "react";
 
 import { runApi } from "@/lib/effect/client";
 import { makeSupplementId } from "@/lib/effect/api";
+import {
+  formatSupplementMonth,
+  supplementSafetyValue,
+} from "@/lib/supplements";
 import type { Supplement } from "@/types/bloodwork";
 
 type RowState =
@@ -14,15 +18,13 @@ type RowState =
       dose: string;
       frequency: string;
       startedAt: string;
+      ingredientForm: string;
+      interactionNotes: string;
+      contraindicationNotes: string;
+      clinicianReview: string;
       changelogDate: string;
     }
   | { kind: "removing"; changelogDate: string };
-
-function formatMonth(yyyyMm: string): string {
-  const [year, month] = yyyyMm.split("-");
-  const date = new Date(Number(year), Number(month) - 1);
-  return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-}
 
 function today(): string {
   return new Date().toISOString().split("T")[0];
@@ -41,6 +43,10 @@ export function SupplementEditor({
     dose: "",
     frequency: "daily",
     startedAt: "",
+    ingredientForm: "",
+    interactionNotes: "",
+    contraindicationNotes: "",
+    clinicianReview: "",
     changelogDate: today(),
   });
 
@@ -64,6 +70,10 @@ export function SupplementEditor({
           dose: state.dose,
           frequency: state.frequency,
           startedAt: state.startedAt,
+          ingredientForm: state.ingredientForm,
+          interactionNotes: state.interactionNotes,
+          contraindicationNotes: state.contraindicationNotes,
+          clinicianReview: state.clinicianReview,
           changelogDate: state.changelogDate,
         },
       }),
@@ -92,6 +102,10 @@ export function SupplementEditor({
       dose: "",
       frequency: "daily",
       startedAt: "",
+      ingredientForm: "",
+      interactionNotes: "",
+      contraindicationNotes: "",
+      clinicianReview: "",
       changelogDate: today(),
     });
     onRefresh();
@@ -117,6 +131,9 @@ export function SupplementEditor({
               <th scope="col" className="px-4 py-3 text-left">
                 Since
               </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Safety context
+              </th>
               <th scope="col" className="px-4 py-3 text-right">
                 <span className="sr-only">Actions</span>
               </th>
@@ -132,8 +149,14 @@ export function SupplementEditor({
                     key={s.id}
                     className="border-t border-zinc-900/8 bg-emerald-50/45"
                   >
-                    <td colSpan={5} className="p-4">
-                      <div className="admin-state-panel grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    <td colSpan={6} className="p-4">
+                      <form
+                        className="admin-state-panel grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void handleSave(s.id);
+                        }}
+                      >
                         <input
                           value={state.name}
                           onChange={(e) =>
@@ -143,6 +166,7 @@ export function SupplementEditor({
                             })
                           }
                           aria-label="Supplement name"
+                          required
                           className="field w-full"
                         />
                         <input
@@ -154,6 +178,7 @@ export function SupplementEditor({
                             })
                           }
                           aria-label="Supplement dose"
+                          required
                           className="field w-full"
                         />
                         <input
@@ -165,6 +190,7 @@ export function SupplementEditor({
                             })
                           }
                           aria-label="Supplement frequency"
+                          required
                           className="field w-full"
                         />
                         <input
@@ -177,13 +203,59 @@ export function SupplementEditor({
                             })
                           }
                           aria-label="Supplement start month"
+                          required
                           className="field w-full"
                         />
-                        <button
-                          type="button"
-                          onClick={() => handleSave(s.id)}
-                          className="button-primary"
-                        >
+                        <input
+                          value={state.ingredientForm}
+                          onChange={(e) =>
+                            setRowState(s.id, {
+                              ...state,
+                              ingredientForm: e.target.value,
+                            })
+                          }
+                          aria-label="Supplement ingredient or form"
+                          placeholder="Ingredient / form"
+                          required
+                          className="field w-full"
+                        />
+                        <input
+                          value={state.interactionNotes}
+                          onChange={(e) =>
+                            setRowState(s.id, {
+                              ...state,
+                              interactionNotes: e.target.value,
+                            })
+                          }
+                          aria-label="Supplement interaction notes"
+                          placeholder="Interaction notes (if known)"
+                          className="field w-full"
+                        />
+                        <input
+                          value={state.contraindicationNotes}
+                          onChange={(e) =>
+                            setRowState(s.id, {
+                              ...state,
+                              contraindicationNotes: e.target.value,
+                            })
+                          }
+                          aria-label="Supplement contraindication notes"
+                          placeholder="Contraindication notes (if known)"
+                          className="field w-full"
+                        />
+                        <input
+                          value={state.clinicianReview}
+                          onChange={(e) =>
+                            setRowState(s.id, {
+                              ...state,
+                              clinicianReview: e.target.value,
+                            })
+                          }
+                          aria-label="Supplement clinician or pharmacist review"
+                          placeholder="Clinician/pharmacist review"
+                          className="field w-full"
+                        />
+                        <button type="submit" className="button-primary">
                           Save
                         </button>
                         <button
@@ -193,7 +265,7 @@ export function SupplementEditor({
                         >
                           Cancel
                         </button>
-                      </div>
+                      </form>
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-600">
                         <label htmlFor={`edit-changelog-${s.id}`}>
                           Changelog date
@@ -222,7 +294,7 @@ export function SupplementEditor({
                     key={s.id}
                     className="border-t border-zinc-900/8 bg-red-50"
                   >
-                    <td colSpan={5} className="p-4">
+                    <td colSpan={6} className="p-4">
                       <div className="flex flex-wrap items-center gap-3">
                         <span>
                           Remove <strong>{s.name}</strong>?
@@ -274,7 +346,43 @@ export function SupplementEditor({
                   </td>
                   <td className="px-4 py-3 text-zinc-600">{s.frequency}</td>
                   <td className="data-value px-4 py-3 text-zinc-500">
-                    {formatMonth(s.startedAt)}
+                    {formatSupplementMonth(s.startedAt)}
+                  </td>
+                  <td className="px-4 py-3 text-xs leading-5 text-zinc-600">
+                    <dl>
+                      <div>
+                        <dt className="inline font-semibold text-zinc-700">
+                          Ingredient/form:{" "}
+                        </dt>
+                        <dd className="inline">
+                          {supplementSafetyValue(s.ingredientForm)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="inline font-semibold text-zinc-700">
+                          Interactions:{" "}
+                        </dt>
+                        <dd className="inline">
+                          {supplementSafetyValue(s.interactionNotes)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="inline font-semibold text-zinc-700">
+                          Contraindications:{" "}
+                        </dt>
+                        <dd className="inline">
+                          {supplementSafetyValue(s.contraindicationNotes)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="inline font-semibold text-zinc-700">
+                          Clinician/pharmacist review:{" "}
+                        </dt>
+                        <dd className="inline">
+                          {supplementSafetyValue(s.clinicianReview)}
+                        </dd>
+                      </div>
+                    </dl>
                   </td>
                   <td className="px-4 py-2 text-right">
                     <span className="flex justify-end gap-1">
@@ -287,6 +395,10 @@ export function SupplementEditor({
                             dose: s.dose,
                             frequency: s.frequency,
                             startedAt: s.startedAt,
+                            ingredientForm: s.ingredientForm,
+                            interactionNotes: s.interactionNotes,
+                            contraindicationNotes: s.contraindicationNotes,
+                            clinicianReview: s.clinicianReview,
                             changelogDate: today(),
                           })
                         }
@@ -320,7 +432,13 @@ export function SupplementEditor({
         <h3 className="mb-4 text-sm font-semibold text-zinc-800">
           Add supplement
         </h3>
-        <div className="grid gap-3 text-sm sm:grid-cols-2">
+        <form
+          className="grid gap-3 text-sm sm:grid-cols-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleAdd();
+          }}
+        >
           <label>
             <span className="mb-1.5 block text-xs font-semibold text-zinc-600">
               Name
@@ -329,6 +447,7 @@ export function SupplementEditor({
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="e.g. Creatine"
+              required
               className="field w-full"
             />
           </label>
@@ -340,6 +459,7 @@ export function SupplementEditor({
               value={form.dose}
               onChange={(e) => setForm({ ...form, dose: e.target.value })}
               placeholder="e.g. 5g"
+              required
               className="field w-full"
             />
           </label>
@@ -350,6 +470,7 @@ export function SupplementEditor({
             <input
               value={form.frequency}
               onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+              required
               className="field w-full"
             />
           </label>
@@ -361,9 +482,67 @@ export function SupplementEditor({
               type="month"
               value={form.startedAt}
               onChange={(e) => setForm({ ...form, startedAt: e.target.value })}
+              required
               className="field w-full"
             />
           </label>
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-600">
+              Ingredient / form
+            </span>
+            <input
+              value={form.ingredientForm}
+              onChange={(e) =>
+                setForm({ ...form, ingredientForm: e.target.value })
+              }
+              placeholder="e.g. creatine monohydrate, powder"
+              required
+              className="field w-full"
+            />
+          </label>
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-600">
+              Interaction notes
+            </span>
+            <input
+              value={form.interactionNotes}
+              onChange={(e) =>
+                setForm({ ...form, interactionNotes: e.target.value })
+              }
+              placeholder="Not checked, or note known interactions"
+              className="field w-full"
+            />
+          </label>
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-600">
+              Contraindication notes
+            </span>
+            <input
+              value={form.contraindicationNotes}
+              onChange={(e) =>
+                setForm({ ...form, contraindicationNotes: e.target.value })
+              }
+              placeholder="Not checked, or note relevant conditions"
+              className="field w-full"
+            />
+          </label>
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-600">
+              Clinician / pharmacist review
+            </span>
+            <input
+              value={form.clinicianReview}
+              onChange={(e) =>
+                setForm({ ...form, clinicianReview: e.target.value })
+              }
+              placeholder="Not reviewed, or note reviewer/date"
+              className="field w-full"
+            />
+          </label>
+          <p className="text-xs leading-5 text-zinc-500 sm:col-span-2 lg:col-span-3">
+            Safety fields record what is known about this personal log entry;
+            blank notes remain explicitly “Not recorded” on the public page.
+          </p>
           <label className="sm:col-span-2">
             <span className="mb-1.5 block text-xs font-semibold text-zinc-600">
               Changelog date
@@ -378,13 +557,12 @@ export function SupplementEditor({
             />
           </label>
           <button
-            type="button"
-            onClick={handleAdd}
+            type="submit"
             className="button-primary mt-1 sm:col-span-2 sm:w-fit"
           >
             Add supplement
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );

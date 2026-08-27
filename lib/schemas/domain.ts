@@ -136,6 +136,10 @@ export const Supplement = Schema.Struct({
   frequency: Schema.String,
   startedAt: Schema.String,
   stoppedAt: Schema.NullOr(Schema.String),
+  ingredientForm: Schema.String,
+  interactionNotes: Schema.String,
+  contraindicationNotes: Schema.String,
+  clinicianReview: Schema.String,
   createdAt: Schema.String,
   updatedAt: Schema.String,
 }).annotate({ identifier: "Supplement" });

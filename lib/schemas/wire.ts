@@ -1,5 +1,12 @@
 import * as Schema from "effect/Schema";
 
+import {
+  SUPPLEMENT_CHANGELOG_DATE_PATTERN,
+  SUPPLEMENT_START_MONTH_PATTERN,
+  isSupplementChangelogDate,
+  isSupplementStartMonth,
+} from "@/lib/supplements";
+
 import { TREND_PERIODS } from "@/lib/period";
 import {
   BloodworkReading,
@@ -18,6 +25,15 @@ import {
   Supplement,
   VocabularyEntry,
 } from "@/lib/schemas/domain";
+
+const SupplementStartMonth = Schema.String.check(
+  Schema.isPattern(SUPPLEMENT_START_MONTH_PATTERN),
+  Schema.makeFilter(isSupplementStartMonth),
+);
+const SupplementChangelogDate = Schema.String.check(
+  Schema.isPattern(SUPPLEMENT_CHANGELOG_DATE_PATTERN),
+  Schema.makeFilter(isSupplementChangelogDate),
+);
 
 export const VocabularyResponse = Schema.Struct({
   entries: Schema.mutable(Schema.Array(VocabularyEntry)),
@@ -210,8 +226,12 @@ export const SupplementCreateRequest = Schema.Struct({
   name: Schema.String,
   dose: Schema.String,
   frequency: Schema.String,
-  startedAt: Schema.String,
-  changelogDate: Schema.String,
+  startedAt: SupplementStartMonth,
+  ingredientForm: Schema.String,
+  interactionNotes: Schema.String,
+  contraindicationNotes: Schema.String,
+  clinicianReview: Schema.String,
+  changelogDate: SupplementChangelogDate,
 }).annotate({ identifier: "SupplementCreateRequest" });
 export interface SupplementCreateRequest extends Schema.Schema.Type<
   typeof SupplementCreateRequest
@@ -223,8 +243,12 @@ export const SupplementUpdateRequest = Schema.Struct({
   name: Schema.String,
   dose: Schema.String,
   frequency: Schema.String,
-  startedAt: Schema.String,
-  changelogDate: Schema.String,
+  startedAt: SupplementStartMonth,
+  ingredientForm: Schema.String,
+  interactionNotes: Schema.String,
+  contraindicationNotes: Schema.String,
+  clinicianReview: Schema.String,
+  changelogDate: SupplementChangelogDate,
 }).annotate({ identifier: "SupplementUpdateRequest" });
 export interface SupplementUpdateRequest extends Schema.Schema.Type<
   typeof SupplementUpdateRequest
@@ -233,7 +257,7 @@ export interface SupplementUpdateRequest extends Schema.Schema.Type<
 }
 
 export const SupplementDeleteQuery = Schema.Struct({
-  changelogDate: Schema.String,
+  changelogDate: SupplementChangelogDate,
 }).annotate({ identifier: "SupplementDeleteQuery" });
 export interface SupplementDeleteQuery extends Schema.Schema.Type<
   typeof SupplementDeleteQuery

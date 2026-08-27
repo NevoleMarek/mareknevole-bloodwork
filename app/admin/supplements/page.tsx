@@ -78,12 +78,18 @@ export default function AdminSupplementsPage() {
   return (
     <>
       <div className="admin-page-title">
-        <p className="eyebrow">Current protocol</p>
+        <p className="eyebrow">Personal supplement log</p>
         <h1 className="mt-2">Supplements</h1>
-        <p>Maintain the active stack and its public change history.</p>
+        <p>Maintain a personal log and its public change history.</p>
       </div>
       <div className="space-y-5">
         <section className="admin-panel">
+          <p className="mb-5 rounded-xl border border-amber-900/10 bg-amber-50/70 px-4 py-3 text-sm leading-6 text-amber-950/75">
+            This is a personal record, not a medical protocol or recommendation.
+            Record ingredient/form, interaction and contraindication notes, and
+            any clinician or pharmacist review when known. Blank safety fields
+            are shown publicly as “Not recorded.”
+          </p>
           <h2 className="mb-5 text-sm font-semibold text-zinc-800">
             Active supplements
           </h2>

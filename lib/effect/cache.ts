@@ -58,7 +58,10 @@ export const layer = Layer.succeed(
   DataCache,
   DataCache.of({
     dashboard: Effect.fn("DataCache.dashboard")(function* () {
-      return yield* promise("DataCache.dashboard", getCachedDashboard);
+      const asOfDate = new Date().toISOString().slice(0, 10);
+      return yield* promise("DataCache.dashboard", () =>
+        getCachedDashboard(asOfDate),
+      );
     }),
     firstChangelogPage: Effect.fn("DataCache.firstChangelogPage")(function* () {
       return yield* promise(

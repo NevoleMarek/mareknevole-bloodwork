@@ -23,12 +23,14 @@ const CHANGELOG_TAG = "changelog";
 const DAY = 86_400;
 
 export const getCachedDashboard = unstable_cache(
-  async (): Promise<DashboardSnapshot> => {
+  async (
+    asOfDate = new Date().toISOString().slice(0, 10),
+  ): Promise<DashboardSnapshot> => {
     const env = await readCloudflareEnv();
     const [vocabulary, labs, supplements] = await Promise.all([
       getVocabulary(env.DB),
       getLabOverview(env.DB),
-      getActiveSupplements(env.DB),
+      getActiveSupplements(env.DB, `${asOfDate}T23:59:59.999Z`),
     ]);
     return { vocabulary, labs, supplements };
   },

@@ -615,8 +615,22 @@ table {
     color: var(--subtle);
   }
 
+  .supplement-table tbody td:nth-child(3) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
   .supplement-table tbody td:nth-child(4) {
+    grid-column: 2;
+    grid-row: 2;
     text-align: right;
+  }
+
+  .supplement-table tbody td:nth-child(5) {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    border-top: 1px solid var(--line);
+    padding-top: 0.65rem;
   }
 
   .admin-shell {

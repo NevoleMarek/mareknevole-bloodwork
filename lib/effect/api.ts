@@ -178,6 +178,7 @@ const protectedBadRequestUnavailableErrors = [
   ApiServiceUnavailable,
 ] as const;
 const protectedPersistenceMutationErrors = [
+  ApiBadRequest,
   ...protocolBadRequestErrors,
   ApiUnauthorized,
   ApiNotFound,

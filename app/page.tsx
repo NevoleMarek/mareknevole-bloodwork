@@ -125,7 +125,7 @@ export default async function Home() {
               </div>
               <div className="rounded-2xl bg-white px-4 py-3.5">
                 <dt className="text-[0.68rem] font-semibold tracking-[0.08em] text-zinc-500 uppercase">
-                  Active stack
+                  Active supplements
                 </dt>
                 <dd className="data-value mt-1.5 text-lg font-semibold tracking-tight text-zinc-950">
                   {supplements.length}
@@ -187,10 +187,10 @@ export default async function Home() {
       <section id="supplements" className="scroll-mt-32 pt-20">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Current protocol</p>
-            <h2 className="mt-2">Supplement stack</h2>
+            <p className="eyebrow">Personal supplement log</p>
+            <h2 className="mt-2">Supplements I track</h2>
           </div>
-          <p>{supplements.length} active</p>
+          <p>{supplements.length} active today</p>
         </div>
         <div className="surface p-4 sm:p-6">
           <SupplementTable supplements={supplements} />
@@ -200,8 +200,8 @@ export default async function Home() {
       <section id="changelog" className="scroll-mt-32 pt-20">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Protocol history</p>
-            <h2 className="mt-2">Changelog</h2>
+            <p className="eyebrow">Supplement history</p>
+            <h2 className="mt-2">Log changes</h2>
           </div>
           <p>A record of what changed, and when.</p>
         </div>

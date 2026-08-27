@@ -64,6 +64,7 @@ import { mapVariablesPrompt } from "@/prompts/map-variables";
 import { researchVariablesPrompt } from "@/prompts/research-variables";
 
 type PersistenceFailure = PersistenceError | NotFoundError | ConflictError;
+type SupplementFailure = PersistenceFailure | ValidationError;
 
 export interface DashboardContract {
   readonly getDashboard: () => Effect.Effect<
@@ -290,13 +291,13 @@ export interface SupplementsContract {
   readonly get: () => Effect.Effect<Supplement[], PersistenceError>;
   readonly create: (
     input: SupplementCreateInput,
-  ) => Effect.Effect<void, PersistenceFailure>;
+  ) => Effect.Effect<void, SupplementFailure>;
   readonly update: (
     input: SupplementUpdateInput,
-  ) => Effect.Effect<void, PersistenceFailure>;
+  ) => Effect.Effect<void, SupplementFailure>;
   readonly remove: (
     input: SupplementDeleteInput,
-  ) => Effect.Effect<void, PersistenceFailure>;
+  ) => Effect.Effect<void, SupplementFailure>;
   readonly updateChangelog: (
     id: string,
     description: string,

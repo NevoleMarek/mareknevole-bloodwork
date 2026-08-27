@@ -48,6 +48,10 @@ export const SupplementRow = Schema.Struct({
   frequency: Schema.String,
   started_at: Schema.String,
   stopped_at: Schema.NullOr(Schema.String),
+  ingredient_form: Schema.String,
+  interaction_notes: Schema.String,
+  contraindication_notes: Schema.String,
+  clinician_review: Schema.String,
   created_at: Schema.String,
   updated_at: Schema.String,
 });
@@ -128,9 +132,24 @@ export const SupplementUpdateRow = Schema.Struct({
   dose: Schema.String,
   frequency: Schema.String,
   started_at: Schema.String,
+  ingredient_form: Schema.String,
+  interaction_notes: Schema.String,
+  contraindication_notes: Schema.String,
+  clinician_review: Schema.String,
 });
 export interface SupplementUpdateRow extends Schema.Schema.Type<
   typeof SupplementUpdateRow
+> {
+  readonly _schemaModel?: never;
+}
+
+export const SupplementDeleteRow = Schema.Struct({
+  name: Schema.String,
+  started_at: Schema.String,
+  stopped_at: Schema.NullOr(Schema.String),
+});
+export interface SupplementDeleteRow extends Schema.Schema.Type<
+  typeof SupplementDeleteRow
 > {
   readonly _schemaModel?: never;
 }

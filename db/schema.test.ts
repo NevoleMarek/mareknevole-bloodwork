@@ -3,7 +3,11 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const schema = ["0001_schema.sql", "0002_measurement_reading_date.sql"]
+const schema = [
+  "0001_schema.sql",
+  "0002_measurement_reading_date.sql",
+  "0003_supplement_safety_context.sql",
+]
   .map((file) => readFileSync(resolve("db/migrations", file), "utf8"))
   .join("\n");
 
@@ -26,5 +30,20 @@ describe("D1 indexes", () => {
       "ALTER TABLE measurements ADD COLUMN reading_date",
     );
     expect(schema).toContain("WHERE readings.id = measurements.reading_id");
+  });
+
+  it("adds explicit supplement safety context fields", () => {
+    expect(schema).toContain(
+      "ALTER TABLE supplements ADD COLUMN ingredient_form TEXT NOT NULL DEFAULT ''",
+    );
+    expect(schema).toContain(
+      "ALTER TABLE supplements ADD COLUMN interaction_notes TEXT NOT NULL DEFAULT ''",
+    );
+    expect(schema).toContain(
+      "ADD COLUMN contraindication_notes TEXT NOT NULL DEFAULT ''",
+    );
+    expect(schema).toContain(
+      "ALTER TABLE supplements ADD COLUMN clinician_review TEXT NOT NULL DEFAULT ''",
+    );
   });
 });

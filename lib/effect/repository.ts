@@ -43,8 +43,13 @@ import {
   PersistenceError,
   ValidationError,
 } from "@/lib/effect/errors";
-import { SupplementNameRow, SupplementUpdateRow } from "@/lib/schemas/rows";
+import { SupplementDeleteRow, SupplementUpdateRow } from "@/lib/schemas/rows";
 import { CloudflareRuntime } from "@/lib/effect/runtime";
+import {
+  isSupplementChangelogDate,
+  isSupplementActive,
+  isSupplementStartMonth,
+} from "@/lib/supplements";
 
 export interface RepositoryContract {
   readonly getVocabulary: () => Effect.Effect<
@@ -116,13 +121,13 @@ export interface RepositoryContract {
   ) => Effect.Effect<void, PersistenceError>;
   readonly createSupplement: (
     input: SupplementCreateInput,
-  ) => Effect.Effect<void, PersistenceError | ConflictError>;
+  ) => Effect.Effect<void, PersistenceError | ConflictError | ValidationError>;
   readonly updateSupplement: (
     input: SupplementUpdateInput,
-  ) => Effect.Effect<void, PersistenceError | NotFoundError>;
+  ) => Effect.Effect<void, PersistenceError | NotFoundError | ValidationError>;
   readonly deleteSupplement: (
     input: SupplementDeleteInput,
-  ) => Effect.Effect<void, PersistenceError | NotFoundError>;
+  ) => Effect.Effect<void, PersistenceError | NotFoundError | ValidationError>;
 }
 
 export class Repository extends Context.Service<
@@ -461,13 +466,41 @@ export const makeRepository = (database: D1Database) => {
   );
   const createSupplementEffect = Effect.fn("Repository.createSupplement")(
     function* (input: SupplementCreateInput) {
+      if (!isSupplementStartMonth(input.startedAt)) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "Repository.createSupplement",
+            message: "Supplement start month must use YYYY-MM",
+          }),
+        );
+      }
+      if (!isSupplementChangelogDate(input.changelogDate)) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "Repository.createSupplement",
+            message: "Supplement changelog date must use YYYY-MM-DD",
+          }),
+        );
+      }
+      if (!input.ingredientForm.trim()) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "Repository.createSupplement",
+            message: "Ingredient/form is required for supplement records",
+          }),
+        );
+      }
       const now = new Date().toISOString();
       yield* d1Mutation(
         "Repository.createSupplement",
         (db) =>
           db
             .prepare(
-              "INSERT INTO supplements (id, name, dose, frequency, started_at, stopped_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)",
+              `INSERT INTO supplements
+               (id, name, dose, frequency, started_at, stopped_at,
+                ingredient_form, interaction_notes, contraindication_notes,
+                clinician_review, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)`,
             )
             .bind(
               crypto.randomUUID(),
@@ -475,6 +508,10 @@ export const makeRepository = (database: D1Database) => {
               input.dose,
               input.frequency,
               input.startedAt,
+              input.ingredientForm,
+              input.interactionNotes,
+              input.contraindicationNotes,
+              input.clinicianReview,
               now,
               now,
             )
@@ -499,6 +536,30 @@ export const makeRepository = (database: D1Database) => {
   );
   const updateSupplementEffect = Effect.fn("Repository.updateSupplement")(
     function* (input: SupplementUpdateInput) {
+      if (!isSupplementStartMonth(input.startedAt)) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "Repository.updateSupplement",
+            message: "Supplement start month must use YYYY-MM",
+          }),
+        );
+      }
+      if (!isSupplementChangelogDate(input.changelogDate)) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "Repository.updateSupplement",
+            message: "Supplement changelog date must use YYYY-MM-DD",
+          }),
+        );
+      }
+      if (!input.ingredientForm.trim()) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "Repository.updateSupplement",
+            message: "Ingredient/form is required for supplement records",
+          }),
+        );
+      }
       const oldUnknown = yield* d1(
         "Repository.updateSupplement.read",
         (db) =>
@@ -532,18 +593,35 @@ export const makeRepository = (database: D1Database) => {
         changes.push(`Renamed ${old.name} to ${input.name}`);
       if (old.started_at !== input.startedAt)
         changes.push(`Changed ${old.name} start date to ${input.startedAt}`);
+      if (old.ingredient_form !== input.ingredientForm)
+        changes.push(`Changed ${old.name} ingredient/form`);
+      if (old.interaction_notes !== input.interactionNotes)
+        changes.push(`Changed ${old.name} interaction notes`);
+      if (old.contraindication_notes !== input.contraindicationNotes)
+        changes.push(`Changed ${old.name} contraindication notes`);
+      if (old.clinician_review !== input.clinicianReview)
+        changes.push(`Changed ${old.name} clinician/pharmacist review`);
       yield* d1(
         "Repository.updateSupplement",
         (db) =>
           db
             .prepare(
-              "UPDATE supplements SET name = ?, dose = ?, frequency = ?, started_at = ?, updated_at = ? WHERE id = ?",
+              `UPDATE supplements
+               SET name = ?, dose = ?, frequency = ?, started_at = ?,
+                   ingredient_form = ?, interaction_notes = ?,
+                   contraindication_notes = ?, clinician_review = ?,
+                   updated_at = ?
+               WHERE id = ?`,
             )
             .bind(
               input.name,
               input.dose,
               input.frequency,
               input.startedAt,
+              input.ingredientForm,
+              input.interactionNotes,
+              input.contraindicationNotes,
+              input.clinicianReview,
               now,
               input.id,
             )
@@ -569,18 +647,28 @@ export const makeRepository = (database: D1Database) => {
   );
   const deleteSupplementEffect = Effect.fn("Repository.deleteSupplement")(
     function* (input: SupplementDeleteInput) {
+      if (!isSupplementChangelogDate(input.changelogDate)) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "Repository.deleteSupplement",
+            message: "Supplement changelog date must use YYYY-MM-DD",
+          }),
+        );
+      }
       const supplementUnknown = yield* d1(
         "Repository.deleteSupplement.read",
         (db) =>
           db
-            .prepare("SELECT name FROM supplements WHERE id = ?")
+            .prepare(
+              "SELECT name, started_at, stopped_at FROM supplements WHERE id = ?",
+            )
             .bind(input.id)
             .first<Schema.Json>(),
         database,
       );
       const supplement = supplementUnknown
         ? yield* decodePersisted(
-            SupplementNameRow,
+            SupplementDeleteRow,
             supplementUnknown,
             "Repository.deleteSupplement.decode",
           )
@@ -588,6 +676,20 @@ export const makeRepository = (database: D1Database) => {
       if (!supplement) {
         return yield* Effect.fail(
           new NotFoundError({ resource: "supplement", id: input.id }),
+        );
+      }
+      if (
+        !isSupplementActive(
+          { startedAt: supplement.started_at, stoppedAt: null },
+          new Date(),
+        )
+      ) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "Repository.deleteSupplement",
+            message:
+              "A supplement cannot be stopped before its valid start month",
+          }),
         );
       }
       const now = new Date().toISOString();

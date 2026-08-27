@@ -27,6 +27,7 @@ import type {
   VocabularyEntry,
 } from "@/types/bloodwork";
 import type { HealthData, HealthMetricConfig } from "@/types/health";
+import { isSupplementActive } from "@/lib/supplements";
 
 // -- Row mappers --
 
@@ -63,6 +64,10 @@ export function mapSupplementRow(row: SupplementRow): Supplement {
     frequency: row.frequency,
     startedAt: row.started_at,
     stoppedAt: row.stopped_at,
+    ingredientForm: row.ingredient_form,
+    interactionNotes: row.interaction_notes,
+    contraindicationNotes: row.contraindication_notes,
+    clinicianReview: row.clinician_review,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -275,15 +280,29 @@ export async function getReadingPage(
 
 export async function getActiveSupplements(
   db: D1Database,
+  asOf: Date | string = new Date(),
 ): Promise<Supplement[]> {
+  const asOfDate = asOf instanceof Date ? asOf : new Date(asOf);
+  if (Number.isNaN(asOfDate.getTime())) {
+    return [];
+  }
+  const asOfTimestamp = asOfDate.toISOString();
   const result = await db
-    .prepare("SELECT * FROM supplements WHERE stopped_at IS NULL ORDER BY name")
+    .prepare(
+      `SELECT * FROM supplements
+       WHERE started_at <= ?
+         AND (stopped_at IS NULL OR stopped_at > ?)
+       ORDER BY name`,
+    )
+    .bind(asOfTimestamp, asOfTimestamp)
     .all<SupplementRow>();
   const rows = await decodeRows(
     SupplementRow,
     resultsOf("active-supplements", result),
   );
-  return rows.map(mapSupplementRow);
+  return rows
+    .map(mapSupplementRow)
+    .filter((supplement) => isSupplementActive(supplement, asOfDate));
 }
 
 const CHANGELOG_PAGE_SIZE = 20;

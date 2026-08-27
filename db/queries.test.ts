@@ -1,10 +1,11 @@
 import * as Effect from "effect/Effect";
 import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 
-import { PersistenceError } from "@/lib/effect/errors";
+import { PersistenceError, ValidationError } from "@/lib/effect/errors";
 import { makeRepository } from "@/lib/effect/repository";
 import {
   getBiomarkerTrend,
+  getActiveSupplements,
   getLabOverview,
   getReadingPage,
   getSupplementChangelogPage,
@@ -192,6 +193,10 @@ describe("row mappers", () => {
       frequency: "daily",
       started_at: "Jun 2025",
       stopped_at: null,
+      ingredient_form: "creatine monohydrate, powder",
+      interaction_notes: "Not checked",
+      contraindication_notes: "Not checked",
+      clinician_review: "Not reviewed",
       created_at: "2025-06-01T00:00:00Z",
       updated_at: "2025-06-01T00:00:00Z",
     };
@@ -202,6 +207,10 @@ describe("row mappers", () => {
       frequency: "daily",
       startedAt: "Jun 2025",
       stoppedAt: null,
+      ingredientForm: "creatine monohydrate, powder",
+      interactionNotes: "Not checked",
+      contraindicationNotes: "Not checked",
+      clinicianReview: "Not reviewed",
       createdAt: "2025-06-01T00:00:00Z",
       updatedAt: "2025-06-01T00:00:00Z",
     });
@@ -394,6 +403,124 @@ describe("getBiomarkerTrend", () => {
       { date: "2026-01-01", value: 90 },
       { date: "2026-02-01", value: 95 },
     ]);
+  });
+});
+
+describe("getActiveSupplements", () => {
+  it("returns only valid supplements active at the requested instant", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const database = new TestDatabase([
+      d1Result([
+        {
+          id: "active",
+          name: "Creatine",
+          dose: "5 g",
+          frequency: "daily",
+          started_at: "2025-01",
+          stopped_at: null,
+          ingredient_form: "creatine monohydrate, powder",
+          interaction_notes: "Not checked",
+          contraindication_notes: "Not checked",
+          clinician_review: "Not reviewed",
+          created_at: "2025-01-01T00:00:00Z",
+          updated_at: "2025-01-01T00:00:00Z",
+        },
+        {
+          id: "future",
+          name: "Future",
+          dose: "1 capsule",
+          frequency: "daily",
+          started_at: "2026-09",
+          stopped_at: null,
+          ingredient_form: "ingredient, capsule",
+          interaction_notes: "",
+          contraindication_notes: "",
+          clinician_review: "",
+          created_at: "2026-08-01T00:00:00Z",
+          updated_at: "2026-08-01T00:00:00Z",
+        },
+        {
+          id: "stopped",
+          name: "Stopped",
+          dose: "1 capsule",
+          frequency: "daily",
+          started_at: "2025-01",
+          stopped_at: "2026-08-27T00:00:00.000Z",
+          ingredient_form: "ingredient, capsule",
+          interaction_notes: "",
+          contraindication_notes: "",
+          clinician_review: "",
+          created_at: "2025-01-01T00:00:00Z",
+          updated_at: "2026-08-27T00:00:00Z",
+        },
+        {
+          id: "invalid-boundary",
+          name: "Invalid boundary",
+          dose: "1 capsule",
+          frequency: "daily",
+          started_at: "2026-09",
+          stopped_at: "2026-08-28T00:00:00.000Z",
+          ingredient_form: "ingredient, capsule",
+          interaction_notes: "",
+          contraindication_notes: "",
+          clinician_review: "",
+          created_at: "2026-08-01T00:00:00Z",
+          updated_at: "2026-08-01T00:00:00Z",
+        },
+      ]),
+    ]);
+    const asOf = new Date("2026-08-27T00:00:00.000Z");
+
+    const supplements = await getActiveSupplements(database, asOf);
+
+    expect(database.prepareMock).toHaveBeenCalledWith(
+      expect.stringContaining("started_at <= ?"),
+    );
+    expect(database.prepareMock).toHaveBeenCalledWith(
+      expect.stringContaining("stopped_at IS NULL OR stopped_at > ?"),
+    );
+    expect(database.bindMock).toHaveBeenCalledWith(
+      asOf.toISOString(),
+      asOf.toISOString(),
+    );
+    expect(supplements.map(({ id }) => id)).toEqual(["active"]);
+  });
+
+  it("returns no rows for an invalid as-of value", async () => {
+    const database = new TestDatabase([]);
+
+    await expect(getActiveSupplements(database, "not-a-date")).resolves.toEqual(
+      [],
+    );
+    expect(database.prepareMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("supplement mutation validation", () => {
+  const input = {
+    name: "Creatine",
+    dose: "5 g",
+    frequency: "daily",
+    startedAt: "2026-08",
+    ingredientForm: "creatine monohydrate, powder",
+    interactionNotes: "Not checked",
+    contraindicationNotes: "Not checked",
+    clinicianReview: "Not reviewed",
+    changelogDate: "2026-08-27",
+  };
+
+  it.each([
+    ["startedAt", { startedAt: "2026-13" }],
+    ["changelogDate", { changelogDate: "2026-02-30" }],
+    ["ingredientForm", { ingredientForm: "   " }],
+  ] as const)("rejects invalid %s before writing", async (_field, change) => {
+    const database = new TestDatabase([]);
+    const repository = makeRepository(database);
+
+    await expect(
+      Effect.runPromise(repository.createSupplement({ ...input, ...change })),
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(database.prepareMock).not.toHaveBeenCalled();
   });
 });
 
