@@ -104,6 +104,36 @@ afterEach(() => {
 });
 
 describe("HealthGrid", () => {
+  it("communicates when a period has no health measurements", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      jsonResponse({
+        metrics: [],
+        configs: [
+          {
+            metric: "weight",
+            label: "Weight",
+            unit: "kg",
+            aggregation: "avg",
+            visible: true,
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetch);
+
+    render(<HealthGridContent requestedPeriod={null} />);
+    enterViewport();
+
+    expect(
+      await screen.findByText(
+        "No health measurements available for this period.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "No health measurements available for this period.",
+    );
+  });
+
   it("loads six months only when the section approaches the viewport", async () => {
     const fetch = vi.fn().mockResolvedValue(jsonResponse(health));
     vi.stubGlobal("fetch", fetch);

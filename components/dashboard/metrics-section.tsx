@@ -70,6 +70,17 @@ export function MetricsSection({
     loadTrend(key);
   }
 
+  if (featured.length === 0 && nonFeatured.length === 0) {
+    return (
+      <div
+        className="surface flex min-h-28 items-center justify-center p-6 text-sm text-zinc-600"
+        role="status"
+      >
+        No biomarker results available yet.
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="grid grid-cols-1 gap-3 min-[370px]:grid-cols-2 md:grid-cols-4 md:gap-4">

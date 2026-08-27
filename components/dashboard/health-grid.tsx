@@ -192,12 +192,30 @@ function HealthCharts({ data }: { data: HealthData }) {
     data.configs.some(
       (config) => config.metric === "blood_pressure_systolic",
     ) &&
-    data.configs.some((config) => config.metric === "blood_pressure_diastolic");
+    data.configs.some(
+      (config) => config.metric === "blood_pressure_diastolic",
+    ) &&
+    (byMetric.get("blood_pressure_systolic")?.length ?? 0) > 0 &&
+    (byMetric.get("blood_pressure_diastolic")?.length ?? 0) > 0;
   const singleConfigs = data.configs.filter(
     (config) =>
       config.metric !== "blood_pressure_systolic" &&
       config.metric !== "blood_pressure_diastolic",
   );
+  const populatedSingleConfigs = singleConfigs.filter(
+    (config) => (byMetric.get(config.metric)?.length ?? 0) > 0,
+  );
+
+  if (!hasBloodPressure && populatedSingleConfigs.length === 0) {
+    return (
+      <div
+        className="surface flex min-h-28 items-center justify-center p-6 text-sm text-zinc-600"
+        role="status"
+      >
+        No health measurements available for this period.
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -207,7 +225,7 @@ function HealthCharts({ data }: { data: HealthData }) {
           diastolic={byMetric.get("blood_pressure_diastolic") ?? []}
         />
       )}
-      {singleConfigs.map((config) => (
+      {populatedSingleConfigs.map((config) => (
         <HealthChart
           key={config.metric}
           label={config.label}

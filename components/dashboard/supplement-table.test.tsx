@@ -28,6 +28,15 @@ const supplements: Supplement[] = [
 ];
 
 describe("SupplementTable", () => {
+  it("communicates when there are no active supplements", () => {
+    render(<SupplementTable supplements={[]} />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "No active supplements recorded.",
+    );
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
   it("renders all supplements", () => {
     render(<SupplementTable supplements={supplements} />);
     expect(screen.getByText("Creatine")).toBeInTheDocument();

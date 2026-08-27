@@ -134,6 +134,10 @@ export function TrendPanel({
     return map;
   }, [vocabulary]);
 
+  const describedEntries = selectedKeys.filter(
+    (key) => !!vocabMap.get(key)?.description,
+  );
+
   if (selectedKeys.length === 0) return null;
 
   return (
@@ -174,22 +178,24 @@ export function TrendPanel({
           </div>
         );
       })}
-      <div className="border-t border-zinc-900/8 bg-zinc-50/70 px-4 py-4 sm:px-5">
-        {selectedKeys.map((key) => {
-          const entry = vocabMap.get(key);
-          if (!entry || !entry.description) return null;
-          return (
-            <div key={key} className="mb-3 last:mb-0">
-              <div className="text-xs font-semibold text-zinc-800">
-                {entry.label}
+      {describedEntries.length > 0 && (
+        <div className="border-t border-zinc-900/8 bg-zinc-50/70 px-4 py-4 sm:px-5">
+          {describedEntries.map((key) => {
+            const entry = vocabMap.get(key);
+            if (!entry?.description) return null;
+            return (
+              <div key={key} className="mb-3 last:mb-0">
+                <div className="text-xs font-semibold text-zinc-800">
+                  {entry.label}
+                </div>
+                <div className="mt-1 text-xs leading-5 text-zinc-600">
+                  {entry.description}
+                </div>
               </div>
-              <div className="mt-1 text-xs leading-5 text-zinc-600">
-                {entry.description}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

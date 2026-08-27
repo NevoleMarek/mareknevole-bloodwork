@@ -44,6 +44,24 @@ const trends = {
 };
 
 describe("TrendPanel", () => {
+  it("does not reserve a footer when selected biomarkers have no descriptions", () => {
+    const vocabularyWithoutDescriptions = vocabulary.map((entry) => ({
+      ...entry,
+      description: null,
+    }));
+    const { container } = render(
+      <TrendPanel
+        selectedKeys={["glucose"]}
+        trends={trends}
+        vocabulary={vocabularyWithoutDescriptions}
+        onRemove={() => {}}
+        onRetry={() => {}}
+      />,
+    );
+
+    expect(container.querySelector(".border-t")).toBeNull();
+  });
+
   it("renders nothing when no keys are selected", () => {
     const { container } = render(
       <TrendPanel

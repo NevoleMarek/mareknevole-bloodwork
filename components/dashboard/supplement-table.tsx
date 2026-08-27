@@ -11,6 +11,17 @@ export function SupplementTable({
 }: {
   supplements: Supplement[];
 }) {
+  if (supplements.length === 0) {
+    return (
+      <p
+        className="flex min-h-28 items-center justify-center text-sm text-zinc-600"
+        role="status"
+      >
+        No active supplements recorded.
+      </p>
+    );
+  }
+
   return (
     <div>
       <div>

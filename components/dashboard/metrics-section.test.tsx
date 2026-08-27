@@ -33,6 +33,14 @@ afterEach(() => {
 });
 
 describe("MetricsSection", () => {
+  it("communicates when no biomarker results are available", () => {
+    render(<MetricsSection featured={[]} nonFeatured={[]} vocabulary={[]} />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "No biomarker results available yet.",
+    );
+  });
+
   it("loads a selected trend once and reuses it", async () => {
     const fetch = vi.fn().mockResolvedValue(
       jsonResponse({
