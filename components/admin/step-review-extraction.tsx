@@ -45,7 +45,13 @@ export function StepReviewExtraction({
   }
 
   return (
-    <div>
+    <form
+      aria-label="Review extracted variables"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onNext();
+      }}
+    >
       <div className="mb-6">
         <label
           htmlFor="test-date"
@@ -70,10 +76,16 @@ export function StepReviewExtraction({
           <caption className="sr-only">Extracted biomarker variables</caption>
           <thead>
             <tr className="text-left text-[0.68rem] font-semibold tracking-[0.07em] text-zinc-500 uppercase">
-              <th className="px-4 py-3">Label</th>
-              <th className="px-4 py-3">Value</th>
-              <th className="px-4 py-3">Unit</th>
-              <th className="w-12 px-4 py-3">
+              <th scope="col" className="px-4 py-3 text-left">
+                Label
+              </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Value
+              </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Unit
+              </th>
+              <th scope="col" className="w-12 px-4 py-3">
                 <span className="sr-only">Actions</span>
               </th>
             </tr>
@@ -85,7 +97,7 @@ export function StepReviewExtraction({
                 data-new={latestAddedIndex === i || undefined}
                 className="extraction-variable-row border-t border-zinc-900/8"
               >
-                <td className="p-2 pl-4">
+                <th scope="row" className="p-2 pl-4 text-left font-normal">
                   <div className="extraction-variable-cell">
                     <input
                       value={v.label}
@@ -96,7 +108,7 @@ export function StepReviewExtraction({
                       className="field w-full text-sm"
                     />
                   </div>
-                </td>
+                </th>
                 <td className="p-2">
                   <div className="extraction-variable-cell">
                     <input
@@ -151,14 +163,13 @@ export function StepReviewExtraction({
 
       <div className="mt-8 flex justify-end">
         <button
-          type="button"
-          onClick={onNext}
+          type="submit"
           disabled={variables.length === 0}
           className="button-primary disabled:opacity-40"
         >
           Next: Map Variables &rarr;
         </button>
       </div>
-    </div>
+    </form>
   );
 }

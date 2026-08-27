@@ -102,6 +102,11 @@ export function VocabularyEditor({
     onRefresh();
   }
 
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void handleSave();
+  }
+
   return (
     <div>
       <div className="admin-table-scroll mb-5 overflow-x-auto rounded-2xl border border-zinc-900/10 bg-white">
@@ -135,9 +140,12 @@ export function VocabularyEditor({
           <tbody className="text-zinc-900">
             {entries.map((e) => (
               <tr key={e.key} className="border-t border-zinc-900/8">
-                <td className="px-4 py-3 font-mono text-xs text-zinc-500">
+                <th
+                  scope="row"
+                  className="px-4 py-3 text-left font-mono text-xs text-zinc-500"
+                >
                   {e.key}
-                </td>
+                </th>
                 <td className="px-4 py-3 font-medium">{e.label}</td>
                 <td className="px-4 py-3 text-zinc-600">{e.unit}</td>
                 <td className="data-value px-4 py-3 text-zinc-600">
@@ -164,6 +172,7 @@ export function VocabularyEditor({
                     type="button"
                     onClick={() => startEdit(e)}
                     className="button-quiet min-h-9 px-2 text-xs"
+                    aria-label={`Edit ${e.label}`}
                   >
                     Edit
                   </button>
@@ -183,49 +192,87 @@ export function VocabularyEditor({
       </div>
 
       {editing.kind !== "none" && (
-        <div className="admin-state-panel mb-5 grid gap-3 rounded-2xl border border-zinc-900/10 bg-zinc-50/70 p-4 text-sm sm:grid-cols-2 lg:grid-cols-5">
-          <input
-            placeholder="key"
-            aria-label="Vocabulary key"
-            value={form.key}
-            onChange={(e) => setForm({ ...form, key: e.target.value })}
-            disabled={editing.kind === "editing"}
-            className="field w-full font-mono text-xs"
-          />
-          <input
-            placeholder="label"
-            aria-label="Biomarker label"
-            value={form.label}
-            onChange={(e) => setForm({ ...form, label: e.target.value })}
-            className="field w-full"
-          />
-          <input
-            placeholder="unit"
-            aria-label="Unit"
-            value={form.unit}
-            onChange={(e) => setForm({ ...form, unit: e.target.value })}
-            className="field w-full"
-          />
-          <input
-            placeholder="min"
-            aria-label="Reference minimum"
-            value={form.min}
-            onChange={(e) => setForm({ ...form, min: e.target.value })}
-            className="field w-full"
-          />
-          <input
-            placeholder="max"
-            aria-label="Reference maximum"
-            value={form.max}
-            onChange={(e) => setForm({ ...form, max: e.target.value })}
-            className="field w-full"
-          />
+        <form
+          aria-label={
+            editing.kind === "adding"
+              ? "Add biomarker vocabulary entry"
+              : `Edit ${editing.entry.label} vocabulary entry`
+          }
+          onSubmit={handleSubmit}
+          className="admin-state-panel mb-5 grid gap-3 rounded-2xl border border-zinc-900/10 bg-zinc-50/70 p-4 text-sm sm:grid-cols-2 lg:grid-cols-5"
+        >
+          <label htmlFor="vocabulary-key" className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-700">
+              Key
+            </span>
+            <input
+              id="vocabulary-key"
+              name="key"
+              placeholder="key"
+              value={form.key}
+              onChange={(e) => setForm({ ...form, key: e.target.value })}
+              disabled={editing.kind === "editing"}
+              className="field w-full font-mono text-xs"
+            />
+          </label>
+          <label htmlFor="vocabulary-label" className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-700">
+              Label
+            </span>
+            <input
+              id="vocabulary-label"
+              name="label"
+              placeholder="label"
+              value={form.label}
+              onChange={(e) => setForm({ ...form, label: e.target.value })}
+              className="field w-full"
+            />
+          </label>
+          <label htmlFor="vocabulary-unit" className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-700">
+              Unit
+            </span>
+            <input
+              id="vocabulary-unit"
+              name="unit"
+              placeholder="unit"
+              value={form.unit}
+              onChange={(e) => setForm({ ...form, unit: e.target.value })}
+              className="field w-full"
+            />
+          </label>
+          <label htmlFor="vocabulary-min" className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-700">
+              Reference minimum
+            </span>
+            <input
+              id="vocabulary-min"
+              name="min"
+              type="number"
+              step="any"
+              placeholder="min"
+              value={form.min}
+              onChange={(e) => setForm({ ...form, min: e.target.value })}
+              className="field w-full"
+            />
+          </label>
+          <label htmlFor="vocabulary-max" className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-zinc-700">
+              Reference maximum
+            </span>
+            <input
+              id="vocabulary-max"
+              name="max"
+              type="number"
+              step="any"
+              placeholder="max"
+              value={form.max}
+              onChange={(e) => setForm({ ...form, max: e.target.value })}
+              className="field w-full"
+            />
+          </label>
           <div className="flex gap-2 sm:col-span-2 lg:col-span-5">
-            <button
-              type="button"
-              onClick={handleSave}
-              className="button-primary"
-            >
+            <button type="submit" className="button-primary">
               Save
             </button>
             <button
@@ -236,7 +283,7 @@ export function VocabularyEditor({
               Cancel
             </button>
           </div>
-        </div>
+        </form>
       )}
 
       {editing.kind === "none" && (

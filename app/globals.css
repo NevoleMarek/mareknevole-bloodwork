@@ -459,6 +459,20 @@ table {
     box-shadow var(--duration-control) var(--ease-out-strong);
 }
 
+.dashboard-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.biomarker-table {
+  min-width: 36rem;
+}
+
+.supplement-table {
+  min-width: 30rem;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .interactive-card {
     transition:
@@ -506,117 +520,6 @@ table {
     align-items: start;
     flex-direction: column;
     gap: 0.35rem;
-  }
-
-  .biomarker-table,
-  .biomarker-table tbody {
-    display: block;
-  }
-
-  .biomarker-table thead {
-    display: none;
-  }
-
-  .biomarker-table tbody {
-    display: grid;
-    gap: 0.625rem;
-  }
-
-  .biomarker-table tbody tr {
-    display: grid;
-    grid-template-columns: 2.5rem minmax(0, 1fr) auto;
-    gap: 0.3rem 0.65rem;
-    align-items: center;
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    background: var(--surface);
-    padding: 0.85rem 0.95rem;
-  }
-
-  .biomarker-table tbody td {
-    padding: 0;
-  }
-
-  .biomarker-table tbody td:nth-child(1) {
-    grid-column: 1;
-    grid-row: 1;
-    margin-left: -0.5rem;
-  }
-
-  .biomarker-table tbody td:nth-child(2) {
-    grid-column: 2;
-    grid-row: 1;
-    overflow: hidden;
-    font-weight: 650;
-    text-overflow: ellipsis;
-  }
-
-  .biomarker-table tbody td:nth-child(3) {
-    grid-column: 3;
-    grid-row: 1;
-    font-size: 1rem;
-    font-weight: 650;
-  }
-
-  .biomarker-table tbody td:nth-child(4) {
-    grid-column: 3;
-    grid-row: 2;
-    text-align: right;
-  }
-
-  .biomarker-table tbody td:nth-child(4)::before {
-    content: "Range ";
-    color: var(--subtle);
-  }
-
-  .biomarker-table tbody td:nth-child(5) {
-    grid-column: 2;
-    grid-row: 2;
-  }
-
-  .supplement-table,
-  .supplement-table tbody {
-    display: block;
-  }
-
-  .supplement-table thead {
-    display: none;
-  }
-
-  .supplement-table tbody {
-    display: grid;
-    gap: 0.625rem;
-  }
-
-  .supplement-table tbody tr {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 0.3rem 1rem;
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    padding: 0.9rem 1rem;
-  }
-
-  .supplement-table tbody td {
-    padding: 0;
-  }
-
-  .supplement-table tbody td:nth-child(1) {
-    font-weight: 650;
-  }
-
-  .supplement-table tbody td:nth-child(2) {
-    font-weight: 650;
-    text-align: right;
-  }
-
-  .supplement-table tbody td:nth-child(3)::before {
-    content: "Frequency · ";
-    color: var(--subtle);
-  }
-
-  .supplement-table tbody td:nth-child(4) {
-    text-align: right;
   }
 
   .admin-shell {

@@ -24,34 +24,47 @@ export function StepReviewResearch({
   }
 
   return (
-    <div>
+    <form
+      aria-label="Review biomarker research"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave();
+      }}
+    >
       <h2 className="mb-3 text-sm font-semibold text-zinc-800">
         New Biomarker Research
       </h2>
       <div className="space-y-4">
         {researched.map((entry, i) => (
-          <div
+          <fieldset
             key={entry.vocabularyKey}
-            className="rounded-2xl border border-zinc-900/10 bg-white p-4 sm:p-5"
+            className="min-w-0 rounded-2xl border border-zinc-900/10 bg-white p-4 sm:p-5"
           >
-            <div className="mb-4 font-mono text-xs font-semibold text-zinc-900">
+            <legend className="mb-4 font-mono text-xs font-semibold text-zinc-900">
               {entry.vocabularyKey}
-            </div>
-            <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
+            </legend>
+            <label
+              htmlFor={`research-${i}-description`}
+              className="mb-1.5 block text-xs font-semibold text-zinc-700"
+            >
               Description
             </label>
             <textarea
+              id={`research-${i}-description`}
+              name={`description-${i}`}
               value={entry.description}
               onChange={(e) => updateEntry(i, { description: e.target.value })}
               rows={2}
               className="field mb-4 w-full text-sm text-zinc-900"
             />
             <div className="grid grid-cols-2 gap-3 sm:max-w-md">
-              <label>
+              <label htmlFor={`research-${i}-min`}>
                 <span className="mb-1.5 block text-xs font-semibold text-zinc-700">
                   Ref Min
                 </span>
                 <input
+                  id={`research-${i}-min`}
+                  name={`reference-min-${i}`}
                   type="number"
                   step="any"
                   value={entry.referenceRange.min}
@@ -66,11 +79,13 @@ export function StepReviewResearch({
                   className="field w-full text-sm"
                 />
               </label>
-              <label>
+              <label htmlFor={`research-${i}-max`}>
                 <span className="mb-1.5 block text-xs font-semibold text-zinc-700">
                   Ref Max
                 </span>
                 <input
+                  id={`research-${i}-max`}
+                  name={`reference-max-${i}`}
                   type="number"
                   step="any"
                   value={entry.referenceRange.max}
@@ -86,7 +101,7 @@ export function StepReviewResearch({
                 />
               </label>
             </div>
-          </div>
+          </fieldset>
         ))}
       </div>
 
@@ -95,14 +110,13 @@ export function StepReviewResearch({
           &larr; Back
         </button>
         <button
-          type="button"
-          onClick={onSave}
+          type="submit"
           disabled={saving}
           className="button-primary disabled:opacity-40"
         >
           {saving ? "Saving..." : "Save Reading"}
         </button>
       </div>
-    </div>
+    </form>
   );
 }

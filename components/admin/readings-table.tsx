@@ -36,7 +36,12 @@ export function ReadingsTable({
         <tbody className="text-zinc-900">
           {readings.map((r) => (
             <tr key={r.id} className="border-t border-zinc-900/8">
-              <td className="data-value px-4 py-3 font-medium">{r.date}</td>
+              <th
+                scope="row"
+                className="data-value px-4 py-3 text-left font-medium"
+              >
+                {r.date}
+              </th>
               <td className="max-w-64 truncate px-4 py-3 text-zinc-600">
                 {r.source}
               </td>

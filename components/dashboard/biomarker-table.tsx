@@ -36,32 +36,36 @@ export function BiomarkerTable({
   onIntent: (key: string, pointerType: string) => void;
 }) {
   return (
-    <div>
+    <div className="dashboard-table-scroll">
       <table className="biomarker-table w-full border-separate border-spacing-0 sm:overflow-hidden sm:rounded-2xl sm:border sm:border-zinc-900/10 sm:bg-white">
         <caption className="sr-only">
-          Latest biomarker values and reference ranges. Select a row to add its
-          trend.
+          Latest biomarker values and reference ranges. Use the trend action to
+          add or remove a biomarker from the trend chart.
         </caption>
         <thead>
           <tr className="text-[0.68rem] font-semibold tracking-[0.07em] text-zinc-500 uppercase">
-            <th className="w-10 px-4 py-3 text-left font-semibold">
-              <span className="sr-only">Status</span>
+            <th scope="col" className="w-10 px-4 py-3 text-left font-semibold">
+              <span className="sr-only">Trend action and status</span>
             </th>
-            <th className="py-3 text-left font-semibold">Biomarker</th>
-            <th className="py-3 text-left font-semibold">Value</th>
-            <th className="py-3 text-left font-semibold">Reference</th>
-            <th className="py-3 pr-4 text-left font-semibold">Unit</th>
+            <th scope="col" className="py-3 text-left font-semibold">
+              Biomarker
+            </th>
+            <th scope="col" className="py-3 text-left font-semibold">
+              Value
+            </th>
+            <th scope="col" className="py-3 text-left font-semibold">
+              Reference
+            </th>
+            <th scope="col" className="py-3 pr-4 text-left font-semibold">
+              Unit
+            </th>
           </tr>
         </thead>
         <tbody>
           {metrics.map((m) => (
             <tr
               key={m.vocabularyKey}
-              onPointerDown={(event) =>
-                onIntent(m.vocabularyKey, event.pointerType)
-              }
-              onClick={() => onToggle(m.vocabularyKey)}
-              className={`cursor-pointer border-t border-zinc-100 ${
+              className={`border-t border-zinc-100 ${
                 selected.includes(m.vocabularyKey)
                   ? "bg-zinc-50 shadow-[inset_3px_0_0_#14775f]"
                   : "bg-white"
@@ -70,10 +74,10 @@ export function BiomarkerTable({
               <td className="py-1 pl-2">
                 <button
                   type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onToggle(m.vocabularyKey);
-                  }}
+                  onPointerDown={(event) =>
+                    onIntent(m.vocabularyKey, event.pointerType)
+                  }
+                  onClick={() => onToggle(m.vocabularyKey)}
                   aria-pressed={selected.includes(m.vocabularyKey)}
                   aria-label={`${m.label}: ${m.value} ${m.unit}, ${statusLabel[m.status]}. ${selected.includes(m.vocabularyKey) ? "Remove from trends" : "Add to trends"}`}
                   className="flex h-10 w-10 items-center justify-center rounded-full"
@@ -85,7 +89,9 @@ export function BiomarkerTable({
                   />
                 </button>
               </td>
-              <td className="py-2.5 text-sm font-medium">{m.label}</td>
+              <th scope="row" className="py-2.5 text-left text-sm font-medium">
+                {m.label}
+              </th>
               <td className="data-value py-2.5 text-sm font-semibold">
                 {m.value}
               </td>

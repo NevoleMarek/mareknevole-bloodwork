@@ -43,7 +43,13 @@ export function StepReviewMapping({
   }
 
   return (
-    <div>
+    <form
+      aria-label="Review variable mappings"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave();
+      }}
+    >
       <h2 className="mb-3 text-sm font-semibold text-zinc-800">
         Variable Mapping
       </h2>
@@ -52,13 +58,21 @@ export function StepReviewMapping({
           <caption className="sr-only">Biomarker vocabulary mapping</caption>
           <thead>
             <tr className="text-left text-[0.68rem] font-semibold tracking-[0.07em] text-zinc-500 uppercase">
-              <th className="px-4 py-3">Extracted</th>
-              <th className="px-4 py-3">
-                <span className="sr-only">Maps to</span>
+              <th scope="col" className="px-4 py-3 text-left">
+                Extracted
               </th>
-              <th className="px-4 py-3">Maps To</th>
-              <th className="px-4 py-3">Value</th>
-              <th className="px-4 py-3">Unit</th>
+              <th scope="col" className="px-4 py-3">
+                <span className="sr-only">Direction</span>
+              </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Maps To
+              </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Value
+              </th>
+              <th scope="col" className="px-4 py-3 text-left">
+                Unit
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -67,10 +81,15 @@ export function StepReviewMapping({
                 key={i}
                 className={`border-t border-zinc-900/8 ${m.isNew ? "bg-emerald-50/45" : ""}`}
               >
-                <td className="px-4 py-3 text-zinc-600">
+                <th
+                  scope="row"
+                  className="px-4 py-3 text-left font-normal text-zinc-600"
+                >
                   {m.label} ({m.originalValue} {m.originalUnit})
+                </th>
+                <td aria-hidden="true" className="px-4 py-3 text-zinc-400">
+                  &rarr;
                 </td>
-                <td className="px-4 py-3 text-zinc-400">&rarr;</td>
                 <td className="px-4 py-3">
                   {m.isNew && (
                     <span className="mr-2 rounded-full bg-emerald-50 px-2 py-1 text-[0.65rem] font-semibold text-emerald-800 uppercase">
@@ -106,14 +125,13 @@ export function StepReviewMapping({
           &larr; Back
         </button>
         <button
-          type="button"
-          onClick={onSave}
+          type="submit"
           disabled={saving}
           className="button-primary disabled:opacity-40"
         >
           {saving ? "Saving..." : "Save Reading"}
         </button>
       </div>
-    </div>
+    </form>
   );
 }

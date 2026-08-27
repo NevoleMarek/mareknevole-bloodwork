@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { SupplementTable } from "@/components/dashboard/supplement-table";
@@ -34,5 +34,15 @@ describe("SupplementTable", () => {
     expect(screen.getByText("Vitamin D3")).toBeInTheDocument();
     expect(screen.getByText("5 g")).toBeInTheDocument();
     expect(screen.getByText("5000 IU")).toBeInTheDocument();
+  });
+
+  it("keeps row and column headers available for responsive layouts", () => {
+    render(<SupplementTable supplements={supplements} />);
+
+    const table = screen.getByRole("table");
+    expect(within(table).getAllByRole("columnheader")).toHaveLength(4);
+    expect(
+      within(table).getByRole("rowheader", { name: "Creatine" }),
+    ).toHaveAttribute("scope", "row");
   });
 });
