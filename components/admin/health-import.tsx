@@ -163,7 +163,7 @@ export function HealthImport({ onImported }: { onImported: () => void }) {
                 />
                 <span
                   data-drag-active={layer.id === activeLayerId && isDragging}
-                  className="file-drop-shell flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-900/20 bg-zinc-50/70 px-4 text-center peer-focus-visible:ring-4 peer-focus-visible:ring-emerald-700/20"
+                  className="file-drop-shell flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-900/20 bg-zinc-50/70 px-4 text-center"
                 >
                   <span
                     aria-hidden="true"

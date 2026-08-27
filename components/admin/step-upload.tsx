@@ -49,7 +49,7 @@ export function StepUpload({ onUpload }: { onUpload: (file: File) => void }) {
       />
       <span
         data-drag-active={isDragging}
-        className="file-drop-shell flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-900/20 bg-zinc-50/65 p-8 text-center peer-focus-visible:ring-4 peer-focus-visible:ring-emerald-700/20"
+        className="file-drop-shell flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-900/20 bg-zinc-50/65 p-8 text-center"
       >
         <span
           aria-hidden="true"
