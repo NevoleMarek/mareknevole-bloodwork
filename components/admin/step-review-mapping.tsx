@@ -1,5 +1,6 @@
 "use client";
 
+import { convertUnitValue } from "@/lib/unit-conversion";
 import type { VocabularyEntry } from "@/types/bloodwork";
 import type { MappedVariable } from "@/types/wizard";
 
@@ -27,16 +28,28 @@ export function StepReviewMapping({
         return {
           ...m,
           vocabularyKey: m.label.toLowerCase().replace(/\s+/g, "_"),
+          convertedValue: m.originalValue,
+          convertedUnit: m.originalUnit,
           isNew: true,
+          referenceRange: undefined,
         };
       }
       const entry = vocabulary.find((v) => v.key === newKey);
       if (!entry) return m;
+      const convertedValue = convertUnitValue(
+        m.originalValue,
+        m.originalUnit,
+        entry.unit,
+        entry.key,
+      );
+      if (convertedValue === null) return m;
       return {
         ...m,
         vocabularyKey: entry.key,
+        convertedValue,
         convertedUnit: entry.unit,
         isNew: false,
+        referenceRange: undefined,
       };
     });
     onMappingsChange(updated);
