@@ -32,6 +32,8 @@ export const VocabularyEntry = Schema.Struct({
   description: Schema.NullOr(Schema.String),
   featured: Schema.Boolean,
   visible: Schema.Boolean,
+  /** Monotonic row version used by authenticated mutations. */
+  version: Schema.optionalKey(Schema.Int),
 }).annotate({ identifier: "VocabularyEntry" });
 export interface VocabularyEntry extends Schema.Schema.Type<
   typeof VocabularyEntry
@@ -138,6 +140,8 @@ export const Supplement = Schema.Struct({
   stoppedAt: Schema.NullOr(Schema.String),
   createdAt: Schema.String,
   updatedAt: Schema.String,
+  /** Monotonic row version used by authenticated mutations. */
+  version: Schema.optionalKey(Schema.Int),
 }).annotate({ identifier: "Supplement" });
 export interface Supplement extends Schema.Schema.Type<typeof Supplement> {
   readonly _schemaModel?: never;

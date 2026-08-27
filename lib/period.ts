@@ -24,8 +24,16 @@ export function getCutoffDate(period: Period): string | null {
   const m = months[period];
   if (m === null) return null;
   const now = new Date();
+  const targetMonth = now.getUTCMonth() - m;
+  const lastDayOfTargetMonth = new Date(
+    Date.UTC(now.getUTCFullYear(), targetMonth + 1, 0),
+  ).getUTCDate();
   const cutoff = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - m, now.getUTCDate()),
+    Date.UTC(
+      now.getUTCFullYear(),
+      targetMonth,
+      Math.min(now.getUTCDate(), lastDayOfTargetMonth),
+    ),
   );
   return cutoff.toISOString().slice(0, 10);
 }

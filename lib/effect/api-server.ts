@@ -16,8 +16,13 @@ import {
   BloodworkApi,
   sessionSecurity,
 } from "@/lib/effect/api";
-import { withApiErrors } from "@/lib/effect/api-errors";
-import { RequestDecodeError } from "@/lib/effect/errors";
+import { toApiError, withApiErrors } from "@/lib/effect/api-errors";
+import {
+  ConfigurationError,
+  PersistenceError,
+  ProviderError,
+  RequestDecodeError,
+} from "@/lib/effect/errors";
 import { appLayer } from "@/lib/effect/layers";
 import { changelogCursor, readingCursor } from "@/lib/effect/query";
 import {
@@ -251,8 +256,10 @@ const vocabularyHandlers = HttpApiBuilder.group(
         )
         .handle(
           "delete",
-          Effect.fn("HttpApi.vocabulary.delete")(function* ({ params }) {
-            yield* bloodwork.deleteVocabulary(params.key).pipe(withApiErrors);
+          Effect.fn("HttpApi.vocabulary.delete")(function* ({ params, query }) {
+            yield* bloodwork
+              .deleteVocabulary({ ...query, key: params.key })
+              .pipe(withApiErrors);
             return undefined;
           }),
         );
@@ -461,8 +468,35 @@ const makeApiLayer = <E>(services: Layer.Layer<ApiServices, E>) =>
     Layer.provide(HttpServer.layerServices),
   );
 
-export const makeApiWebHandler = <E>(services: Layer.Layer<ApiServices, E>) =>
-  HttpRouter.toWebHandler(makeApiLayer(services), { disableLogger: true });
+export const makeApiWebHandler = <E>(services: Layer.Layer<ApiServices, E>) => {
+  const webHandler = HttpRouter.toWebHandler(makeApiLayer(services), {
+    disableLogger: true,
+  });
+  return {
+    dispose: webHandler.dispose,
+    handler: async (
+      ...args: Parameters<typeof webHandler.handler>
+    ): Promise<Response> => {
+      try {
+        return await webHandler.handler(...args);
+      } catch (cause) {
+        if (
+          cause instanceof ConfigurationError ||
+          cause instanceof PersistenceError ||
+          cause instanceof ProviderError
+        ) {
+          const error = toApiError(cause);
+          return HttpServerResponse.toWeb(
+            HttpServerResponse.jsonUnsafe(error, {
+              status: error._tag === "Bloodwork.ApiBadGateway" ? 502 : 503,
+            }),
+          );
+        }
+        throw cause;
+      }
+    },
+  };
+};
 
 export const handleApiRequestWith = async <E>(
   request: Request,
