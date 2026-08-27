@@ -8,6 +8,7 @@ import { SectionNav } from "@/components/dashboard/section-nav";
 import { SupplementTable } from "@/components/dashboard/supplement-table";
 import { provideAppLayer, runAppEffect } from "@/lib/effect/run";
 import { Dashboard } from "@/lib/effect/services";
+import { personalTrackingDisclaimer } from "@/lib/site-metadata";
 
 export default async function Home() {
   await connection();
@@ -211,7 +212,7 @@ export default async function Home() {
       </section>
 
       <footer className="mt-20 flex flex-col gap-2 border-t border-zinc-900/8 pt-6 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
-        <p>Personal tracking, not clinical guidance.</p>
+        <p>{personalTrackingDisclaimer}</p>
         <p>Built and maintained by Marek Nevole.</p>
       </footer>
     </main>
