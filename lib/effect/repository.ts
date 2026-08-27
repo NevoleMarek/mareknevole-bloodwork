@@ -43,7 +43,11 @@ import {
   PersistenceError,
   ValidationError,
 } from "@/lib/effect/errors";
-import { SupplementNameRow, SupplementUpdateRow } from "@/lib/schemas/rows";
+import {
+  SupplementNameRow,
+  SupplementUpdateRow,
+  VocabularyMutationStateRow,
+} from "@/lib/schemas/rows";
 import { CloudflareRuntime } from "@/lib/effect/runtime";
 
 export interface RepositoryContract {
@@ -110,7 +114,7 @@ export interface RepositoryContract {
   ) => Effect.Effect<void, PersistenceError | ConflictError>;
   readonly updateVocabulary: (
     entry: VocabularyEntry,
-  ) => Effect.Effect<void, PersistenceError | NotFoundError>;
+  ) => Effect.Effect<void, PersistenceError | NotFoundError | ConflictError>;
   readonly deleteVocabulary: (
     key: string,
   ) => Effect.Effect<void, PersistenceError>;
@@ -354,7 +358,7 @@ export const makeRepository = (database: D1Database) => {
           statements.push(
             db
               .prepare(
-                "INSERT INTO vocabulary (key, label, unit, reference_min, reference_max, description) VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO vocabulary (key, label, unit, reference_min, reference_max, description, featured, visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
               )
               .bind(
                 entry.key,
@@ -363,6 +367,8 @@ export const makeRepository = (database: D1Database) => {
                 entry.referenceRange.min,
                 entry.referenceRange.max,
                 entry.description,
+                entry.featured ? 1 : 0,
+                entry.visible ? 1 : 0,
               ),
           );
         }
@@ -427,7 +433,17 @@ export const makeRepository = (database: D1Database) => {
         (db) =>
           db
             .prepare(
-              "UPDATE vocabulary SET label = ?, unit = ?, reference_min = ?, reference_max = ?, description = ?, featured = ?, visible = ? WHERE key = ?",
+              `UPDATE vocabulary
+               SET label = ?, unit = ?, reference_min = ?, reference_max = ?, description = ?, featured = ?, visible = ?
+               WHERE key = ?
+                 AND (
+                   (unit = ? AND reference_min = ? AND reference_max = ?)
+                   OR NOT EXISTS (
+                     SELECT 1
+                     FROM measurements
+                     WHERE measurements.vocabulary_key = ?
+                   )
+                 )`,
             )
             .bind(
               entry.label,
@@ -438,13 +454,57 @@ export const makeRepository = (database: D1Database) => {
               entry.featured ? 1 : 0,
               entry.visible ? 1 : 0,
               entry.key,
+              entry.unit,
+              entry.referenceRange.min,
+              entry.referenceRange.max,
+              entry.key,
             )
             .run(),
         database,
       );
-      if (result.meta.changes === 0) {
+      if (result.meta.changes !== 0) return;
+
+      // The guarded UPDATE distinguishes a missing key from an attempted
+      // unit/range change after measurements already exist. This keeps a
+      // vocabulary's interpretation stable for every stored measurement.
+      const stateUnknown = yield* d1(
+        "Repository.updateVocabulary.state",
+        (db) =>
+          db
+            .prepare(
+              `SELECT key, unit, reference_min, reference_max,
+                      EXISTS (
+                        SELECT 1
+                        FROM measurements
+                        WHERE measurements.vocabulary_key = vocabulary.key
+                      ) AS has_measurements
+               FROM vocabulary
+               WHERE key = ?`,
+            )
+            .bind(entry.key)
+            .first<Schema.Json>(),
+        database,
+      );
+      const state = stateUnknown
+        ? yield* decodePersisted(
+            VocabularyMutationStateRow,
+            stateUnknown,
+            "Repository.updateVocabulary.decode",
+          )
+        : null;
+      if (!state) {
         return yield* Effect.fail(
           new NotFoundError({ resource: "vocabulary", id: entry.key }),
+        );
+      }
+
+      const metadataChanged =
+        state.unit !== entry.unit ||
+        state.reference_min !== entry.referenceRange.min ||
+        state.reference_max !== entry.referenceRange.max;
+      if (metadataChanged && state.has_measurements !== 0) {
+        return yield* Effect.fail(
+          new ConflictError({ resource: "vocabulary", id: entry.key }),
         );
       }
     },
@@ -462,36 +522,35 @@ export const makeRepository = (database: D1Database) => {
   const createSupplementEffect = Effect.fn("Repository.createSupplement")(
     function* (input: SupplementCreateInput) {
       const now = new Date().toISOString();
+      const supplementId = crypto.randomUUID();
       yield* d1Mutation(
         "Repository.createSupplement",
-        (db) =>
-          db
+        (db) => {
+          const supplement = db
             .prepare(
               "INSERT INTO supplements (id, name, dose, frequency, started_at, stopped_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)",
             )
             .bind(
-              crypto.randomUUID(),
+              supplementId,
               input.name,
               input.dose,
               input.frequency,
               input.startedAt,
               now,
               now,
+            );
+          const changelog = db
+            .prepare(
+              "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
             )
-            .run()
-            .then(() =>
-              db
-                .prepare(
-                  "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
-                )
-                .bind(
-                  crypto.randomUUID(),
-                  input.changelogDate,
-                  `Added ${input.name} ${input.dose}`,
-                  now,
-                )
-                .run(),
-            ),
+            .bind(
+              crypto.randomUUID(),
+              input.changelogDate,
+              `Added ${input.name} ${input.dose}`,
+              now,
+            );
+          return db.batch([supplement, changelog]).then(() => undefined);
+        },
         database,
         { resource: "supplement", id: input.name },
       );
@@ -534,8 +593,8 @@ export const makeRepository = (database: D1Database) => {
         changes.push(`Changed ${old.name} start date to ${input.startedAt}`);
       yield* d1(
         "Repository.updateSupplement",
-        (db) =>
-          db
+        (db) => {
+          const supplement = db
             .prepare(
               "UPDATE supplements SET name = ?, dose = ?, frequency = ?, started_at = ?, updated_at = ? WHERE id = ?",
             )
@@ -546,23 +605,16 @@ export const makeRepository = (database: D1Database) => {
               input.startedAt,
               now,
               input.id,
-            )
-            .run()
-            .then(async () => {
-              for (const description of changes) {
-                await db
-                  .prepare(
-                    "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
-                  )
-                  .bind(
-                    crypto.randomUUID(),
-                    input.changelogDate,
-                    description,
-                    now,
-                  )
-                  .run();
-              }
-            }),
+            );
+          const changelog = changes.map((description) =>
+            db
+              .prepare(
+                "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
+              )
+              .bind(crypto.randomUUID(), input.changelogDate, description, now),
+          );
+          return db.batch([supplement, ...changelog]).then(() => undefined);
+        },
         database,
       );
     },
@@ -593,26 +645,24 @@ export const makeRepository = (database: D1Database) => {
       const now = new Date().toISOString();
       yield* d1(
         "Repository.deleteSupplement",
-        (db) =>
-          db
+        (db) => {
+          const supplementUpdate = db
             .prepare(
               "UPDATE supplements SET stopped_at = ?, updated_at = ? WHERE id = ?",
             )
-            .bind(now, now, input.id)
-            .run()
-            .then(() =>
-              db
-                .prepare(
-                  "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
-                )
-                .bind(
-                  crypto.randomUUID(),
-                  input.changelogDate,
-                  `Removed ${supplement.name}`,
-                  now,
-                )
-                .run(),
-            ),
+            .bind(now, now, input.id);
+          const changelog = db
+            .prepare(
+              "INSERT INTO supplement_changelog (id, date, description, created_at) VALUES (?, ?, ?, ?)",
+            )
+            .bind(
+              crypto.randomUUID(),
+              input.changelogDate,
+              `Removed ${supplement.name}`,
+              now,
+            );
+          return db.batch([supplementUpdate, changelog]).then(() => undefined);
+        },
         database,
       );
     },
