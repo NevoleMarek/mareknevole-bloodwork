@@ -47,7 +47,9 @@ import type {
   SupplementCreateInput,
   SupplementDeleteInput,
   SupplementUpdateInput,
+  VocabularyDeleteInput,
   VocabularyEntry,
+  VocabularyUpdateInput,
 } from "@/types/bloodwork";
 import type {
   HealthData,
@@ -62,6 +64,12 @@ import type {
 import { extractVariablesPrompt } from "@/prompts/extract-variables";
 import { mapVariablesPrompt } from "@/prompts/map-variables";
 import { researchVariablesPrompt } from "@/prompts/research-variables";
+import {
+  validateMapRequest,
+  validateMapResponse,
+  validateResearchRequest,
+  validateResearchResponse,
+} from "@/lib/effect/provider-correspondence";
 
 type PersistenceFailure = PersistenceError | NotFoundError | ConflictError;
 
@@ -172,11 +180,11 @@ export interface BloodworkContract {
     entry: VocabularyEntry,
   ) => Effect.Effect<void, PersistenceFailure>;
   readonly updateVocabulary: (
-    entry: VocabularyEntry,
-  ) => Effect.Effect<void, PersistenceFailure>;
+    entry: VocabularyUpdateInput,
+  ) => Effect.Effect<void, PersistenceFailure | ValidationError>;
   readonly deleteVocabulary: (
-    key: string,
-  ) => Effect.Effect<void, PersistenceError>;
+    input: VocabularyDeleteInput,
+  ) => Effect.Effect<void, PersistenceError | NotFoundError | ConflictError>;
 }
 
 export class Bloodwork extends Context.Service<Bloodwork, BloodworkContract>()(
@@ -211,15 +219,15 @@ export const bloodworkLayer = Layer.effect(
       yield* invalidate();
     });
     const updateVocabulary = Effect.fn("Bloodwork.updateVocabulary")(function* (
-      entry: VocabularyEntry,
+      entry: VocabularyUpdateInput,
     ) {
       yield* repository.updateVocabulary(entry);
       yield* invalidate();
     });
     const deleteVocabulary = Effect.fn("Bloodwork.deleteVocabulary")(function* (
-      key: string,
+      input: VocabularyDeleteInput,
     ) {
-      yield* repository.deleteVocabulary(key);
+      yield* repository.deleteVocabulary(input);
       yield* invalidate();
     });
     return Bloodwork.of({
@@ -583,6 +591,15 @@ export const providerWorkflowsLayer = Layer.effect(
       request: MapRequest,
     ) {
       yield* requireNonEmpty(request.variables, "map.variables");
+      const requestValidation = validateMapRequest(request);
+      if (!requestValidation.ok) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "map.input",
+            message: requestValidation.message,
+          }),
+        );
+      }
       const prompt = mapVariablesPrompt(
         JSON.stringify(request.vocabulary, null, 2),
         JSON.stringify(request.variables, null, 2),
@@ -594,12 +611,30 @@ export const providerWorkflowsLayer = Layer.effect(
         "map.response",
       );
       yield* requireNonEmpty(result.mappings, "map.mappings");
-      return result;
+      const responseValidation = validateMapResponse(request, result);
+      if (!responseValidation.ok) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "map.correspondence",
+            message: responseValidation.message,
+          }),
+        );
+      }
+      return responseValidation.value;
     });
     const research = Effect.fn("ProviderWorkflows.research")(function* (
       request: ResearchRequest,
     ) {
       yield* requireNonEmpty(request.newEntries, "research.entries");
+      const requestValidation = validateResearchRequest(request);
+      if (!requestValidation.ok) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "research.input",
+            message: requestValidation.message,
+          }),
+        );
+      }
       const prompt = researchVariablesPrompt(
         JSON.stringify(request.newEntries, null, 2),
       );
@@ -610,7 +645,16 @@ export const providerWorkflowsLayer = Layer.effect(
         "research.response",
       );
       yield* requireNonEmpty(result.entries, "research.results");
-      return result;
+      const responseValidation = validateResearchResponse(request, result);
+      if (!responseValidation.ok) {
+        return yield* Effect.fail(
+          new ValidationError({
+            operation: "research.correspondence",
+            message: responseValidation.message,
+          }),
+        );
+      }
+      return responseValidation.value;
     });
     return ProviderWorkflows.of({ extract, map, research });
   }),

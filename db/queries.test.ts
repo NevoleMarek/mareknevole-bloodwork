@@ -5,6 +5,7 @@ import { PersistenceError } from "@/lib/effect/errors";
 import { makeRepository } from "@/lib/effect/repository";
 import {
   getBiomarkerTrend,
+  getDashboardSnapshot,
   getLabOverview,
   getReadingPage,
   getSupplementChangelogPage,
@@ -91,7 +92,10 @@ class TestDatabase implements D1Database {
   batch<T = unknown>(
     _statements: D1PreparedStatement[],
   ): Promise<D1Result<T>[]> {
-    throw new Error("TestDatabase.batch was not expected");
+    const results = this.results.splice(0);
+    // SAFETY: Test fixtures are queued in the same order as the batch
+    // statements, matching D1's unchecked generic result contract.
+    return Promise.resolve(results as D1Result<T>[]);
   }
 
   exec(_query: string): Promise<D1ExecResult> {
@@ -124,6 +128,7 @@ describe("row mappers", () => {
       description: null,
       featured: 0,
       visible: 1,
+      version: 1,
     };
     expect(mapVocabularyRow(row)).toEqual({
       key: "glucose",
@@ -133,6 +138,7 @@ describe("row mappers", () => {
       description: null,
       featured: false,
       visible: true,
+      version: 1,
     });
   });
 
@@ -146,6 +152,7 @@ describe("row mappers", () => {
       description: null,
       featured: 1,
       visible: 1,
+      version: 1,
     };
     expect(mapVocabularyRow(row)).toEqual({
       key: "glucose",
@@ -155,6 +162,7 @@ describe("row mappers", () => {
       description: null,
       featured: true,
       visible: true,
+      version: 1,
     });
   });
 
@@ -194,6 +202,7 @@ describe("row mappers", () => {
       stopped_at: null,
       created_at: "2025-06-01T00:00:00Z",
       updated_at: "2025-06-01T00:00:00Z",
+      version: 1,
     };
     expect(mapSupplementRow(row)).toEqual({
       id: "s1",
@@ -204,6 +213,7 @@ describe("row mappers", () => {
       stoppedAt: null,
       createdAt: "2025-06-01T00:00:00Z",
       updatedAt: "2025-06-01T00:00:00Z",
+      version: 1,
     });
   });
 
@@ -311,6 +321,95 @@ describe("getLabOverview", () => {
           value: 90,
           unit: "µg/L",
           status: "normal",
+        },
+      ],
+    });
+  });
+});
+
+describe("getDashboardSnapshot", () => {
+  it("reads all dashboard resources in one D1 batch", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const database = new TestDatabase([
+      d1Result([
+        {
+          key: "glucose",
+          label: "Glucose",
+          unit: "mg/dL",
+          reference_min: 70,
+          reference_max: 100,
+          description: null,
+          featured: 1,
+          visible: 1,
+          version: 4,
+        },
+      ]),
+      d1Result([{ id: "newest", date: "2026-01-10", source: "newest.pdf" }]),
+      d1Result([{ count: 3 }]),
+      d1Result([
+        {
+          id: "m1",
+          reading_id: "newest",
+          vocabulary_key: "glucose",
+          value: 107,
+          unit: "mg/dL",
+          status: "borderline",
+        },
+      ]),
+      d1Result([
+        {
+          id: "s1",
+          name: "Creatine",
+          dose: "5 g",
+          frequency: "daily",
+          started_at: "2025-06",
+          stopped_at: null,
+          created_at: "2025-06-01T00:00:00Z",
+          updated_at: "2025-06-01T00:00:00Z",
+          version: 2,
+        },
+      ]),
+    ]);
+
+    const result = await getDashboardSnapshot(database);
+
+    expect(database.prepareMock).toHaveBeenCalledTimes(5);
+    expect(result).toEqual({
+      vocabulary: [
+        {
+          key: "glucose",
+          label: "Glucose",
+          unit: "mg/dL",
+          referenceRange: { min: 70, max: 100 },
+          description: null,
+          featured: true,
+          visible: true,
+          version: 4,
+        },
+      ],
+      labs: {
+        latestPanel: { date: "2026-01-10", source: "newest.pdf" },
+        latestMeasurements: [
+          {
+            vocabularyKey: "glucose",
+            value: 107,
+            unit: "mg/dL",
+            status: "borderline",
+          },
+        ],
+        panelCount: 3,
+      },
+      supplements: [
+        {
+          id: "s1",
+          name: "Creatine",
+          dose: "5 g",
+          frequency: "daily",
+          startedAt: "2025-06",
+          stoppedAt: null,
+          createdAt: "2025-06-01T00:00:00Z",
+          updatedAt: "2025-06-01T00:00:00Z",
+          version: 2,
         },
       ],
     });

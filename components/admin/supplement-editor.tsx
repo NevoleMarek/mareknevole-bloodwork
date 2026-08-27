@@ -15,8 +15,9 @@ type RowState =
       frequency: string;
       startedAt: string;
       changelogDate: string;
+      expectedVersion: number;
     }
-  | { kind: "removing"; changelogDate: string };
+  | { kind: "removing"; changelogDate: string; expectedVersion: number };
 
 function formatMonth(yyyyMm: string): string {
   const [year, month] = yyyyMm.split("-");
@@ -65,6 +66,7 @@ export function SupplementEditor({
           frequency: state.frequency,
           startedAt: state.startedAt,
           changelogDate: state.changelogDate,
+          expectedVersion: state.expectedVersion,
         },
       }),
     );
@@ -79,7 +81,10 @@ export function SupplementEditor({
     await runApi((client) =>
       client.supplements.delete({
         params: { id: makeSupplementId(id) },
-        query: { changelogDate: state.changelogDate },
+        query: {
+          changelogDate: state.changelogDate,
+          expectedVersion: state.expectedVersion,
+        },
       }),
     );
     onRefresh();
@@ -288,6 +293,7 @@ export function SupplementEditor({
                             frequency: s.frequency,
                             startedAt: s.startedAt,
                             changelogDate: today(),
+                            expectedVersion: s.version ?? 1,
                           })
                         }
                         className="button-quiet min-h-9 px-2 text-xs"
@@ -300,6 +306,7 @@ export function SupplementEditor({
                           setRowState(s.id, {
                             kind: "removing",
                             changelogDate: today(),
+                            expectedVersion: s.version ?? 1,
                           })
                         }
                         className="min-h-9 rounded-full px-2 text-xs font-semibold text-red-700"

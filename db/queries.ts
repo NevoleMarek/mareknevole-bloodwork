@@ -17,6 +17,7 @@ import type {
   BiomarkerTrendPoint,
   ChangelogCursor,
   ChangelogPage,
+  DashboardSnapshot,
   LabOverview,
   Measurement,
   ReadingCursor,
@@ -39,6 +40,7 @@ export function mapVocabularyRow(row: VocabularyRow): VocabularyEntry {
     description: row.description,
     featured: row.featured === 1,
     visible: row.visible === 1,
+    version: row.version,
   };
 }
 
@@ -65,6 +67,7 @@ export function mapSupplementRow(row: SupplementRow): Supplement {
     stoppedAt: row.stopped_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    version: row.version,
   };
 }
 
@@ -112,12 +115,29 @@ async function decodeRows<S extends Schema.ConstraintDecoder<unknown, never>>(
   );
 }
 
+/**
+ * D1 batches execute all statements in one transaction. Keeping the result
+ * extraction here makes it harder to accidentally reintroduce independent
+ * reads into a snapshot query.
+ */
+function batchRows<T>(
+  results: readonly D1Result<unknown>[],
+  index: number,
+  operation: string,
+): T[] {
+  const result = results[index];
+  if (!result) throw new Error(`Missing D1 batch result for ${operation}`);
+  // SAFETY: D1 preserves the statement order and each caller supplies the
+  // row type for the corresponding batch position.
+  return resultsOf(operation, result) as T[];
+}
+
 export async function getVocabulary(
   db: D1Database,
 ): Promise<VocabularyEntry[]> {
   const result = await db
     .prepare(
-      "SELECT key, label, unit, reference_min, reference_max, description, featured, visible FROM vocabulary ORDER BY label",
+      "SELECT key, label, unit, reference_min, reference_max, description, featured, visible, version FROM vocabulary ORDER BY label",
     )
     .all<VocabularyRow>();
   const rows = await decodeRows(VocabularyRow, resultsOf("vocabulary", result));
@@ -125,27 +145,23 @@ export async function getVocabulary(
 }
 
 export async function getLabOverview(db: D1Database): Promise<LabOverview> {
-  const [latestResult, countResult, measurementResult] = await Promise.all([
-    db
-      .prepare(
-        "SELECT id, date, source FROM readings ORDER BY date DESC, id DESC LIMIT 1",
-      )
-      .all<ReadingRow>(),
-    db.prepare("SELECT COUNT(*) AS count FROM readings").all<ReadingCountRow>(),
-    db
-      .prepare(
-        `SELECT m.id, m.reading_id, m.vocabulary_key, m.value, m.unit, m.status
-         FROM vocabulary v
-         JOIN measurements m ON m.id = (
-           SELECT latest.id
-           FROM measurements latest
-           WHERE latest.vocabulary_key = v.key
-           ORDER BY latest.reading_date DESC, latest.reading_id DESC, latest.id DESC
-           LIMIT 1
-         )
-         WHERE v.visible = 1`,
-      )
-      .all<MeasurementRow>(),
+  const [latestResult, countResult, measurementResult] = await db.batch([
+    db.prepare(
+      "SELECT id, date, source FROM readings ORDER BY date DESC, id DESC LIMIT 1",
+    ),
+    db.prepare("SELECT COUNT(*) AS count FROM readings"),
+    db.prepare(
+      `SELECT m.id, m.reading_id, m.vocabulary_key, m.value, m.unit, m.status
+       FROM vocabulary v
+       JOIN measurements m ON m.id = (
+         SELECT latest.id
+         FROM measurements latest
+         WHERE latest.vocabulary_key = v.key
+         ORDER BY latest.reading_date DESC, latest.reading_id DESC, latest.id DESC
+         LIMIT 1
+       )
+       WHERE v.visible = 1`,
+    ),
   ]);
   const latest = (
     await decodeRows(ReadingRow, resultsOf("latest-reading", latestResult))
@@ -161,6 +177,86 @@ export async function getLabOverview(db: D1Database): Promise<LabOverview> {
     latestPanel: latest ? { date: latest.date, source: latest.source } : null,
     latestMeasurements: latestMeasurements.map(mapMeasurementRow),
     panelCount,
+  };
+}
+
+/**
+ * Read every public dashboard resource under one D1 transaction. A set of
+ * independent SELECT promises can observe different commits (for example a
+ * new panel paired with the previous supplement list), so the dashboard
+ * cache must use this combined snapshot instead.
+ */
+export async function getDashboardSnapshot(
+  db: D1Database,
+): Promise<DashboardSnapshot> {
+  const results = await db.batch([
+    db.prepare(
+      "SELECT key, label, unit, reference_min, reference_max, description, featured, visible, version FROM vocabulary ORDER BY label",
+    ),
+    db.prepare(
+      "SELECT id, date, source FROM readings ORDER BY date DESC, id DESC LIMIT 1",
+    ),
+    db.prepare("SELECT COUNT(*) AS count FROM readings"),
+    db.prepare(
+      `SELECT m.id, m.reading_id, m.vocabulary_key, m.value, m.unit, m.status
+       FROM vocabulary v
+       JOIN measurements m ON m.id = (
+         SELECT latest.id
+         FROM measurements latest
+         WHERE latest.vocabulary_key = v.key
+         ORDER BY latest.reading_date DESC, latest.reading_id DESC, latest.id DESC
+         LIMIT 1
+       )
+       WHERE v.visible = 1`,
+    ),
+    db.prepare(
+      `SELECT id, name, dose, frequency, started_at, stopped_at,
+              created_at, updated_at, version
+       FROM supplements
+       WHERE stopped_at IS NULL
+       ORDER BY name`,
+    ),
+  ]);
+
+  const vocabulary = (
+    await decodeRows(
+      VocabularyRow,
+      batchRows(results, 0, "dashboard-vocabulary"),
+    )
+  ).map(mapVocabularyRow);
+  const latest = (
+    await decodeRows(
+      ReadingRow,
+      batchRows(results, 1, "dashboard-latest-reading"),
+    )
+  )[0];
+  const panelCount = (
+    await decodeRows(
+      ReadingCountRow,
+      batchRows(results, 2, "dashboard-reading-count"),
+    )
+  )[0].count;
+  const latestMeasurements = (
+    await decodeRows(
+      MeasurementRow,
+      batchRows(results, 3, "dashboard-latest-measurements"),
+    )
+  ).map(mapMeasurementRow);
+  const supplements = (
+    await decodeRows(
+      SupplementRow,
+      batchRows(results, 4, "dashboard-supplements"),
+    )
+  ).map(mapSupplementRow);
+
+  return {
+    vocabulary,
+    labs: {
+      latestPanel: latest ? { date: latest.date, source: latest.source } : null,
+      latestMeasurements,
+      panelCount,
+    },
+    supplements,
   };
 }
 
@@ -194,15 +290,11 @@ export async function getBiomarkerTrend(
 export async function getReadingsWithMeasurements(
   db: D1Database,
 ): Promise<ReadingWithMeasurements[]> {
-  const [readings, measurements] = await Promise.all([
-    db
-      .prepare("SELECT id, date, source FROM readings ORDER BY date DESC")
-      .all<ReadingRow>(),
-    db
-      .prepare(
-        "SELECT id, reading_id, vocabulary_key, value, unit, status FROM measurements",
-      )
-      .all<MeasurementRow>(),
+  const [readings, measurements] = await db.batch([
+    db.prepare("SELECT id, date, source FROM readings ORDER BY date DESC"),
+    db.prepare(
+      "SELECT id, reading_id, vocabulary_key, value, unit, status FROM measurements",
+    ),
   ]);
 
   const byReading = new Map<string, Measurement[]>();
@@ -350,13 +442,11 @@ export async function getVisibleHealthMetrics(
          ORDER BY hm.date`,
       );
 
-  const [metricResults, configResults] = await Promise.all([
-    metricsQuery.all<HealthMetricRow>(),
-    db
-      .prepare(
-        "SELECT metric, label, unit, aggregation, visible FROM health_metric_config WHERE visible = 1 ORDER BY label",
-      )
-      .all<HealthMetricConfigRow>(),
+  const [metricResults, configResults] = await db.batch([
+    metricsQuery,
+    db.prepare(
+      "SELECT metric, label, unit, aggregation, visible FROM health_metric_config WHERE visible = 1 ORDER BY label",
+    ),
   ]);
   return {
     metrics: await decodeRows(
