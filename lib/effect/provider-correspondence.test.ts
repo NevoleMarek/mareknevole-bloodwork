@@ -25,6 +25,16 @@ const glucose: VocabularyEntry = {
   visible: true,
 };
 
+const hemoglobin: VocabularyEntry = {
+  key: "hemoglobin",
+  label: "Hemoglobin",
+  unit: "g/dL",
+  referenceRange: { min: 12, max: 17.5 },
+  description: "Oxygen-carrying protein in red blood cells.",
+  featured: true,
+  visible: true,
+};
+
 const mapRequest: MapRequest = {
   variables: [
     { label: "Glucose", value: 5.5, unit: "mmol/L" },
@@ -137,6 +147,71 @@ describe("provider correspondence validation", () => {
         mappings: [
           { ...validMapping.mappings[0], convertedValue: 999 },
           validMapping.mappings[1],
+        ],
+      }),
+    ).toMatchObject({ ok: false });
+  });
+
+  it("rejects unrelated existing keys when no unique semantic match exists", () => {
+    const albuminRequest: MapRequest = {
+      variables: [{ label: "Albumin", value: 4, unit: "g/dL" }],
+      vocabulary: [hemoglobin],
+    };
+    const redirectedToHemoglobin: MapResponse = {
+      mappings: [
+        {
+          label: "Albumin",
+          originalValue: 4,
+          originalUnit: "g/dL",
+          vocabularyKey: "hemoglobin",
+          convertedValue: 4,
+          convertedUnit: "g/dL",
+          isNew: false,
+        },
+      ],
+    };
+
+    expect(
+      validateMapResponse(albuminRequest, redirectedToHemoglobin),
+    ).toMatchObject({ ok: false });
+    expect(
+      validateMapResponse(albuminRequest, {
+        mappings: [
+          {
+            ...redirectedToHemoglobin.mappings[0],
+            vocabularyKey: "albumin",
+            isNew: true,
+            referenceRange: { min: 3.5, max: 5.2 },
+          },
+        ],
+      }),
+    ).toMatchObject({ ok: true });
+
+    const ambiguousAlbuminVocabulary: MapRequest = {
+      ...albuminRequest,
+      vocabulary: [
+        hemoglobin,
+        {
+          ...hemoglobin,
+          key: "albumin",
+          label: "Albumin",
+          referenceRange: { min: 3.5, max: 5.2 },
+        },
+        {
+          ...hemoglobin,
+          key: "albumin_serum",
+          label: "Albumin",
+        },
+      ],
+    };
+    expect(
+      validateMapResponse(ambiguousAlbuminVocabulary, {
+        mappings: [
+          {
+            ...redirectedToHemoglobin.mappings[0],
+            vocabularyKey: "albumin",
+            isNew: false,
+          },
         ],
       }),
     ).toMatchObject({ ok: false });

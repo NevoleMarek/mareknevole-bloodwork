@@ -380,6 +380,11 @@ export const validateMapResponse = (
         `mappings[${index}].vocabularyKey is not the matching key`,
       );
     }
+    if (matches.length === 0 && entry !== undefined) {
+      return invalid(
+        `mappings[${index}].vocabularyKey has no unique semantic match`,
+      );
+    }
 
     if (entry === undefined) {
       const expectedKey = deriveVocabularyKey(variable.label);
