@@ -1,26 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { adminErrorMessage } from "@/components/admin/admin-error-state";
 import { runApi } from "@/lib/effect/client";
 
 export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitPending = useRef(false);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitPending.current) return;
+    submitPending.current = true;
     setError("");
+    setIsSubmitting(true);
 
     try {
       await runApi((client) =>
         client.session.create({ payload: { password } }),
       );
       router.push("/admin/data");
-    } catch {
-      setError("Invalid password");
+    } catch (cause) {
+      setError(adminErrorMessage(cause, "Invalid password"));
+    } finally {
+      submitPending.current = false;
+      setIsSubmitting(false);
     }
   }
 
@@ -31,6 +40,7 @@ export default function AdminLogin() {
     >
       <form
         onSubmit={handleSubmit}
+        aria-busy={isSubmitting}
         className="surface-elevated w-full max-w-sm p-6 sm:p-8"
       >
         <div className="mb-8">
@@ -60,6 +70,7 @@ export default function AdminLogin() {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          disabled={isSubmitting}
           className="field w-full"
         />
         {error && (
@@ -67,8 +78,12 @@ export default function AdminLogin() {
             {error}
           </p>
         )}
-        <button type="submit" className="button-primary mt-5 w-full">
-          Sign in
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="button-primary mt-5 w-full disabled:opacity-40"
+        >
+          {isSubmitting ? "Signing in…" : "Sign in"}
         </button>
       </form>
     </main>

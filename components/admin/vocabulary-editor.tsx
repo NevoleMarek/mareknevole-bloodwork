@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
+import {
+  AdminErrorState,
+  adminErrorMessage,
+} from "@/components/admin/admin-error-state";
 import { runApi } from "@/lib/effect/client";
 import { makeVocabularyKey } from "@/lib/effect/api";
 import type { VocabularyEntry } from "@/types/bloodwork";
@@ -10,6 +14,17 @@ type EditingState =
   | { kind: "none" }
   | { kind: "editing"; entry: VocabularyEntry }
   | { kind: "adding" };
+
+type VocabularyAction =
+  | { kind: "toggle-visible"; entry: VocabularyEntry }
+  | { kind: "toggle-featured"; entry: VocabularyEntry }
+  | { kind: "save"; entry: VocabularyEntry; mode: "adding" | "editing" }
+  | { kind: "delete"; key: string };
+
+type MutationState =
+  | { kind: "idle" }
+  | { kind: "pending"; action: VocabularyAction }
+  | { kind: "error"; action: VocabularyAction; message: string };
 
 const updatePayload = (entry: VocabularyEntry) => ({
   label: entry.label,
@@ -25,9 +40,10 @@ export function VocabularyEditor({
   onRefresh,
 }: {
   entries: VocabularyEntry[];
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<void>;
 }) {
   const [editing, setEditing] = useState<EditingState>({ kind: "none" });
+  const [mutation, setMutation] = useState<MutationState>({ kind: "idle" });
   const [form, setForm] = useState({
     key: "",
     label: "",
@@ -35,6 +51,7 @@ export function VocabularyEditor({
     min: "",
     max: "",
   });
+  const mutationPending = useRef(false);
 
   function startAdd() {
     setForm({ key: "", label: "", unit: "", min: "", max: "" });
@@ -52,27 +69,82 @@ export function VocabularyEditor({
     setEditing({ kind: "editing", entry });
   }
 
-  async function toggleVisible(entry: VocabularyEntry) {
-    await runApi((client) =>
-      client.vocabulary.update({
-        params: { key: makeVocabularyKey(entry.key) },
-        payload: updatePayload({ ...entry, visible: !entry.visible }),
-      }),
-    );
-    onRefresh();
+  const isPending = mutation.kind === "pending";
+
+  async function runMutation(action: VocabularyAction) {
+    if (mutationPending.current) return;
+    mutationPending.current = true;
+    setMutation({ kind: "pending", action });
+
+    try {
+      if (action.kind === "toggle-visible") {
+        await runApi((client) =>
+          client.vocabulary.update({
+            params: { key: makeVocabularyKey(action.entry.key) },
+            payload: updatePayload({
+              ...action.entry,
+              visible: !action.entry.visible,
+            }),
+          }),
+        );
+      } else if (action.kind === "toggle-featured") {
+        await runApi((client) =>
+          client.vocabulary.update({
+            params: { key: makeVocabularyKey(action.entry.key) },
+            payload: updatePayload({
+              ...action.entry,
+              featured: !action.entry.featured,
+            }),
+          }),
+        );
+      } else if (action.kind === "save") {
+        await runApi((client) =>
+          action.mode === "adding"
+            ? client.vocabulary.create({ payload: action.entry })
+            : client.vocabulary.update({
+                params: { key: makeVocabularyKey(action.entry.key) },
+                payload: updatePayload(action.entry),
+              }),
+        );
+        setEditing({ kind: "none" });
+      } else {
+        await runApi((client) =>
+          client.vocabulary.delete({
+            params: { key: makeVocabularyKey(action.key) },
+          }),
+        );
+      }
+
+      await onRefresh();
+      setMutation({ kind: "idle" });
+    } catch (error) {
+      setMutation({
+        kind: "error",
+        action,
+        message: adminErrorMessage(
+          error,
+          action.kind === "delete"
+            ? "Could not delete this vocabulary entry. Please try again."
+            : action.kind === "save"
+              ? "Could not save this vocabulary entry. Please try again."
+              : "Could not update vocabulary visibility. Please try again.",
+        ),
+      });
+    } finally {
+      mutationPending.current = false;
+    }
   }
 
-  async function toggleFeatured(entry: VocabularyEntry) {
-    await runApi((client) =>
-      client.vocabulary.update({
-        params: { key: makeVocabularyKey(entry.key) },
-        payload: updatePayload({ ...entry, featured: !entry.featured }),
-      }),
-    );
-    onRefresh();
+  function toggleVisible(entry: VocabularyEntry) {
+    void runMutation({ kind: "toggle-visible", entry });
   }
 
-  async function handleSave() {
+  function toggleFeatured(entry: VocabularyEntry) {
+    void runMutation({ kind: "toggle-featured", entry });
+  }
+
+  function handleSave() {
+    if (editing.kind === "none") return;
     const entry: VocabularyEntry = {
       key: form.key,
       label: form.label,
@@ -83,27 +155,40 @@ export function VocabularyEditor({
       featured: editing.kind === "editing" ? editing.entry.featured : false,
       visible: editing.kind === "editing" ? editing.entry.visible : true,
     };
-    await runApi((client) =>
-      editing.kind === "adding"
-        ? client.vocabulary.create({ payload: entry })
-        : client.vocabulary.update({
-            params: { key: makeVocabularyKey(entry.key) },
-            payload: updatePayload(entry),
-          }),
-    );
-    setEditing({ kind: "none" });
-    onRefresh();
+    void runMutation({
+      kind: "save",
+      entry,
+      mode: editing.kind,
+    });
   }
 
-  async function handleDelete(key: string) {
-    await runApi((client) =>
-      client.vocabulary.delete({ params: { key: makeVocabularyKey(key) } }),
-    );
-    onRefresh();
+  function handleDelete(key: string) {
+    void runMutation({ kind: "delete", key });
+  }
+
+  function retryMutation() {
+    if (mutation.kind !== "error") return;
+    void runMutation(mutation.action);
   }
 
   return (
-    <div>
+    <div aria-busy={isPending}>
+      {mutation.kind === "error" && (
+        <AdminErrorState message={mutation.message} onRetry={retryMutation} />
+      )}
+      {mutation.kind === "pending" && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="mb-3 text-sm text-zinc-500"
+        >
+          {mutation.action.kind === "delete"
+            ? "Deleting vocabulary entry…"
+            : mutation.action.kind === "save"
+              ? "Saving vocabulary entry…"
+              : "Updating vocabulary visibility…"}
+        </p>
+      )}
       <div className="admin-table-scroll mb-5 overflow-x-auto rounded-2xl border border-zinc-900/10 bg-white">
         <table className="w-full text-sm">
           <caption className="sr-only">Biomarker vocabulary</caption>
@@ -148,6 +233,7 @@ export function VocabularyEditor({
                     type="checkbox"
                     checked={e.visible}
                     onChange={() => toggleVisible(e)}
+                    disabled={isPending}
                     aria-label={`Show ${e.label} on dashboard`}
                   />
                 </td>
@@ -156,6 +242,7 @@ export function VocabularyEditor({
                     type="checkbox"
                     checked={e.featured}
                     onChange={() => toggleFeatured(e)}
+                    disabled={isPending}
                     aria-label={`Feature ${e.label}`}
                   />
                 </td>
@@ -163,6 +250,7 @@ export function VocabularyEditor({
                   <button
                     type="button"
                     onClick={() => startEdit(e)}
+                    disabled={isPending}
                     className="button-quiet min-h-9 px-2 text-xs"
                   >
                     Edit
@@ -170,6 +258,7 @@ export function VocabularyEditor({
                   <button
                     type="button"
                     onClick={() => handleDelete(e.key)}
+                    disabled={isPending}
                     className="min-h-9 rounded-full px-2 text-xs font-semibold text-red-700"
                     aria-label={`Delete ${e.label}`}
                   >
@@ -189,7 +278,7 @@ export function VocabularyEditor({
             aria-label="Vocabulary key"
             value={form.key}
             onChange={(e) => setForm({ ...form, key: e.target.value })}
-            disabled={editing.kind === "editing"}
+            disabled={editing.kind === "editing" || isPending}
             className="field w-full font-mono text-xs"
           />
           <input
@@ -197,6 +286,7 @@ export function VocabularyEditor({
             aria-label="Biomarker label"
             value={form.label}
             onChange={(e) => setForm({ ...form, label: e.target.value })}
+            disabled={isPending}
             className="field w-full"
           />
           <input
@@ -204,6 +294,7 @@ export function VocabularyEditor({
             aria-label="Unit"
             value={form.unit}
             onChange={(e) => setForm({ ...form, unit: e.target.value })}
+            disabled={isPending}
             className="field w-full"
           />
           <input
@@ -211,6 +302,7 @@ export function VocabularyEditor({
             aria-label="Reference minimum"
             value={form.min}
             onChange={(e) => setForm({ ...form, min: e.target.value })}
+            disabled={isPending}
             className="field w-full"
           />
           <input
@@ -218,19 +310,24 @@ export function VocabularyEditor({
             aria-label="Reference maximum"
             value={form.max}
             onChange={(e) => setForm({ ...form, max: e.target.value })}
+            disabled={isPending}
             className="field w-full"
           />
           <div className="flex gap-2 sm:col-span-2 lg:col-span-5">
             <button
               type="button"
               onClick={handleSave}
+              disabled={isPending}
               className="button-primary"
             >
-              Save
+              {isPending && mutation.action.kind === "save"
+                ? "Saving…"
+                : "Save"}
             </button>
             <button
               type="button"
               onClick={() => setEditing({ kind: "none" })}
+              disabled={isPending}
               className="button-secondary"
             >
               Cancel
@@ -240,7 +337,12 @@ export function VocabularyEditor({
       )}
 
       {editing.kind === "none" && (
-        <button type="button" onClick={startAdd} className="button-primary">
+        <button
+          type="button"
+          onClick={startAdd}
+          disabled={isPending}
+          className="button-primary"
+        >
           + Add entry
         </button>
       )}

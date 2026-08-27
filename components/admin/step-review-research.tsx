@@ -1,12 +1,14 @@
 "use client";
 
+import { useState } from "react";
+
 import type { ResearchedEntry } from "@/types/wizard";
 
 type Props = {
   researched: ResearchedEntry[];
   onResearchedChange: (entries: ResearchedEntry[]) => void;
   onBack: () => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
   saving: boolean;
 };
 
@@ -17,6 +19,20 @@ export function StepReviewResearch({
   onSave,
   saving,
 }: Props) {
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSave() {
+    if (saving || submitting) return;
+    setSubmitting(true);
+    try {
+      await onSave();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const isSaving = saving || submitting;
+
   function updateEntry(index: number, patch: Partial<ResearchedEntry>) {
     onResearchedChange(
       researched.map((e, i) => (i === index ? { ...e, ...patch } : e)),
@@ -96,11 +112,12 @@ export function StepReviewResearch({
         </button>
         <button
           type="button"
-          onClick={onSave}
-          disabled={saving}
+          onClick={handleSave}
+          disabled={isSaving}
+          aria-busy={isSaving}
           className="button-primary disabled:opacity-40"
         >
-          {saving ? "Saving..." : "Save Reading"}
+          {isSaving ? "Saving…" : "Save Reading"}
         </button>
       </div>
     </div>

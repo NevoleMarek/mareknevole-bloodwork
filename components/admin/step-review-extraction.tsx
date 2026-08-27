@@ -9,7 +9,7 @@ type Props = {
   variables: ExtractedVariable[];
   onDateChange: (date: string) => void;
   onVariablesChange: (variables: ExtractedVariable[]) => void;
-  onNext: () => void;
+  onNext: () => void | Promise<void>;
 };
 
 export function StepReviewExtraction({
@@ -20,6 +20,17 @@ export function StepReviewExtraction({
   onNext,
 }: Props) {
   const [latestAddedIndex, setLatestAddedIndex] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleNext() {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await onNext();
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   function updateVariable(
     index: number,
@@ -152,11 +163,12 @@ export function StepReviewExtraction({
       <div className="mt-8 flex justify-end">
         <button
           type="button"
-          onClick={onNext}
-          disabled={variables.length === 0}
+          onClick={handleNext}
+          disabled={variables.length === 0 || submitting}
+          aria-busy={submitting}
           className="button-primary disabled:opacity-40"
         >
-          Next: Map Variables &rarr;
+          {submitting ? "Mapping…" : "Next: Map Variables →"}
         </button>
       </div>
     </div>

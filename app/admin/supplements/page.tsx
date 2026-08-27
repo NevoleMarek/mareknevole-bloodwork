@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+  AdminErrorState,
+  adminErrorMessage,
+} from "@/components/admin/admin-error-state";
 import { SupplementEditor } from "@/components/admin/supplement-editor";
 import { makeChangelogId, type SupplementsResponse } from "@/lib/effect/api";
 import { runApi } from "@/lib/effect/client";
@@ -15,6 +19,15 @@ type SupplementsData = SupplementsResponse & {
   changelog: SupplementChangelog[];
 };
 
+type ChangelogAction =
+  | { kind: "save"; id: string; description: string }
+  | { kind: "delete"; id: string };
+
+type ChangelogMutation =
+  | { kind: "idle" }
+  | { kind: "pending"; action: ChangelogAction }
+  | { kind: "error"; action: ChangelogAction; message: string };
+
 async function loadData(): Promise<SupplementsData> {
   const [supplements, changelog] = await Promise.all([
     runApi((client) => client.supplements.list({})),
@@ -25,40 +38,105 @@ async function loadData(): Promise<SupplementsData> {
 
 export default function AdminSupplementsPage() {
   const [data, setData] = useState<SupplementsData | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [editing, setEditing] = useState<EditingState>({ kind: "none" });
+  const [changelogMutation, setChangelogMutation] = useState<ChangelogMutation>(
+    { kind: "idle" },
+  );
   const didFetch = useRef(false);
+  const refreshPending = useRef(false);
+  const changelogPending = useRef(false);
+
+  const refresh = useCallback(async () => {
+    if (refreshPending.current) return;
+    refreshPending.current = true;
+    setIsRefreshing(true);
+    setLoadError(null);
+    try {
+      setData(await loadData());
+    } catch (error) {
+      setLoadError(
+        adminErrorMessage(
+          error,
+          "Could not load supplements. Please try again.",
+        ),
+      );
+    } finally {
+      refreshPending.current = false;
+      setIsRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (didFetch.current) return;
     didFetch.current = true;
-    loadData().then(setData);
-  }, []);
+    void refresh();
+  }, [refresh]);
 
-  const refresh = useCallback(async () => {
-    setData(await loadData());
-  }, []);
-
-  async function handleSaveEdit(id: string, description: string) {
-    await runApi((client) =>
-      client.changelog.update({
-        params: { id: makeChangelogId(id) },
-        payload: { description },
-      }),
-    );
-    setEditing({ kind: "none" });
-    await refresh();
+  async function runChangelogAction(action: ChangelogAction) {
+    if (changelogPending.current) return;
+    changelogPending.current = true;
+    setChangelogMutation({ kind: "pending", action });
+    try {
+      if (action.kind === "save") {
+        await runApi((client) =>
+          client.changelog.update({
+            params: { id: makeChangelogId(action.id) },
+            payload: { description: action.description },
+          }),
+        );
+        setEditing({ kind: "none" });
+      } else {
+        await runApi((client) =>
+          client.changelog.delete({
+            params: { id: makeChangelogId(action.id) },
+          }),
+        );
+      }
+      setChangelogMutation({ kind: "idle" });
+      await refresh();
+    } catch (error) {
+      setChangelogMutation({
+        kind: "error",
+        action,
+        message: adminErrorMessage(
+          error,
+          action.kind === "save"
+            ? "Could not save this change. Please try again."
+            : "Could not delete this change. Please try again.",
+        ),
+      });
+    } finally {
+      changelogPending.current = false;
+    }
   }
 
-  async function handleDelete(id: string) {
-    await runApi((client) =>
-      client.changelog.delete({ params: { id: makeChangelogId(id) } }),
-    );
-    await refresh();
+  function handleSaveEdit(id: string, description: string) {
+    void runChangelogAction({ kind: "save", id, description });
   }
+
+  function handleDelete(id: string) {
+    void runChangelogAction({ kind: "delete", id });
+  }
+
+  function retryChangelogAction() {
+    if (changelogMutation.kind !== "error") return;
+    void runChangelogAction(changelogMutation.action);
+  }
+
+  if (!data && loadError)
+    return (
+      <AdminErrorState
+        message={loadError}
+        onRetry={refresh}
+        retrying={isRefreshing}
+      />
+    );
 
   if (!data)
     return (
-      <p role="status" className="text-sm text-zinc-500">
+      <p role="status" aria-busy="true" className="text-sm text-zinc-500">
         Loading supplements…
       </p>
     );
@@ -82,7 +160,27 @@ export default function AdminSupplementsPage() {
         <h1 className="mt-2">Supplements</h1>
         <p>Maintain the active stack and its public change history.</p>
       </div>
-      <div className="space-y-5">
+      {loadError && (
+        <AdminErrorState
+          message={loadError}
+          onRetry={refresh}
+          retrying={isRefreshing}
+        />
+      )}
+      {changelogMutation.kind === "error" && (
+        <AdminErrorState
+          message={changelogMutation.message}
+          onRetry={retryChangelogAction}
+        />
+      )}
+      {changelogMutation.kind === "pending" && (
+        <p role="status" aria-live="polite" className="text-sm text-zinc-500">
+          {changelogMutation.action.kind === "save"
+            ? "Saving change…"
+            : "Deleting change…"}
+        </p>
+      )}
+      <div className="space-y-5" aria-busy={isRefreshing}>
         <section className="admin-panel">
           <h2 className="mb-5 text-sm font-semibold text-zinc-800">
             Active supplements
@@ -130,13 +228,23 @@ export default function AdminSupplementsPage() {
                         />
                         <button
                           type="submit"
-                          className="button-primary min-h-9"
+                          disabled={
+                            changelogMutation.kind === "pending" &&
+                            changelogMutation.action.kind === "save" &&
+                            changelogMutation.action.id === entry.id
+                          }
+                          className="button-primary min-h-9 disabled:opacity-40"
                         >
-                          Save
+                          {changelogMutation.kind === "pending" &&
+                          changelogMutation.action.kind === "save" &&
+                          changelogMutation.action.id === entry.id
+                            ? "Saving…"
+                            : "Save"}
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditing({ kind: "none" })}
+                          disabled={changelogMutation.kind === "pending"}
                           className="button-quiet min-h-9"
                         >
                           Cancel
@@ -164,10 +272,15 @@ export default function AdminSupplementsPage() {
                         <button
                           type="button"
                           onClick={() => handleDelete(entry.id)}
-                          className="min-h-9 rounded-full px-2 text-xs font-semibold text-red-700"
+                          disabled={changelogMutation.kind === "pending"}
+                          className="min-h-9 rounded-full px-2 text-xs font-semibold text-red-700 disabled:opacity-40"
                           aria-label={`Delete change from ${entry.date}`}
                         >
-                          Delete
+                          {changelogMutation.kind === "pending" &&
+                          changelogMutation.action.kind === "delete" &&
+                          changelogMutation.action.id === entry.id
+                            ? "Deleting…"
+                            : "Delete"}
                         </button>
                       </>
                     )}

@@ -12,6 +12,34 @@ afterEach(() => {
 });
 
 describe("AdminDataPage", () => {
+  it("shows a retryable error when the first page load is rejected", async () => {
+    let requests = 0;
+    const fetch = vi.fn(() => {
+      requests += 1;
+      return Promise.resolve(
+        requests === 1
+          ? jsonResponse(
+              {
+                _tag: "Bloodwork.ApiServiceUnavailable",
+                error: "Service unavailable",
+              },
+              503,
+            )
+          : jsonResponse({ entries: [], nextCursor: null }),
+      );
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    render(<AdminDataPage />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Error: Service unavailable",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("No readings yet.")).toBeInTheDocument();
+    expect(requests).toBe(2);
+  }, 15000);
+
   it("loads the first page through Strict Mode effect replay", async () => {
     const fetch = vi
       .fn()
@@ -335,4 +363,119 @@ describe("AdminDataPage", () => {
     fireEvent.click(copy);
     await vi.waitFor(() => expect(exportRequests).toBe(2));
   });
+
+  it("shows a retryable error when export fails", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    let exportRequests = 0;
+    const fetch = vi.fn((input: RequestInfo | URL) => {
+      const path = requestPath(input);
+      if (path === "/api/readings") {
+        return Promise.resolve(
+          jsonResponse({
+            entries: [
+              {
+                id: "r1",
+                date: "2026-07-28",
+                source: "panel.pdf",
+                measurementCount: 1,
+              },
+            ],
+            nextCursor: null,
+          }),
+        );
+      }
+      exportRequests += 1;
+      return Promise.resolve(
+        exportRequests === 1
+          ? jsonResponse(
+              {
+                _tag: "Bloodwork.ApiServiceUnavailable",
+                error: "Service unavailable",
+              },
+              503,
+            )
+          : jsonResponse({ vocabulary: { entries: [] }, readings: [] }),
+      );
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    render(<AdminDataPage />);
+    const button = await screen.findByRole("button", {
+      name: "Copy as Markdown",
+    });
+    fireEvent.click(button);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Error: Service unavailable",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Markdown copied to clipboard.",
+    );
+    expect(exportRequests).toBe(2);
+    expect(writeText).toHaveBeenCalled();
+  }, 15000);
+
+  it("keeps a reading and exposes retry after deletion fails", async () => {
+    let deleteRequests = 0;
+    let readingRequests = 0;
+    const fetch = vi.fn((input: RequestInfo | URL) => {
+      const path = requestPath(input);
+      if (path === "/api/readings/r1") {
+        deleteRequests += 1;
+        return Promise.resolve(
+          deleteRequests === 1
+            ? jsonResponse(
+                {
+                  _tag: "Bloodwork.ApiServiceUnavailable",
+                  error: "Service unavailable",
+                },
+                503,
+              )
+            : new Response(null, { status: 204 }),
+        );
+      }
+      if (path === "/api/readings") {
+        readingRequests += 1;
+        return Promise.resolve(
+          jsonResponse({
+            entries:
+              readingRequests === 1
+                ? [
+                    {
+                      id: "r1",
+                      date: "2026-07-28",
+                      source: "panel.pdf",
+                      measurementCount: 1,
+                    },
+                  ]
+                : [],
+            nextCursor: null,
+          }),
+        );
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    render(<AdminDataPage />);
+    const deleteButton = await screen.findByRole("button", {
+      name: "Delete reading from 2026-07-28",
+    });
+    fireEvent.click(deleteButton);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Error: Service unavailable",
+    );
+    expect(screen.getByText("2026-07-28")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByText("No readings yet.")).toBeInTheDocument();
+    expect(deleteRequests).toBe(2);
+  }, 15000);
 });

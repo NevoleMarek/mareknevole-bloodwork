@@ -10,6 +10,7 @@ import type {
   WizardState,
 } from "@/types/wizard";
 import { deriveStatus } from "@/lib/status";
+import { adminErrorMessage } from "@/components/admin/admin-error-state";
 import { runApi } from "@/lib/effect/client";
 
 import { StepUpload } from "@/components/admin/step-upload";
@@ -93,7 +94,10 @@ export function UploadWizard() {
       } catch (e) {
         setState({
           step: "error",
-          message: e instanceof Error ? e.message : "Extraction failed",
+          message: adminErrorMessage(
+            e,
+            "Extraction failed. Please try again with this PDF.",
+          ),
           returnTo: { step: "upload" },
         });
       }
@@ -121,7 +125,7 @@ export function UploadWizard() {
       } catch (e) {
         setState({
           step: "error",
-          message: e instanceof Error ? e.message : "Mapping failed",
+          message: adminErrorMessage(e, "Mapping failed. Please try again."),
           returnTo: { step: "review-extraction", pdfUrl, date, variables },
         });
       }
@@ -186,7 +190,7 @@ export function UploadWizard() {
       } catch (e) {
         setState({
           step: "error",
-          message: e instanceof Error ? e.message : "Save failed",
+          message: adminErrorMessage(e, "Save failed. Please try again."),
           returnTo: { step: "review-mapping", pdfUrl, date, mappings },
         });
       }
@@ -206,8 +210,7 @@ export function UploadWizard() {
         }));
 
       if (newEntries.length === 0) {
-        handleSave(date, mappings, [], pdfUrl);
-        return;
+        return handleSave(date, mappings, [], pdfUrl);
       }
 
       setState({ step: "researching", pdfUrl, date, mappings });
@@ -226,7 +229,7 @@ export function UploadWizard() {
       } catch (e) {
         setState({
           step: "error",
-          message: e instanceof Error ? e.message : "Research failed",
+          message: adminErrorMessage(e, "Research failed. Please try again."),
           returnTo: { step: "review-mapping", pdfUrl, date, mappings },
         });
       }
@@ -254,7 +257,16 @@ export function UploadWizard() {
     <div className={`grid gap-6 ${pdfUrl ? "md:grid-cols-2" : ""}`}>
       {/* Left panel */}
       <div className="min-w-0">
-        <div key={state.step} className="admin-state-shell">
+        <div
+          key={state.step}
+          aria-busy={
+            state.step === "extracting" ||
+            state.step === "mapping" ||
+            state.step === "researching" ||
+            state.step === "saving"
+          }
+          className="admin-state-shell"
+        >
           {state.step === "upload" && <StepUpload onUpload={handleUpload} />}
 
           {state.step === "extracting" && (

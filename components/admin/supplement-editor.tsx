@@ -1,22 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
-import { runApi } from "@/lib/effect/client";
+import {
+  AdminErrorState,
+  adminErrorMessage,
+} from "@/components/admin/admin-error-state";
 import { makeSupplementId } from "@/lib/effect/api";
+import { runApi } from "@/lib/effect/client";
 import type { Supplement } from "@/types/bloodwork";
+
+type SupplementForm = {
+  name: string;
+  dose: string;
+  frequency: string;
+  startedAt: string;
+  changelogDate: string;
+};
 
 type RowState =
   | { kind: "display" }
-  | {
-      kind: "editing";
-      name: string;
-      dose: string;
-      frequency: string;
-      startedAt: string;
-      changelogDate: string;
-    }
+  | ({ kind: "editing" } & SupplementForm)
   | { kind: "removing"; changelogDate: string };
+
+type SupplementAction =
+  | { kind: "save"; id: string; payload: SupplementForm }
+  | { kind: "remove"; id: string; changelogDate: string }
+  | { kind: "add"; payload: SupplementForm };
+
+type MutationState =
+  | { kind: "idle" }
+  | { kind: "pending"; action: SupplementAction }
+  | { kind: "error"; action: SupplementAction; message: string };
 
 function formatMonth(yyyyMm: string): string {
   const [year, month] = yyyyMm.split("-");
@@ -28,21 +43,27 @@ function today(): string {
   return new Date().toISOString().split("T")[0];
 }
 
-export function SupplementEditor({
-  supplements,
-  onRefresh,
-}: {
-  supplements: Supplement[];
-  onRefresh: () => void;
-}) {
-  const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
-  const [form, setForm] = useState({
+function emptyForm(): SupplementForm {
+  return {
     name: "",
     dose: "",
     frequency: "daily",
     startedAt: "",
     changelogDate: today(),
-  });
+  };
+}
+
+export function SupplementEditor({
+  supplements,
+  onRefresh,
+}: {
+  supplements: Supplement[];
+  onRefresh: () => void | Promise<void>;
+}) {
+  const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
+  const [mutation, setMutation] = useState<MutationState>({ kind: "idle" });
+  const [form, setForm] = useState<SupplementForm>(emptyForm);
+  const mutationPending = useRef(false);
 
   function getRowState(id: string): RowState {
     return rowStates[id] ?? { kind: "display" };
@@ -52,53 +73,107 @@ export function SupplementEditor({
     setRowStates((prev) => ({ ...prev, [id]: state }));
   }
 
-  async function handleSave(id: string) {
+  const isPending = mutation.kind === "pending";
+
+  async function runMutation(action: SupplementAction) {
+    if (mutationPending.current) return;
+    mutationPending.current = true;
+    setMutation({ kind: "pending", action });
+
+    try {
+      if (action.kind === "save") {
+        await runApi((client) =>
+          client.supplements.update({
+            params: { id: makeSupplementId(action.id) },
+            payload: action.payload,
+          }),
+        );
+        setRowState(action.id, { kind: "display" });
+      } else if (action.kind === "remove") {
+        await runApi((client) =>
+          client.supplements.delete({
+            params: { id: makeSupplementId(action.id) },
+            query: { changelogDate: action.changelogDate },
+          }),
+        );
+        setRowState(action.id, { kind: "display" });
+      } else {
+        await runApi((client) =>
+          client.supplements.create({ payload: action.payload }),
+        );
+        setForm(emptyForm());
+      }
+
+      await onRefresh();
+      setMutation({ kind: "idle" });
+    } catch (error) {
+      setMutation({
+        kind: "error",
+        action,
+        message: adminErrorMessage(
+          error,
+          action.kind === "add"
+            ? "Could not add this supplement. Please try again."
+            : action.kind === "save"
+              ? "Could not save this supplement. Please try again."
+              : "Could not remove this supplement. Please try again.",
+        ),
+      });
+    } finally {
+      mutationPending.current = false;
+    }
+  }
+
+  function handleSave(id: string) {
     const state = getRowState(id);
     if (state.kind !== "editing") return;
-
-    await runApi((client) =>
-      client.supplements.update({
-        params: { id: makeSupplementId(id) },
-        payload: {
-          name: state.name,
-          dose: state.dose,
-          frequency: state.frequency,
-          startedAt: state.startedAt,
-          changelogDate: state.changelogDate,
-        },
-      }),
-    );
-    setRowState(id, { kind: "display" });
-    onRefresh();
+    void runMutation({
+      kind: "save",
+      id,
+      payload: {
+        name: state.name,
+        dose: state.dose,
+        frequency: state.frequency,
+        startedAt: state.startedAt,
+        changelogDate: state.changelogDate,
+      },
+    });
   }
 
-  async function handleRemove(id: string) {
+  function handleRemove(id: string) {
     const state = getRowState(id);
     if (state.kind !== "removing") return;
-
-    await runApi((client) =>
-      client.supplements.delete({
-        params: { id: makeSupplementId(id) },
-        query: { changelogDate: state.changelogDate },
-      }),
-    );
-    onRefresh();
+    void runMutation({
+      kind: "remove",
+      id,
+      changelogDate: state.changelogDate,
+    });
   }
 
-  async function handleAdd() {
-    await runApi((client) => client.supplements.create({ payload: form }));
-    setForm({
-      name: "",
-      dose: "",
-      frequency: "daily",
-      startedAt: "",
-      changelogDate: today(),
-    });
-    onRefresh();
+  function handleAdd() {
+    void runMutation({ kind: "add", payload: { ...form } });
+  }
+
+  function retryMutation() {
+    if (mutation.kind !== "error") return;
+    void runMutation(mutation.action);
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-busy={isPending}>
+      {mutation.kind === "error" && (
+        <AdminErrorState message={mutation.message} onRetry={retryMutation} />
+      )}
+      {mutation.kind === "pending" && (
+        <p role="status" aria-live="polite" className="text-sm text-zinc-500">
+          {mutation.action.kind === "add"
+            ? "Adding supplement…"
+            : mutation.action.kind === "save"
+              ? "Saving supplement…"
+              : "Removing supplement…"}
+        </p>
+      )}
+
       {/* Active supplements table */}
       <div className="admin-table-scroll overflow-x-auto rounded-2xl border border-zinc-900/10 bg-white">
         <table className="w-full text-sm">
@@ -142,6 +217,7 @@ export function SupplementEditor({
                               name: e.target.value,
                             })
                           }
+                          disabled={isPending}
                           aria-label="Supplement name"
                           className="field w-full"
                         />
@@ -153,6 +229,7 @@ export function SupplementEditor({
                               dose: e.target.value,
                             })
                           }
+                          disabled={isPending}
                           aria-label="Supplement dose"
                           className="field w-full"
                         />
@@ -164,6 +241,7 @@ export function SupplementEditor({
                               frequency: e.target.value,
                             })
                           }
+                          disabled={isPending}
                           aria-label="Supplement frequency"
                           className="field w-full"
                         />
@@ -176,20 +254,27 @@ export function SupplementEditor({
                               startedAt: e.target.value,
                             })
                           }
+                          disabled={isPending}
                           aria-label="Supplement start month"
                           className="field w-full"
                         />
                         <button
                           type="button"
                           onClick={() => handleSave(s.id)}
-                          className="button-primary"
+                          disabled={isPending}
+                          className="button-primary disabled:opacity-40"
                         >
-                          Save
+                          {mutation.kind === "pending" &&
+                          mutation.action.kind === "save" &&
+                          mutation.action.id === s.id
+                            ? "Saving…"
+                            : "Save"}
                         </button>
                         <button
                           type="button"
                           onClick={() => setRowState(s.id, { kind: "display" })}
-                          className="button-secondary"
+                          disabled={isPending}
+                          className="button-secondary disabled:opacity-40"
                         >
                           Cancel
                         </button>
@@ -208,6 +293,7 @@ export function SupplementEditor({
                               changelogDate: e.target.value,
                             })
                           }
+                          disabled={isPending}
                           className="field text-xs"
                         />
                       </div>
@@ -239,6 +325,7 @@ export function SupplementEditor({
                                 changelogDate: e.target.value,
                               })
                             }
+                            disabled={isPending}
                             className="field text-xs"
                           />
                         </span>
@@ -246,16 +333,22 @@ export function SupplementEditor({
                           <button
                             type="button"
                             onClick={() => handleRemove(s.id)}
-                            className="min-h-10 rounded-full bg-red-700 px-4 font-semibold text-white"
+                            disabled={isPending}
+                            className="min-h-10 rounded-full bg-red-700 px-4 font-semibold text-white disabled:opacity-40"
                           >
-                            Confirm
+                            {mutation.kind === "pending" &&
+                            mutation.action.kind === "remove" &&
+                            mutation.action.id === s.id
+                              ? "Removing…"
+                              : "Confirm"}
                           </button>
                           <button
                             type="button"
                             onClick={() =>
                               setRowState(s.id, { kind: "display" })
                             }
-                            className="button-secondary min-h-10"
+                            disabled={isPending}
+                            className="button-secondary min-h-10 disabled:opacity-40"
                           >
                             Cancel
                           </button>
@@ -290,7 +383,8 @@ export function SupplementEditor({
                             changelogDate: today(),
                           })
                         }
-                        className="button-quiet min-h-9 px-2 text-xs"
+                        disabled={isPending}
+                        className="button-quiet min-h-9 px-2 text-xs disabled:opacity-40"
                       >
                         Edit
                       </button>
@@ -302,7 +396,8 @@ export function SupplementEditor({
                             changelogDate: today(),
                           })
                         }
-                        className="min-h-9 rounded-full px-2 text-xs font-semibold text-red-700"
+                        disabled={isPending}
+                        className="min-h-9 rounded-full px-2 text-xs font-semibold text-red-700 disabled:opacity-40"
                       >
                         Remove
                       </button>
@@ -328,6 +423,7 @@ export function SupplementEditor({
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
+              disabled={isPending}
               placeholder="e.g. Creatine"
               className="field w-full"
             />
@@ -339,6 +435,7 @@ export function SupplementEditor({
             <input
               value={form.dose}
               onChange={(e) => setForm({ ...form, dose: e.target.value })}
+              disabled={isPending}
               placeholder="e.g. 5g"
               className="field w-full"
             />
@@ -350,6 +447,7 @@ export function SupplementEditor({
             <input
               value={form.frequency}
               onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+              disabled={isPending}
               className="field w-full"
             />
           </label>
@@ -361,6 +459,7 @@ export function SupplementEditor({
               type="month"
               value={form.startedAt}
               onChange={(e) => setForm({ ...form, startedAt: e.target.value })}
+              disabled={isPending}
               className="field w-full"
             />
           </label>
@@ -374,15 +473,19 @@ export function SupplementEditor({
               onChange={(e) =>
                 setForm({ ...form, changelogDate: e.target.value })
               }
+              disabled={isPending}
               className="field w-full sm:max-w-xs"
             />
           </label>
           <button
             type="button"
             onClick={handleAdd}
-            className="button-primary mt-1 sm:col-span-2 sm:w-fit"
+            disabled={isPending}
+            className="button-primary mt-1 disabled:opacity-40 sm:col-span-2 sm:w-fit"
           >
-            Add supplement
+            {mutation.kind === "pending" && mutation.action.kind === "add"
+              ? "Adding…"
+              : "Add supplement"}
           </button>
         </div>
       </div>

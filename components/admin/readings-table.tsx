@@ -5,9 +5,11 @@ import type { ReadingSummary } from "@/types/bloodwork";
 export function ReadingsTable({
   readings,
   onDelete,
+  deletingId = null,
 }: {
   readings: ReadingSummary[];
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => void | Promise<void>;
+  deletingId?: string | null;
 }) {
   if (readings.length === 0) {
     return <p className="text-xs text-zinc-400">No readings yet.</p>;
@@ -47,10 +49,11 @@ export function ReadingsTable({
                 <button
                   type="button"
                   onClick={() => onDelete(r.id)}
-                  className="min-h-9 rounded-full px-3 text-xs font-semibold text-red-700"
+                  disabled={deletingId !== null}
+                  className="min-h-9 rounded-full px-3 text-xs font-semibold text-red-700 disabled:opacity-40"
                   aria-label={`Delete reading from ${r.date}`}
                 >
-                  Delete
+                  {deletingId === r.id ? "Deleting…" : "Delete"}
                 </button>
               </td>
             </tr>

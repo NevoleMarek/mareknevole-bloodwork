@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
-import { apiErrorMessage, runApi } from "@/lib/effect/client";
+import { adminErrorMessage } from "@/components/admin/admin-error-state";
+import { runApi } from "@/lib/effect/client";
 import { HealthImportRequest } from "@/lib/effect/api";
 
 type ImportState =
@@ -21,7 +22,11 @@ type StateLayer = {
 
 const STATE_TRANSITION_MS = 180;
 
-export function HealthImport({ onImported }: { onImported: () => void }) {
+export function HealthImport({
+  onImported,
+}: {
+  onImported: () => void | Promise<void>;
+}) {
   const [layers, setLayers] = useState<StateLayer[]>([
     { id: 0, state: { kind: "idle" }, phase: "stable" },
   ]);
@@ -83,21 +88,15 @@ export function HealthImport({ onImported }: { onImported: () => void }) {
           kind: "success",
           message: `Imported ${data.metrics} metrics, ${data.days} days`,
         });
-        onImported();
+        void Promise.resolve(onImported()).catch(() => {});
         resetTimer.current = setTimeout(
           () => transitionTo({ kind: "idle" }),
           3000,
         );
       } catch (error) {
-        const transportMessage = apiErrorMessage(error);
         transitionTo({
           kind: "error",
-          message:
-            transportMessage === undefined
-              ? error instanceof Error
-                ? error.message
-                : "Import failed"
-              : `Error: ${transportMessage}`,
+          message: adminErrorMessage(error, "Import failed. Please try again."),
         });
       }
     },

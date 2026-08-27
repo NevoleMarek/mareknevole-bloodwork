@@ -2,22 +2,34 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+  AdminErrorState,
+  adminErrorMessage,
+} from "@/components/admin/admin-error-state";
 import { ReadingsTable } from "@/components/admin/readings-table";
 import { makeReadingId, type ExportData } from "@/lib/effect/api";
 import { runApi } from "@/lib/effect/client";
 import type { ReadingCursor, ReadingSummary } from "@/types/bloodwork";
 
-type MoreState = { kind: "idle" } | { kind: "loading" } | { kind: "error" };
+type MoreState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "error"; message: string };
 
 type DataState =
   | { kind: "loading" }
-  | { kind: "error" }
+  | { kind: "error"; message: string }
   | {
       kind: "ready";
       readings: ReadingSummary[];
       nextCursor: ReadingCursor | null;
       more: MoreState;
     };
+
+type DeleteState =
+  | { kind: "idle" }
+  | { kind: "pending"; id: string }
+  | { kind: "error"; id: string; message: string };
 
 const loadReadings = (cursor: ReadingCursor | null) =>
   runApi((client) =>
@@ -48,13 +60,22 @@ export default function AdminDataPage() {
   const [copyState, setCopyState] = useState<"idle" | "copying" | "copied">(
     "idle",
   );
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [deleteState, setDeleteState] = useState<DeleteState>({
+    kind: "idle",
+  });
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exportData = useRef<ExportData | null>(null);
   const exportRequest = useRef<Promise<ExportData> | null>(null);
   const exportGeneration = useRef(0);
   const readingsGeneration = useRef(0);
+  const readingsRequest = useRef(false);
+  const exportPending = useRef(false);
+  const deletePending = useRef(false);
 
   const loadFirstPage = useCallback(async () => {
+    if (readingsRequest.current) return;
+    readingsRequest.current = true;
     const generation = ++readingsGeneration.current;
     setData({ kind: "loading" });
     try {
@@ -66,9 +87,17 @@ export default function AdminDataPage() {
         nextCursor: page.nextCursor,
         more: { kind: "idle" },
       });
-    } catch {
+    } catch (error) {
       if (readingsGeneration.current !== generation) return;
-      setData({ kind: "error" });
+      setData({
+        kind: "error",
+        message: adminErrorMessage(
+          error,
+          "Could not load readings. Please try again.",
+        ),
+      });
+    } finally {
+      readingsRequest.current = false;
     }
   }, []);
 
@@ -105,11 +134,20 @@ export default function AdminDataPage() {
           more: { kind: "idle" },
         };
       });
-    } catch {
+    } catch (error) {
       if (readingsGeneration.current !== generation) return;
       setData((current) =>
         current.kind === "ready"
-          ? { ...current, more: { kind: "error" } }
+          ? {
+              ...current,
+              more: {
+                kind: "error",
+                message: adminErrorMessage(
+                  error,
+                  "Could not load more readings. Please try again.",
+                ),
+              },
+            }
           : current,
       );
     }
@@ -139,7 +177,10 @@ export default function AdminDataPage() {
   }
 
   async function handleExportMarkdown() {
+    if (exportPending.current) return;
+    exportPending.current = true;
     setCopyState("copying");
+    setExportError(null);
     try {
       const markdown = loadExportData().then(formatExportMarkdown);
       if ("ClipboardItem" in globalThis && "write" in navigator.clipboard) {
@@ -156,32 +197,61 @@ export default function AdminDataPage() {
       setCopyState("copied");
       if (copiedTimer.current) clearTimeout(copiedTimer.current);
       copiedTimer.current = setTimeout(() => setCopyState("idle"), 1400);
-    } catch {
+    } catch (error) {
       setCopyState("idle");
+      setExportError(
+        adminErrorMessage(
+          error,
+          "Could not export readings. Please try again.",
+        ),
+      );
+    } finally {
+      exportPending.current = false;
     }
+  }
+
+  async function handleDelete(id: string) {
+    if (deletePending.current) return;
+    deletePending.current = true;
+    setDeleteState({ kind: "pending", id });
+    try {
+      await runApi((client) =>
+        client.readings.delete({ params: { id: makeReadingId(id) } }),
+      );
+      exportGeneration.current += 1;
+      exportData.current = null;
+      exportRequest.current = null;
+      await loadFirstPage();
+      setDeleteState({ kind: "idle" });
+    } catch (error) {
+      setDeleteState({
+        kind: "error",
+        id,
+        message: adminErrorMessage(
+          error,
+          "Could not delete this reading. Please try again.",
+        ),
+      });
+    } finally {
+      deletePending.current = false;
+    }
+  }
+
+  function retryDelete() {
+    if (deleteState.kind !== "error") return;
+    void handleDelete(deleteState.id);
   }
 
   if (data.kind === "loading") {
     return (
-      <p role="status" className="text-sm text-zinc-500">
+      <p role="status" aria-busy="true" className="text-sm text-zinc-500">
         Loading readings…
       </p>
     );
   }
 
   if (data.kind === "error") {
-    return (
-      <div className="admin-state-panel flex flex-col items-start gap-3 text-sm text-zinc-600">
-        <p>Could not load readings.</p>
-        <button
-          type="button"
-          className="button-secondary"
-          onClick={loadFirstPage}
-        >
-          Retry
-        </button>
-      </div>
-    );
+    return <AdminErrorState message={data.message} onRetry={loadFirstPage} />;
   }
 
   return (
@@ -191,7 +261,22 @@ export default function AdminDataPage() {
         <h1 className="mt-2">Readings</h1>
         <p>Review imported panels or export the dataset as structured text.</p>
       </div>
-      <section className="admin-panel">
+      {exportError && (
+        <AdminErrorState
+          message={exportError}
+          onRetry={handleExportMarkdown}
+          retrying={copyState === "copying"}
+        />
+      )}
+      {deleteState.kind === "error" && (
+        <AdminErrorState message={deleteState.message} onRetry={retryDelete} />
+      )}
+      <section
+        className="admin-panel"
+        aria-busy={
+          data.more.kind === "loading" || deleteState.kind === "pending"
+        }
+      >
         <div className="mb-5 flex items-center justify-between gap-3">
           <p className="text-sm font-semibold text-zinc-800">
             {data.readings.length}
@@ -218,16 +303,14 @@ export default function AdminDataPage() {
         </div>
         <ReadingsTable
           readings={data.readings}
-          onDelete={async (id) => {
-            await runApi((client) =>
-              client.readings.delete({ params: { id: makeReadingId(id) } }),
-            );
-            exportGeneration.current += 1;
-            exportData.current = null;
-            exportRequest.current = null;
-            await loadFirstPage();
-          }}
+          deletingId={deleteState.kind === "pending" ? deleteState.id : null}
+          onDelete={handleDelete}
         />
+        {data.more.kind === "error" && (
+          <p role="alert" className="mt-3 text-sm text-red-700">
+            {data.more.message}
+          </p>
+        )}
         {data.nextCursor && (
           <button
             type="button"

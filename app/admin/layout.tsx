@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 
+import {
+  AdminErrorState,
+  adminErrorMessage,
+} from "@/components/admin/admin-error-state";
 import { runApi } from "@/lib/effect/client";
 
 const navItems = [
@@ -20,17 +25,33 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const logoutPending = useRef(false);
 
   // Don't show nav on login page
   if (pathname === "/admin") return <>{children}</>;
 
   async function handleLogout() {
-    await runApi((client) => client.session.delete({}));
-    router.push("/admin");
+    if (logoutPending.current) return;
+    logoutPending.current = true;
+    setLogoutError(null);
+    setIsLoggingOut(true);
+    try {
+      await runApi((client) => client.session.delete({}));
+      router.push("/admin");
+    } catch (error) {
+      setLogoutError(
+        adminErrorMessage(error, "Could not log out. Please try again."),
+      );
+    } finally {
+      logoutPending.current = false;
+      setIsLoggingOut(false);
+    }
   }
 
   return (
-    <main id="main-content" className="admin-shell">
+    <main id="main-content" className="admin-shell" aria-busy={isLoggingOut}>
       <header className="admin-chrome">
         <Link
           href="/"
@@ -81,12 +102,20 @@ export default function AdminLayout({
           <button
             type="button"
             onClick={handleLogout}
-            className="button-quiet min-h-10 shrink-0 px-3 text-xs"
+            disabled={isLoggingOut}
+            className="button-quiet min-h-10 shrink-0 px-3 text-xs disabled:opacity-40"
           >
-            Log out
+            {isLoggingOut ? "Logging out…" : "Log out"}
           </button>
         </div>
       </header>
+      {logoutError && (
+        <AdminErrorState
+          message={logoutError}
+          onRetry={handleLogout}
+          retrying={isLoggingOut}
+        />
+      )}
       {children}
     </main>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import type { VocabularyEntry } from "@/types/bloodwork";
 import type { MappedVariable } from "@/types/wizard";
 
@@ -8,7 +10,7 @@ type Props = {
   vocabulary: VocabularyEntry[];
   onMappingsChange: (mappings: MappedVariable[]) => void;
   onBack: () => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
   saving: boolean;
 };
 
@@ -20,6 +22,20 @@ export function StepReviewMapping({
   onSave,
   saving,
 }: Props) {
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSave() {
+    if (saving || submitting) return;
+    setSubmitting(true);
+    try {
+      await onSave();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const isSaving = saving || submitting;
+
   function updateMapping(index: number, newKey: string) {
     const updated = mappings.map((m, i) => {
       if (i !== index) return m;
@@ -107,11 +123,12 @@ export function StepReviewMapping({
         </button>
         <button
           type="button"
-          onClick={onSave}
-          disabled={saving}
+          onClick={handleSave}
+          disabled={isSaving}
+          aria-busy={isSaving}
           className="button-primary disabled:opacity-40"
         >
-          {saving ? "Saving..." : "Save Reading"}
+          {isSaving ? "Saving…" : "Save Reading"}
         </button>
       </div>
     </div>
