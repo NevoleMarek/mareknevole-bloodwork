@@ -11,6 +11,7 @@ import {
 } from "recharts";
 
 import { linearRegression } from "@/lib/linear-regression";
+import { formatDisplayDate } from "@/lib/date-format";
 import type { HealthMetric } from "@/types/health";
 
 export function HealthChart({
@@ -27,7 +28,7 @@ export function HealthChart({
   const chartData = useMemo(() => {
     const reg = linearRegression(data.map((d, i) => ({ x: i, y: d.value })));
     return data.map((d, i) => ({
-      date: new Date(d.date).toLocaleDateString("en-US", {
+      date: formatDisplayDate(d.date, {
         month: "short",
         day: "numeric",
       }),

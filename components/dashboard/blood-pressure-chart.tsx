@@ -11,6 +11,7 @@ import {
 } from "recharts";
 
 import { linearRegression } from "@/lib/linear-regression";
+import { formatDisplayDate } from "@/lib/date-format";
 import type { HealthMetric } from "@/types/health";
 
 export function BloodPressureChart({
@@ -33,7 +34,7 @@ export function BloodPressureChart({
     const diaMap = new Map(diastolic.map((d) => [d.date, d.value]));
 
     return systolic.map((d, i) => ({
-      date: new Date(d.date).toLocaleDateString("en-US", {
+      date: formatDisplayDate(d.date, {
         month: "short",
         day: "numeric",
       }),
