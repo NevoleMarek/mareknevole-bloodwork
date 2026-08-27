@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { formatDisplayDate } from "@/lib/date-format";
 import type { BiomarkerTrendPoint, VocabularyEntry } from "@/types/bloodwork";
 
 export type TrendState =
@@ -21,7 +22,7 @@ function buildChartData(
   points: BiomarkerTrendPoint[],
 ): { date: string; value: number }[] {
   return points.map((point) => ({
-    date: new Date(point.date).toLocaleDateString("en-US", {
+    date: formatDisplayDate(point.date, {
       month: "short",
       year: "2-digit",
     }),
