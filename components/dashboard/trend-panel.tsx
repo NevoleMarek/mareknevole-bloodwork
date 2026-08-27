@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { CHART_COLORS } from "@/components/dashboard/chart-colors";
 import type { BiomarkerTrendPoint, VocabularyEntry } from "@/types/bloodwork";
 
 export type TrendState =
@@ -81,14 +82,14 @@ function BiomarkerTrend({
           <LineChart data={chartData}>
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 9, fill: "#77827e" }}
+              tick={{ fontSize: 9, fill: CHART_COLORS.axisText }}
               axisLine={false}
               tickLine={false}
               minTickGap={20}
             />
             <YAxis
               domain={[yMin, yMax]}
-              tick={{ fontSize: 9, fill: "#77827e" }}
+              tick={{ fontSize: 9, fill: CHART_COLORS.axisText }}
               axisLine={false}
               tickLine={false}
               width={34}
@@ -98,14 +99,24 @@ function BiomarkerTrend({
               y2={max}
               fill="#70bd9f"
               fillOpacity={0.13}
+              stroke={CHART_COLORS.referenceRange}
+              strokeDasharray="4 3"
             />
             <Line
               type="monotone"
               dataKey="value"
-              stroke="#14775f"
+              stroke={CHART_COLORS.primaryData}
               strokeWidth={2}
-              dot={{ r: 2.5, fill: "#14775f", strokeWidth: 0 }}
-              activeDot={{ r: 4, fill: "#14775f", strokeWidth: 2 }}
+              dot={{
+                r: 2.5,
+                fill: CHART_COLORS.primaryData,
+                strokeWidth: 0,
+              }}
+              activeDot={{
+                r: 4,
+                fill: CHART_COLORS.primaryData,
+                strokeWidth: 2,
+              }}
               isAnimationActive={false}
             />
           </LineChart>

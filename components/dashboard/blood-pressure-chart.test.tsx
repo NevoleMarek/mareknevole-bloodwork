@@ -39,5 +39,10 @@ describe("BloodPressureChart", () => {
     expect(screen.getByText("Blood Pressure")).toBeInTheDocument();
     expect(screen.getByText("118/78")).toBeInTheDocument();
     expect(screen.getByText("mmHg")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: "Blood pressure history. Latest value 118 over 78 millimeters of mercury.",
+      }),
+    ).toBeInTheDocument();
   });
 });

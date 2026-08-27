@@ -12,6 +12,7 @@ import {
 
 import { linearRegression } from "@/lib/linear-regression";
 import type { HealthMetric } from "@/types/health";
+import { CHART_COLORS } from "@/components/dashboard/chart-colors";
 
 export function HealthChart({
   label,
@@ -59,13 +60,13 @@ export function HealthChart({
           <LineChart data={chartData}>
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 10, fill: "#77827e" }}
+              tick={{ fontSize: 10, fill: CHART_COLORS.axisText }}
               axisLine={false}
               tickLine={false}
               minTickGap={24}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: "#77827e" }}
+              tick={{ fontSize: 10, fill: CHART_COLORS.axisText }}
               axisLine={false}
               tickLine={false}
               width={36}
@@ -73,31 +74,43 @@ export function HealthChart({
             />
             <Tooltip
               isAnimationActive={false}
-              cursor={{ stroke: "rgba(20, 119, 95, 0.16)" }}
+              cursor={{ stroke: CHART_COLORS.cursor }}
               contentStyle={{
                 fontFamily:
                   '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                 fontSize: 12,
+                color: CHART_COLORS.tooltipText,
+                backgroundColor: CHART_COLORS.tooltipBackground,
                 border: "1px solid rgba(23, 35, 31, 0.12)",
                 borderRadius: 12,
                 boxShadow: "0 12px 30px rgba(23, 35, 31, 0.12)",
               }}
+              labelStyle={{ color: CHART_COLORS.tooltipText }}
+              itemStyle={{ color: CHART_COLORS.tooltipText }}
             />
             <Line
               type="monotone"
               dataKey="value"
               name={label}
-              stroke="#14775f"
+              stroke={CHART_COLORS.primaryData}
               strokeWidth={2.25}
-              dot={{ r: 2.5, fill: "#14775f", strokeWidth: 0 }}
-              activeDot={{ r: 4, fill: "#14775f", strokeWidth: 2 }}
+              dot={{
+                r: 2.5,
+                fill: CHART_COLORS.primaryData,
+                strokeWidth: 0,
+              }}
+              activeDot={{
+                r: 4,
+                fill: CHART_COLORS.primaryData,
+                strokeWidth: 2,
+              }}
               isAnimationActive={false}
             />
             <Line
               type="monotone"
               dataKey="trend"
               name="Trend"
-              stroke="#9ba5a1"
+              stroke={CHART_COLORS.primaryTrend}
               strokeWidth={1.25}
               strokeDasharray="6 4"
               dot={false}

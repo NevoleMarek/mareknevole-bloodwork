@@ -71,6 +71,11 @@ describe("TrendPanel", () => {
     expect(screen.getAllByText("Glucose")).toHaveLength(2);
     expect(screen.getByText("70–100 mg/dL")).toBeInTheDocument();
     expect(screen.getByText(/Fasting glucose/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: "Glucose history. Latest value 95 mg/dL; reference range 70 to 100.",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("renders multiple selected biomarkers", () => {

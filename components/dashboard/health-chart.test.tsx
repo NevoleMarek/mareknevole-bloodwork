@@ -16,5 +16,10 @@ describe("HealthChart", () => {
     expect(screen.getByText("Resting HR")).toBeInTheDocument();
     expect(screen.getByText("55")).toBeInTheDocument();
     expect(screen.getByText("bpm")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: "Resting HR history. Latest value 55 bpm.",
+      }),
+    ).toBeInTheDocument();
   });
 });
