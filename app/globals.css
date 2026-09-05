@@ -37,7 +37,6 @@
 
 html {
   scroll-behavior: auto;
-  scroll-padding-top: 7rem;
 }
 
 html,
@@ -98,14 +97,10 @@ label[class*="cursor-pointer"] {
     border-color var(--duration-control) var(--ease-out-strong);
 }
 
-button[data-pointer-pressed="true"]:not(:disabled),
-nav a[data-pointer-pressed="true"],
-a:is(
-    .button-primary,
-    .button-secondary,
-    .button-quiet
-  )[data-pointer-pressed="true"],
-label[class*="cursor-pointer"][data-pointer-pressed="true"] {
+button:active:not(:disabled),
+nav a:active,
+a:is(.button-primary, .button-secondary, .button-quiet):active,
+label[class*="cursor-pointer"]:active {
   transform: scale(0.98);
   transition-duration: var(--duration-control);
 }
@@ -139,10 +134,6 @@ label[class*="cursor-pointer"][data-pointer-pressed="true"] {
 .data-value,
 table {
   font-variant-numeric: tabular-nums;
-}
-
-.section-nav-indicator {
-  transition: transform var(--duration-control) var(--ease-out-strong);
 }
 
 .eyebrow {
@@ -643,7 +634,6 @@ table {
   label[class*="cursor-pointer"],
   .interactive-card,
   .biomarker-table tbody tr,
-  .section-nav-indicator,
   .admin-state-shell,
   .admin-state-panel,
   .admin-pdf-preview,
@@ -656,16 +646,11 @@ table {
     transition-duration: var(--duration-feedback) !important;
   }
 
-  button[data-pointer-pressed="true"]:not(:disabled),
-  nav a[data-pointer-pressed="true"],
-  a:is(
-      .button-primary,
-      .button-secondary,
-      .button-quiet
-    )[data-pointer-pressed="true"],
-  label[class*="cursor-pointer"][data-pointer-pressed="true"],
+  button:active:not(:disabled),
+  nav a:active,
+  a:is(.button-primary, .button-secondary, .button-quiet):active,
+  label[class*="cursor-pointer"]:active,
   .interactive-card:hover,
-  .section-nav-indicator,
   .admin-state-shell,
   .admin-state-panel,
   .admin-pdf-preview,
@@ -684,23 +669,11 @@ table {
     animation-name: extraction-variable-cell-fade;
   }
 
-  button[data-pointer-pressed="true"]:not(:disabled),
-  nav a[data-pointer-pressed="true"],
-  a:is(
-      .button-primary,
-      .button-secondary,
-      .button-quiet
-    )[data-pointer-pressed="true"],
-  label[class*="cursor-pointer"][data-pointer-pressed="true"] {
+  button:active:not(:disabled),
+  nav a:active,
+  a:is(.button-primary, .button-secondary, .button-quiet):active,
+  label[class*="cursor-pointer"]:active {
     opacity: 0.82;
-  }
-
-  .section-nav-indicator {
-    opacity: 0;
-  }
-
-  .section-nav-indicator[data-active="true"] {
-    opacity: 1;
   }
 
   @starting-style {

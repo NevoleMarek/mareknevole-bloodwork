@@ -172,9 +172,12 @@ user actions.
 ## Verification
 
 ```sh
-bun run check        # fast: format + lint + typecheck + test
-bun run check:full   # fast suite + OpenNext Worker build + deployment contract
+bun run check        # read-only, sequential: format check + lint + typecheck + test
+bun run check:full   # fast suite + OpenNext Worker build + deployment artifacts
 ```
+
+The deployment verification checks generated Worker, server handler, assets, and
+OpenNext cache entries (including the admin prerender and dynamic dashboard).
 
 ## Deploy
 
