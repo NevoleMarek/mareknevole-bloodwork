@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
 
-import { PointerPressFeedback } from "@/components/ui/pointer-press-feedback";
-
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -69,7 +67,6 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        <PointerPressFeedback />
         <a href="#main-content" className="skip-link">
           Skip to content
         </a>
