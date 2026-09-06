@@ -10,7 +10,6 @@ import {
   YAxis,
 } from "recharts";
 
-import { linearRegression } from "@/lib/linear-regression";
 import { formatDisplayDate } from "@/lib/date-format";
 import type { HealthMetric } from "@/types/health";
 
@@ -25,17 +24,10 @@ export function HealthChart({
 }) {
   const latest = data.at(-1);
 
-  const chartData = useMemo(() => {
-    const reg = linearRegression(data.map((d, i) => ({ x: i, y: d.value })));
-    return data.map((d, i) => ({
-      date: formatDisplayDate(d.date, {
-        month: "short",
-        day: "numeric",
-      }),
-      value: d.value,
-      trend: reg.slope * i + reg.intercept,
-    }));
-  }, [data]);
+  const chartData = useMemo(
+    () => data.map((d) => ({ date: Date.parse(d.date), value: d.value })),
+    [data],
+  );
 
   return (
     <article className="surface overflow-hidden p-4 sm:p-5">
@@ -60,6 +52,15 @@ export function HealthChart({
           <LineChart data={chartData}>
             <XAxis
               dataKey="date"
+              type="number"
+              scale="time"
+              domain={["dataMin", "dataMax"]}
+              tickFormatter={(value: number) =>
+                formatDisplayDate(new Date(value).toISOString().slice(0, 10), {
+                  month: "short",
+                  day: "numeric",
+                })
+              }
               tick={{ fontSize: 10, fill: "#77827e" }}
               axisLine={false}
               tickLine={false}
@@ -73,6 +74,16 @@ export function HealthChart({
               domain={["dataMin - 1", "dataMax + 1"]}
             />
             <Tooltip
+              labelFormatter={(value) =>
+                formatDisplayDate(
+                  new Date(Number(value)).toISOString().slice(0, 10),
+                  {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  },
+                )
+              }
               isAnimationActive={false}
               cursor={{ stroke: "rgba(20, 119, 95, 0.16)" }}
               contentStyle={{
@@ -92,17 +103,6 @@ export function HealthChart({
               strokeWidth={2.25}
               dot={{ r: 2.5, fill: "#14775f", strokeWidth: 0 }}
               activeDot={{ r: 4, fill: "#14775f", strokeWidth: 2 }}
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="trend"
-              name="Trend"
-              stroke="#9ba5a1"
-              strokeWidth={1.25}
-              strokeDasharray="6 4"
-              dot={false}
-              activeDot={false}
               isAnimationActive={false}
             />
           </LineChart>

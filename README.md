@@ -1,193 +1,64 @@
 # bloodwork.mareknevole.com
 
-A public dashboard for tracking personal blood work over time. Better decisions come from better data — structured lab results, supplements, and health metrics, all in one place and open for anyone to learn from.
+Public dashboard for personal blood work, supplements, and health metrics, with password-protected administration.
 
-## Stack
+## Run locally
 
-- Next.js 16 compiled by OpenNext for Cloudflare Workers
-- Alchemy v2 and Effect 4 own the production Worker, bindings, secrets, domain, and URL output
-- Cloudflare D1 database
-- Tailwind CSS 4
-- Recharts
-- Vitest + Testing Library
+Use Bun (CI uses 1.4.0). [Next.js development](next.config.ts) loads local Cloudflare bindings from [wrangler.dev.jsonc](wrangler.dev.jsonc); initialize its local D1 database before opening the dashboard.
 
-## SEO
-
-The following SEO infrastructure is in place:
-
-| File                       | Purpose                                                                                    |
-| -------------------------- | ------------------------------------------------------------------------------------------ |
-| `app/layout.tsx`           | Open Graph, Twitter Card (`summary`), canonical URL, `robots` directives, meta description |
-| `app/robots.ts`            | `robots.txt` — allows `/`, disallows `/admin` and `/api`                                   |
-| `app/sitemap.ts`           | XML sitemap for `/` (weekly changeFrequency)                                               |
-| `app/favicon.ico`          | Favicon                                                                                    |
-| `app/layout.tsx` (JSON-LD) | `WebApplication` schema with author link back to mareknevole.com                           |
-
-### Structured data
-
-```json
-{
-  "@type": "WebApplication",
-  "name": "Bloodwork",
-  "applicationCategory": "HealthApplication",
-  "url": "https://bloodwork.mareknevole.com",
-  "author": {
-    "@type": "Person",
-    "name": "Marek Nevole",
-    "url": "https://mareknevole.com"
-  }
-}
-```
-
-### Future improvements
-
-- Dedicated OG image (1200x630) for richer social sharing previews
-- `icon.svg` alongside existing `favicon.ico`
-- Apple touch icon
-
-## Development
-
-```sh
+```bash
 bun install
-bun run dev
+bun run db:migrate # applies db/migrations to local D1 only
+bun run dev # http://localhost:3000
 ```
 
-## Application architecture
+The empty database is enough to start. To sign in at `/admin`, create a local `.dev.vars` file beside `wrangler.dev.jsonc` containing `ADMIN_PASSWORD=<your-local-password>`. Add `GEMINI_API_KEY=<your-key>` only for AI extraction, mapping, and research; those requests use the external Gemini service and may incur charges. Restart the dev server after changing bindings.
 
-The API is declared once in the client-safe `lib/effect/api.ts` contract with
-Effect v4's `effect/unstable/httpapi`. Its endpoint schemas drive request
-decoding, response encoding, typed failures, OpenAPI at `/api/openapi.json`,
-URL builders, and the generated browser client. Groups follow user goals and
-resources (`dashboard`, `readings`, `vocabulary`, `supplements`, `changelog`,
-`session`, `health`, and `import`) rather than database/provider adapters.
-Handler groups invoke named Effect workflows and services; one optional Next
-catch-all route adapts the resulting Fetch handler instead of maintaining a
-route file per endpoint. `lib/effect/runtime.ts` remains the sole OpenNext
-context adapter and supplies D1 and secret bindings to the live graph.
-Configuration is read from a binding-backed `ConfigProvider`: `Config.redacted`
-keeps the admin password and Gemini key as `Redacted` values until the trusted
-Auth or Gemini adapter needs them.
+Keep `.dev.vars` out of Git: add `.dev.vars` to the local exclude file located by `git rev-parse --git-path info/exclude` before creating it. The repository does not currently ignore that filename. Ordinary `.env*` values are not forwarded into OpenNext's local Cloudflare bindings. See [runtime configuration](lib/effect/config.ts) for required values by operation.
 
-The live graph is intentionally topological:
+The optional `db:seed` script only prints SQL from the existing JSON data; it does not apply it. Review [the generator](db/migrate.ts) before importing data. [Migrations](db/migrations) are the schema source; the local Wrangler config is not a production deployment manifest.
 
-```text
-CloudflareRuntime -> ApplicationConfig -> Gemini -> ProviderWorkflows
-CloudflareRuntime -> Repository
-Repository + DataCache -> Dashboard, Bloodwork, Health, Supplements
-ApplicationConfig -> Auth
+## Check changes
+
+```bash
+bun run check # read-only format check, lint, typecheck, and tests
+
+# Optional release check: also builds the OpenNext Worker and verifies artifacts.
+# bun run check:full
 ```
 
-`Repository` is the D1 boundary and decodes persisted rows—including status
-and aggregation enums—before mapping them to canonical domain schemas.
-`Gemini` is the only SDK boundary; its layer acquires one redacted-key client
-and the finite flash/pro model handles, while each request remains
-interruptible. `DataCache` preserves Next/OpenNext `unstable_cache` and tag
-invalidation semantics; it is not an in-memory cache substitute.
-The public dashboard cache reads vocabulary, lab metadata/measurements, and
-active supplements in one D1 batch so a response cannot combine rows from
-different commits. Mutable vocabulary and supplement rows carry monotonic
-versions; authenticated mutations include the version they read and receive
-a `409 Conflict` when another request has already changed that row. Vocabulary
-updates use partial PATCH semantics so flag toggles do not replay stale
-metadata.
-`lib/effect/api-server.ts` composes the contract, handler groups, platform
-services, and application layer into the Fetch handler consumed by Next.
-`lib/effect/client.ts` uses `HttpApiClient` so browser calls share the same URL,
-payload, success, and error schemas. Server components cross their Effect
-boundary through `lib/effect/run.ts`.
+Checks run sequentially and stop at the first failure. [Deployment verification](scripts/verify-deployment.ts) checks the Worker, server handler, assets, and cache artifacts. See [package scripts](package.json) for individual checks and explicit formatting or lint fixes.
 
-The beta.102 test package does not register a compatible `it.effect` Vitest
-adapter, so Effect service tests use an explicit `Effect.runPromise` bridge in
-the test files. Production `Effect.runPromise` is limited to server-component
-and generated-client boundaries; the HttpApi runtime owns the Next Fetch
-boundary.
+## Understand data access
 
-Expected failures are tagged schema errors: malformed requests and validation
-failures are `400`, missing resources are `404`, conflicts are `409`, provider
-failures are `502`, and missing configuration or D1 failures are `503`. Defects
-and interruption (including framework route-parameter failures) are not
-converted into application responses.
+Dashboard data is public, including health metrics, biomarker trends, and the changelog. These reads and `/api/openapi.json` are accessible to any network client. Visibility settings are publication decisions: keep sensitive information out of public dashboard fields and changelog entries.
 
-Readings and public changelog use cursor pagination with a `nextCursor`; health
-requests are bounded by the selected period, while biomarker trend requests use
-one of the bounded `1M`, `6M`, or `1Y` windows (the chart currently requests
-`1Y`, with no unbounded `ALL` trend). The vocabulary is a small
-administrator-maintained dictionary and active supplements are bounded current
-state, so they remain ordinary list resources. Full data export is a separate
-explicit `/api/readings/export` operation because it is expensive and not needed
-for the summaries view.
+Reading management/export, vocabulary, supplements, health administration, changelog writes, and AI import workflows require a valid `bloodwork-session` cookie. Login and logout are unauthenticated session endpoints. The [API contract](lib/effect/api.ts) defines exact routes, schemas, and authentication requirements; [API handlers](lib/effect/api-server.ts) enforce them.
 
-### API access and threat model
+There is one administrator password and no per-user roles. [Authentication](lib/effect/services.ts) validates signed HMAC tokens with a seven-day expiry. Cookies are HttpOnly, SameSite=Strict, and Secure outside development. [Next middleware](middleware.ts) checks cookie presence for admin navigation; API middleware validates the session itself. Same-origin browser requests are a convention, not an access restriction.
 
-The API is not private or same-origin-only. It intentionally combines public
-dashboard reads, unauthenticated session-management endpoints, and operations
-that require an administrator session. The browser client uses the same-origin
-API URL, but that is a client usage convention—not an authorization boundary.
-The public dashboard reads are:
-
-- `GET /api/dashboard/health?period=1M|6M|1Y|ALL`
-- `GET /api/biomarkers/:key/trend?period=1M|6M|1Y`
-- `GET /api/changelog` (optionally with its cursor query)
-
-These endpoints require no session and can be requested directly by any network
-client. Dashboard responses are selected for public display: biomarker and
-health visibility settings are intentional disclosure decisions, and the public
-changelog is exposed by design. Do not store sensitive information in data that
-is configured for the dashboard or changelog. `GET /api/openapi.json` is also
-public and describes the API contract.
-
-The following operations require a valid `bloodwork-session` cookie and are the
-administrator surface:
-
-- readings: `GET /api/readings`, `GET /api/readings/export`, `POST /api/readings`,
-  and `DELETE /api/readings/:id`
-- changelog writes: `PUT /api/changelog/:id` and `DELETE /api/changelog/:id`
-- vocabulary: `GET /api/vocabulary`, `POST /api/vocabulary`,
-  `PUT /api/vocabulary/:key`, and `DELETE /api/vocabulary/:key`
-- supplements: `GET /api/supplements`, `POST /api/supplements`,
-  `PUT /api/supplements/:id`, and `DELETE /api/supplements/:id`
-- health administration: `GET /api/health/metrics`,
-  `PATCH /api/health/metrics/:metric`, and `POST /api/health/import`
-- import and provider workflows: `POST /api/import/extract`,
-  `POST /api/import/map`, and `POST /api/import/research`
-
-`POST /api/session` is the unauthenticated login endpoint: it accepts the
-administrator password and sets the session cookie. `DELETE /api/session` is
-also unguarded and expires that cookie. The shared HttpApi security middleware
-validates the cookie's signed HMAC token and seven-day expiry on every protected
-request. The cookie is `HttpOnly`, `SameSite=Strict`, and `Secure` outside
-development. There is one administrator password and no per-user roles. Next
-middleware only redirects `/admin` pages when the cookie is absent; it does not
-authenticate API requests, and a present-but-invalid cookie is rejected by the
-API middleware.
-
-Production operations must therefore treat the public endpoints as internet
-facing and the administrator cookie/password as sensitive credentials. The
-application does not provide API-level rate limiting, origin allowlisting,
-client-specific kill switches, idempotency keys, or automatic mutation retries;
-platform or edge controls are responsible for any additional abuse protection.
-Mutations are not automatically retried, and the browser only retries explicit
-user actions.
-
-## Verification
-
-```sh
-bun run check        # fast: format + lint + typecheck + test
-bun run check:full   # fast suite + OpenNext Worker build + deployment contract
-```
+The app provides no API rate limiting, origin allowlist, or client-specific revocation. Add edge controls if needed. Mutations have no idempotency keys or automatic retries; concurrent edits can return `409 Conflict` and require reloading before retrying.
 
 ## Deploy
 
-```sh
-bun run build:worker
-bun run verify:deployment
-bun run plan:production
+[Alchemy](alchemy.run.ts) owns the OpenNext Worker, D1 migrations, cache bindings, secrets, and production domain. Supply `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `ADMIN_PASSWORD`, and `GEMINI_API_KEY` in the deployment environment.
+
+```bash
+# Requires Cloudflare credentials: builds and verifies artifacts, then plans prod.
+# bun run plan:production
+
+# First production migration only: review the plan and resource identities below.
+# bun alchemy deploy --stage prod --adopt
+
+# Later releases: runs the full check and publishes to production.
+# bun run deploy:production
 ```
 
-`wrangler.dev.jsonc` supports local Next and D1 development only. It is not a production deployment manifest.
+Before the first adoption, confirm ownership of Worker `bloodwork` and domain `bloodwork.mareknevole.com`, plus the existing resources:
 
-The first production migration is intentionally manual. Review the plan, confirm that D1 name `bloodwork-db` has existing database ID `59c89aab-650f-4814-9182-dc6691e74237` and KV title `NEXT_INC_CACHE_KV` has existing namespace ID `3ce48886bf744930a9e9114f7c707019`, then run `bun alchemy deploy --stage prod --adopt`. The deployment environment needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ADMIN_PASSWORD`, and `GEMINI_API_KEY`. Alchemy builds the Worker, seeds the build-scoped KV entries, initializes the D1 tag table, and publishes the Worker.
+| Resource               | Existing identity                      |
+| ---------------------- | -------------------------------------- |
+| D1 `bloodwork-db`      | `59c89aab-650f-4814-9182-dc6691e74237` |
+| KV `NEXT_INC_CACHE_KV` | `3ce48886bf744930a9e9114f7c707019`     |
 
-After adoption, pushes to `main` deploy through
-`.github/workflows/deploy-production.yml`. Its GitHub `production` environment
-supplies the same four values.
+The [production build](scripts/build-production-opennext.ts) prepares the Worker and remote cache before publication. Unlike `deploy:production`, `plan:production` does not run the source check suite. Confirm adoption has completed before enabling automated releases: the [production workflow](.github/workflows/deploy-production.yml) checks and deploys pushes to `main`, with the account ID variable and three secrets from GitHub's `production` environment.

@@ -10,7 +10,6 @@ import {
   YAxis,
 } from "recharts";
 
-import { linearRegression } from "@/lib/linear-regression";
 import { formatDisplayDate } from "@/lib/date-format";
 import type { HealthMetric } from "@/types/health";
 
@@ -23,25 +22,18 @@ export function BloodPressureChart({
 }) {
   const latestSys = systolic.at(-1);
   const latestDia = diastolic.at(-1);
+  const hasLatestPair =
+    latestSys && latestDia && latestSys.date === latestDia.date;
 
   const chartData = useMemo(() => {
-    const sysReg = linearRegression(
-      systolic.map((d, i) => ({ x: i, y: d.value })),
-    );
-    const diaReg = linearRegression(
-      diastolic.map((d, i) => ({ x: i, y: d.value })),
-    );
+    const sysMap = new Map(systolic.map((d) => [d.date, d.value]));
     const diaMap = new Map(diastolic.map((d) => [d.date, d.value]));
+    const dates = new Set([...sysMap.keys(), ...diaMap.keys()]);
 
-    return systolic.map((d, i) => ({
-      date: formatDisplayDate(d.date, {
-        month: "short",
-        day: "numeric",
-      }),
-      systolic: d.value,
-      diastolic: diaMap.get(d.date) ?? null,
-      sysTrend: sysReg.slope * i + sysReg.intercept,
-      diaTrend: diaReg.slope * i + diaReg.intercept,
+    return [...dates].sort().map((date) => ({
+      date: Date.parse(date),
+      systolic: sysMap.get(date) ?? null,
+      diastolic: diaMap.get(date) ?? null,
     }));
   }, [systolic, diastolic]);
 
@@ -51,7 +43,7 @@ export function BloodPressureChart({
         <span className="pt-1 text-xs font-semibold tracking-[0.04em] text-zinc-600 uppercase">
           Blood Pressure
         </span>
-        {latestSys && latestDia && (
+        {hasLatestPair && (
           <span className="text-right">
             <span className="data-value text-2xl leading-none font-semibold tracking-[-0.04em] text-zinc-950">
               {latestSys.value}/{latestDia.value}
@@ -62,8 +54,8 @@ export function BloodPressureChart({
       </div>
       <div
         role="img"
-        aria-label={`Blood pressure history. Latest value ${
-          latestSys && latestDia
+        aria-label={`Blood pressure history. Latest paired value ${
+          hasLatestPair
             ? `${latestSys.value} over ${latestDia.value} millimeters of mercury`
             : "unavailable"
         }.`}
@@ -72,6 +64,15 @@ export function BloodPressureChart({
           <LineChart data={chartData}>
             <XAxis
               dataKey="date"
+              type="number"
+              scale="time"
+              domain={["dataMin", "dataMax"]}
+              tickFormatter={(value: number) =>
+                formatDisplayDate(new Date(value).toISOString().slice(0, 10), {
+                  month: "short",
+                  day: "numeric",
+                })
+              }
               tick={{ fontSize: 10, fill: "#77827e" }}
               axisLine={false}
               tickLine={false}
@@ -85,6 +86,16 @@ export function BloodPressureChart({
               domain={["dataMin - 5", "dataMax + 5"]}
             />
             <Tooltip
+              labelFormatter={(value) =>
+                formatDisplayDate(
+                  new Date(Number(value)).toISOString().slice(0, 10),
+                  {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  },
+                )
+              }
               isAnimationActive={false}
               cursor={{ stroke: "rgba(20, 119, 95, 0.16)" }}
               contentStyle={{
@@ -115,28 +126,6 @@ export function BloodPressureChart({
               strokeDasharray="4 3"
               dot={{ r: 2.5, fill: "#4e759d", strokeWidth: 0 }}
               activeDot={{ r: 4, fill: "#4e759d", strokeWidth: 2 }}
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="sysTrend"
-              name="Sys Trend"
-              stroke="#a5afab"
-              strokeWidth={1}
-              strokeDasharray="6 4"
-              dot={false}
-              activeDot={false}
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="diaTrend"
-              name="Dia Trend"
-              stroke="#bdc6c2"
-              strokeWidth={1}
-              strokeDasharray="2 3"
-              dot={false}
-              activeDot={false}
               isAnimationActive={false}
             />
           </LineChart>

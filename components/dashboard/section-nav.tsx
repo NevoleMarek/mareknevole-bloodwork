@@ -1,7 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
-
 const SECTIONS = [
   { id: "metrics", label: "Metrics" },
   { id: "health", label: "Health" },
@@ -9,36 +5,7 @@ const SECTIONS = [
   { id: "changelog", label: "Changelog" },
 ] as const;
 
-type SectionId = (typeof SECTIONS)[number]["id"];
-
 export function SectionNav() {
-  const [active, setActive] = useState<SectionId>("metrics");
-
-  useEffect(() => {
-    function onScroll() {
-      const offset = 140;
-      let current: SectionId = SECTIONS[0].id;
-      for (const { id } of SECTIONS) {
-        const el = document.getElementById(id);
-        if (el && el.getBoundingClientRect().top <= offset) {
-          current = id;
-        }
-      }
-      setActive(current);
-    }
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  function handleClick(id: SectionId) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const top = el.getBoundingClientRect().top + window.scrollY - 112;
-    window.scrollTo({ top, behavior: "auto" });
-  }
-
   return (
     <div className="sticky top-3 z-50 mt-4">
       <nav
@@ -60,26 +27,13 @@ export function SectionNav() {
         <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex min-w-max items-center">
             {SECTIONS.map(({ id, label }) => (
-              <button
+              <a
                 key={id}
-                type="button"
-                onClick={() => handleClick(id)}
-                aria-current={active === id ? "location" : undefined}
-                className={`relative min-h-11 rounded-xl px-2 text-[0.68rem] font-semibold whitespace-nowrap sm:px-3 sm:text-[0.72rem] ${
-                  active === id
-                    ? "text-emerald-800"
-                    : "text-zinc-500 hover:text-zinc-900"
-                }`}
+                href={`#${id}`}
+                className="inline-flex min-h-11 items-center rounded-xl px-2 text-[0.68rem] font-semibold whitespace-nowrap text-zinc-500 hover:text-zinc-900 sm:px-3 sm:text-[0.72rem]"
               >
                 {label}
-                <span
-                  aria-hidden="true"
-                  data-active={active === id}
-                  className={`section-nav-indicator absolute right-2 bottom-1.5 left-2 h-0.5 origin-left rounded-full bg-emerald-700 sm:right-3 sm:left-3 ${
-                    active === id ? "scale-x-100" : "scale-x-0"
-                  }`}
-                />
-              </button>
+              </a>
             ))}
           </div>
         </div>
