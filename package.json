@@ -13,7 +13,7 @@
     "format:check": "oxfmt --check",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
+    "check": "bun run --parallel --no-exit-on-error format:check lint typecheck test",
     "build:worker": "opennextjs-cloudflare build --skipWranglerConfigCheck",
     "build:production-worker": "bun run scripts/build-production-opennext.ts",
     "check:full": "bun run check && bun run build:worker && bun run verify:deployment",
