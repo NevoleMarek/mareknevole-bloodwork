@@ -11,6 +11,8 @@ import {
 } from "recharts";
 
 import { formatDisplayDate } from "@/lib/date-format";
+import { healthValueFormat } from "@/lib/health-metrics";
+import { formatDateSpan, formatValueRange } from "@/lib/series-summary";
 import type { BiomarkerTrendPoint, VocabularyEntry } from "@/types/bloodwork";
 
 export type TrendState =
@@ -30,6 +32,25 @@ function buildChartData(
   }));
 }
 
+function RemoveTrendButton({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onRemove}
+      aria-label={`Remove ${label} trend`}
+      className="text-muted ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg hover:bg-zinc-100 hover:text-zinc-900"
+    >
+      <span aria-hidden="true">×</span>
+    </button>
+  );
+}
+
 function BiomarkerTrend({
   entry,
   points,
@@ -40,7 +61,7 @@ function BiomarkerTrend({
   onRemove: () => void;
 }) {
   const chartData = useMemo(() => buildChartData(points), [points]);
-  const latest = points.at(-1)?.value ?? null;
+  const latest = points[points.length - 1].value;
   const { min, max } = entry.referenceRange;
 
   const allValues = chartData.map((d) => d.value);
@@ -56,43 +77,35 @@ function BiomarkerTrend({
         <span className="min-w-[100px] text-sm font-semibold tracking-[-0.01em] text-zinc-900">
           {entry.label}
         </span>
-        <span className="data-value text-xs text-zinc-500">
+        <span className="data-value text-muted text-xs">
           {min}–{max} {entry.unit}
         </span>
-        {latest !== null && (
-          <span className="data-value rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-900">
-            Latest <strong>{latest}</strong>
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label={`Remove ${entry.label} trend`}
-          className="ml-auto flex h-10 w-10 items-center justify-center rounded-full text-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
-        >
-          <span aria-hidden="true">×</span>
-        </button>
+        <span className="data-value bg-background text-foreground rounded-full px-2.5 py-1 text-xs">
+          Latest <strong>{latest}</strong>
+        </span>
+        <RemoveTrendButton label={entry.label} onRemove={onRemove} />
       </div>
       <div
         className="px-2 pb-3 sm:px-4"
         role="img"
-        aria-label={`${entry.label} history. Latest value ${latest ?? "unavailable"} ${entry.unit}; reference range ${min} to ${max}.`}
+        aria-label={`${entry.label}, ${formatDateSpan(points.map((point) => point.date))}: ${formatValueRange(points)} ${entry.unit}, latest ${latest}; reference range ${min} to ${max}.`}
       >
         <ResponsiveContainer width="100%" height={110}>
-          <LineChart data={chartData}>
+          <LineChart data={chartData} accessibilityLayer={false}>
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 9, fill: "#77827e" }}
+              tick={{ fontSize: 12, fill: "var(--muted)" }}
               axisLine={false}
               tickLine={false}
               minTickGap={20}
             />
             <YAxis
               domain={[yMin, yMax]}
-              tick={{ fontSize: 9, fill: "#77827e" }}
+              tick={{ fontSize: 12, fill: "var(--muted)" }}
+              tickFormatter={healthValueFormat(entry.unit)}
               axisLine={false}
               tickLine={false}
-              width={34}
+              width="auto"
             />
             <ReferenceArea
               y1={min}
@@ -103,10 +116,10 @@ function BiomarkerTrend({
             <Line
               type="monotone"
               dataKey="value"
-              stroke="#14775f"
+              stroke="var(--accent)"
               strokeWidth={2}
-              dot={{ r: 2.5, fill: "#14775f", strokeWidth: 0 }}
-              activeDot={{ r: 4, fill: "#14775f", strokeWidth: 2 }}
+              dot={{ r: 2.5, fill: "var(--accent)", strokeWidth: 0 }}
+              activeDot={{ r: 4, fill: "var(--accent)", strokeWidth: 2 }}
               isAnimationActive={false}
             />
           </LineChart>
@@ -135,62 +148,87 @@ export function TrendPanel({
     return map;
   }, [vocabulary]);
 
-  if (selectedKeys.length === 0) return null;
+  const loadingLabels = selectedKeys.flatMap((key) => {
+    const label = vocabMap.get(key)?.label;
+    return label && (trends[key]?.kind ?? "loading") === "loading"
+      ? [label]
+      : [];
+  });
+  const status = (
+    <p role="status" className="sr-only">
+      {loadingLabels.length > 0 && `Loading ${loadingLabels.join(", ")} trend…`}
+    </p>
+  );
+
+  if (selectedKeys.length === 0) return status;
 
   return (
-    <div className="surface overflow-hidden">
-      {selectedKeys.map((key, i) => {
-        const entry = vocabMap.get(key);
-        if (!entry) return null;
-        const trend = trends[key];
-        return (
-          <div
-            key={key}
-            className={
-              i < selectedKeys.length - 1 ? "border-b border-zinc-900/8" : ""
-            }
-          >
-            {!trend || trend.kind === "loading" ? (
-              <div className="px-5 py-8 text-sm text-zinc-500" role="status">
-                Loading {entry.label} trend…
-              </div>
-            ) : trend.kind === "error" ? (
-              <div className="flex items-center justify-between gap-4 px-5 py-6 text-sm text-zinc-600">
-                <span>Could not load {entry.label}.</span>
-                <button
-                  type="button"
-                  className="button-secondary"
-                  onClick={() => onRetry(key)}
-                >
-                  Retry
-                </button>
-              </div>
-            ) : (
-              <BiomarkerTrend
-                entry={entry}
-                points={trend.points}
-                onRemove={() => onRemove(key)}
-              />
-            )}
-          </div>
-        );
-      })}
-      <div className="border-t border-zinc-900/8 bg-zinc-50/70 px-4 py-4 sm:px-5">
-        {selectedKeys.map((key) => {
+    <>
+      {status}
+      <div className="surface overflow-hidden">
+        {selectedKeys.map((key, i) => {
           const entry = vocabMap.get(key);
-          if (!entry || !entry.description) return null;
+          if (!entry) return null;
+          const trend = trends[key];
           return (
-            <div key={key} className="mb-3 last:mb-0">
-              <div className="text-xs font-semibold text-zinc-800">
-                {entry.label}
-              </div>
-              <div className="mt-1 text-xs leading-5 text-zinc-600">
-                {entry.description}
-              </div>
+            <div
+              key={key}
+              className={
+                i < selectedKeys.length - 1 ? "border-b border-zinc-900/8" : ""
+              }
+            >
+              {!trend || trend.kind === "loading" ? (
+                <div className="text-muted px-5 py-8 text-sm">
+                  Loading {entry.label} trend…
+                </div>
+              ) : trend.kind === "error" || trend.points.length === 0 ? (
+                <div className="flex items-center gap-2 py-4 pr-4 pl-5 text-sm text-zinc-600 sm:pr-5">
+                  <span className="flex-1">
+                    {trend.kind === "error"
+                      ? `Could not load ${entry.label}.`
+                      : `No ${entry.label} results in the last 12 months.`}
+                  </span>
+                  {trend.kind === "error" && (
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={() => onRetry(key)}
+                    >
+                      Retry
+                    </button>
+                  )}
+                  <RemoveTrendButton
+                    label={entry.label}
+                    onRemove={() => onRemove(key)}
+                  />
+                </div>
+              ) : (
+                <BiomarkerTrend
+                  entry={entry}
+                  points={trend.points}
+                  onRemove={() => onRemove(key)}
+                />
+              )}
             </div>
           );
         })}
+        <div className="border-t border-zinc-900/8 bg-zinc-50/70 px-4 py-4 sm:px-5">
+          {selectedKeys.map((key) => {
+            const entry = vocabMap.get(key);
+            if (!entry || !entry.description) return null;
+            return (
+              <div key={key} className="mb-3 last:mb-0">
+                <div className="text-xs font-semibold text-zinc-800">
+                  {entry.label}
+                </div>
+                <div className="mt-1 text-xs leading-5 text-zinc-600">
+                  {entry.description}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

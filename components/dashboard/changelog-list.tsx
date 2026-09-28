@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { formatDisplayDate } from "@/lib/date-format";
 import { apiUrls, runApi } from "@/lib/effect/client";
 import type {
   ChangelogCursor,
@@ -143,13 +144,19 @@ export function ChangelogList() {
                 >
                   <span
                     data-testid="changelog-date"
-                    className="data-value pt-px text-xs whitespace-nowrap text-zinc-500"
+                    className="data-value text-muted pt-px text-xs whitespace-nowrap"
                   >
-                    {showDate ? entry.date : ""}
+                    {showDate
+                      ? formatDisplayDate(entry.date, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : ""}
                   </span>
                   <span
                     aria-hidden="true"
-                    className="mt-[0.42rem] h-1.5 w-1.5 rounded-full bg-emerald-600"
+                    className="bg-accent mt-[0.42rem] h-1.5 w-1.5 rounded-full"
                   />
                   <span className="text-zinc-700">{entry.description}</span>
                 </div>
@@ -157,24 +164,29 @@ export function ChangelogList() {
             })}
           </div>
           {state.entries.length === 0 && (
-            <p className="text-sm text-zinc-500">No changelog entries yet.</p>
+            <p className="text-muted text-sm">No changelog entries yet.</p>
           )}
           {state.nextCursor && (
-            <button
-              type="button"
-              onPointerDown={(event) => {
-                if (event.pointerType === "mouse") prefetchMore();
-              }}
-              onClick={loadMore}
-              disabled={state.more.kind === "loading"}
-              className="button-secondary mt-4"
-            >
-              {state.more.kind === "loading"
-                ? "Loading…"
-                : state.more.kind === "error"
-                  ? "Retry"
-                  : "Load more"}
-            </button>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onPointerDown={(event) => {
+                  if (event.pointerType === "mouse") prefetchMore();
+                }}
+                onClick={loadMore}
+                aria-disabled={state.more.kind === "loading" || undefined}
+                className="button-secondary"
+              >
+                {state.more.kind === "loading"
+                  ? "Loading…"
+                  : state.more.kind === "error"
+                    ? "Retry"
+                    : "Load more"}
+              </button>
+              <p role="status" className="text-muted text-sm">
+                {state.more.kind === "error" && "Could not load more entries."}
+              </p>
+            </div>
           )}
         </>
       ) : state.kind === "error" ? (
@@ -190,7 +202,7 @@ export function ChangelogList() {
         </div>
       ) : (
         <p
-          className="flex min-h-28 items-center justify-center text-sm text-zinc-500"
+          className="text-muted flex min-h-28 items-center justify-center text-sm"
           role="status"
         >
           {state.kind === "loading"

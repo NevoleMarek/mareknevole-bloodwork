@@ -183,4 +183,34 @@ describe("HealthGrid", () => {
       "/api/dashboard/health?period=ALL",
     );
   });
+
+  it("announces a period reload through a status region that stays mounted", async () => {
+    let resolveYear: (response: Response) => void = () => {};
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(health))
+      .mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          resolveYear = resolve;
+        }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const user = userEvent.setup();
+
+    render(<HealthGridContent requestedPeriod={null} />);
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent(
+      "Health trends load as you approach this section.",
+    );
+    enterViewport();
+    expect(await screen.findByText("Weight")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "1Y" }));
+    expect(screen.getByRole("status")).toBe(status);
+    expect(status).toHaveTextContent("Loading 1Y health trends…");
+
+    await act(async () => resolveYear(jsonResponse(health)));
+    expect(await screen.findByText("Weight")).toBeInTheDocument();
+    expect(status).toBeEmptyDOMElement();
+  });
 });

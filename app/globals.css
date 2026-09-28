@@ -5,7 +5,6 @@
   --background: #f3f7f5;
   --foreground: #17231f;
   --muted: #63706b;
-  --subtle: #85908c;
   --line: rgba(23, 35, 31, 0.1);
   --line-strong: rgba(23, 35, 31, 0.18);
   --surface: #ffffff;
@@ -28,6 +27,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -106,7 +107,7 @@ label[class*="cursor-pointer"]:active {
 }
 
 :where(a, button, input, select, textarea, [role="button"]):focus-visible {
-  outline: 3px solid rgba(20, 119, 95, 0.28);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
@@ -136,47 +137,49 @@ table {
   font-variant-numeric: tabular-nums;
 }
 
-.eyebrow {
-  color: var(--accent);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.13em;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
+@layer components {
+  .eyebrow {
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
 
-.section-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.125rem;
-}
+  .section-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.125rem;
+  }
 
-.section-heading h2 {
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  font-weight: 650;
-  letter-spacing: -0.035em;
-  line-height: 1.05;
-}
+  .section-heading h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 650;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+  }
 
-.section-heading p {
-  color: var(--muted);
-  font-size: 0.8125rem;
-}
+  .section-heading p {
+    color: var(--muted);
+    font-size: 0.8125rem;
+  }
 
-.surface {
-  border: 1px solid var(--line);
-  border-radius: 1.5rem;
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-}
+  .surface {
+    border: 1px solid var(--line);
+    border-radius: 1.5rem;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
 
-.surface-elevated {
-  border: 1px solid rgba(255, 255, 255, 0.68);
-  border-radius: 1.75rem;
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: var(--shadow-md);
+  .surface-elevated {
+    border: 1px solid rgba(255, 255, 255, 0.68);
+    border-radius: 1.75rem;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: var(--shadow-md);
+  }
 }
 
 .button-primary,
@@ -444,26 +447,30 @@ table {
   transform: translateY(0);
 }
 
-.biomarker-table tbody tr {
-  transition:
-    background-color var(--duration-control) var(--ease-out-strong),
-    box-shadow var(--duration-control) var(--ease-out-strong);
+@layer components {
+  .biomarker-table tbody tr {
+    transition:
+      background-color var(--duration-control) var(--ease-out-strong),
+      box-shadow var(--duration-control) var(--ease-out-strong);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .interactive-card {
+      transition:
+        transform var(--duration-state) var(--ease-out-strong),
+        border-color var(--duration-state) var(--ease-out-strong),
+        box-shadow var(--duration-state) var(--ease-out-strong);
+    }
+
+    .interactive-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(20, 119, 95, 0.2);
+      box-shadow: 0 14px 32px rgba(23, 35, 31, 0.09);
+    }
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .interactive-card {
-    transition:
-      transform var(--duration-state) var(--ease-out-strong),
-      border-color var(--duration-state) var(--ease-out-strong),
-      box-shadow var(--duration-state) var(--ease-out-strong);
-  }
-
-  .interactive-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(20, 119, 95, 0.2);
-    box-shadow: 0 14px 32px rgba(23, 35, 31, 0.09);
-  }
-
   .button-primary:hover {
     background: var(--accent-strong);
   }
@@ -492,124 +499,129 @@ table {
   }
 }
 
+@layer components {
+  @media (max-width: 639px) {
+    .section-heading {
+      align-items: start;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .biomarker-table,
+    .biomarker-table tbody {
+      display: block;
+    }
+
+    .biomarker-table thead {
+      display: none;
+    }
+
+    .biomarker-table tbody {
+      display: grid;
+      gap: 0.625rem;
+    }
+
+    .biomarker-table tbody tr {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 0.3rem 0.65rem;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: var(--surface);
+      padding: 0.85rem 0.95rem;
+    }
+
+    .biomarker-table tbody td {
+      padding: 0;
+    }
+
+    .biomarker-table tbody td:nth-child(1) {
+      grid-column: 3;
+      grid-row: 1;
+      justify-self: end;
+      margin-right: -0.5rem;
+    }
+
+    .biomarker-table tbody td:nth-child(2) {
+      grid-column: 1 / 3;
+      grid-row: 1;
+      overflow: hidden;
+      font-weight: 650;
+      text-overflow: ellipsis;
+    }
+
+    .biomarker-table tbody td:nth-child(3) {
+      grid-column: 1;
+      grid-row: 2;
+      font-size: 1rem;
+      font-weight: 650;
+    }
+
+    .biomarker-table tbody td:nth-child(4) {
+      grid-column: 3;
+      grid-row: 2;
+      text-align: right;
+    }
+
+    .biomarker-table tbody td:nth-child(4)::before {
+      content: "Reference ";
+      color: var(--muted);
+    }
+
+    .biomarker-table tbody td:nth-child(5) {
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    .supplement-table,
+    .supplement-table tbody {
+      display: block;
+    }
+
+    .supplement-table thead {
+      display: none;
+    }
+
+    .supplement-table tbody {
+      display: grid;
+      gap: 0.625rem;
+    }
+
+    .supplement-table tbody tr {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.3rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      padding: 0.9rem 1rem;
+    }
+
+    .supplement-table tbody td {
+      padding: 0;
+    }
+
+    .supplement-table tbody td:nth-child(1) {
+      font-weight: 650;
+    }
+
+    .supplement-table tbody td:nth-child(2) {
+      font-weight: 650;
+      text-align: right;
+    }
+
+    .supplement-table tbody td:nth-child(3)::before {
+      content: "Frequency · ";
+      color: var(--muted);
+    }
+
+    .supplement-table tbody td:nth-child(4) {
+      text-align: right;
+    }
+  }
+}
+
 @media (max-width: 639px) {
-  .section-heading {
-    align-items: start;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .biomarker-table,
-  .biomarker-table tbody {
-    display: block;
-  }
-
-  .biomarker-table thead {
-    display: none;
-  }
-
-  .biomarker-table tbody {
-    display: grid;
-    gap: 0.625rem;
-  }
-
-  .biomarker-table tbody tr {
-    display: grid;
-    grid-template-columns: 2.5rem minmax(0, 1fr) auto;
-    gap: 0.3rem 0.65rem;
-    align-items: center;
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    background: var(--surface);
-    padding: 0.85rem 0.95rem;
-  }
-
-  .biomarker-table tbody td {
-    padding: 0;
-  }
-
-  .biomarker-table tbody td:nth-child(1) {
-    grid-column: 1;
-    grid-row: 1;
-    margin-left: -0.5rem;
-  }
-
-  .biomarker-table tbody td:nth-child(2) {
-    grid-column: 2;
-    grid-row: 1;
-    overflow: hidden;
-    font-weight: 650;
-    text-overflow: ellipsis;
-  }
-
-  .biomarker-table tbody td:nth-child(3) {
-    grid-column: 3;
-    grid-row: 1;
-    font-size: 1rem;
-    font-weight: 650;
-  }
-
-  .biomarker-table tbody td:nth-child(4) {
-    grid-column: 3;
-    grid-row: 2;
-    text-align: right;
-  }
-
-  .biomarker-table tbody td:nth-child(4)::before {
-    content: "Range ";
-    color: var(--subtle);
-  }
-
-  .biomarker-table tbody td:nth-child(5) {
-    grid-column: 2;
-    grid-row: 2;
-  }
-
-  .supplement-table,
-  .supplement-table tbody {
-    display: block;
-  }
-
-  .supplement-table thead {
-    display: none;
-  }
-
-  .supplement-table tbody {
-    display: grid;
-    gap: 0.625rem;
-  }
-
-  .supplement-table tbody tr {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 0.3rem 1rem;
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    padding: 0.9rem 1rem;
-  }
-
-  .supplement-table tbody td {
-    padding: 0;
-  }
-
-  .supplement-table tbody td:nth-child(1) {
-    font-weight: 650;
-  }
-
-  .supplement-table tbody td:nth-child(2) {
-    font-weight: 650;
-    text-align: right;
-  }
-
-  .supplement-table tbody td:nth-child(3)::before {
-    content: "Frequency · ";
-    color: var(--subtle);
-  }
-
-  .supplement-table tbody td:nth-child(4) {
-    text-align: right;
-  }
-
   .admin-shell {
     padding-inline: 0.75rem;
   }
@@ -618,12 +630,6 @@ table {
     align-items: stretch;
     flex-direction: column;
     padding: 0.75rem;
-  }
-}
-
-@media (max-width: 359px) {
-  .hero-owner-link {
-    display: none;
   }
 }
 
@@ -704,7 +710,6 @@ table {
 @media (prefers-contrast: more) {
   :root {
     --muted: #3f4945;
-    --subtle: #515b57;
     --line: rgba(23, 35, 31, 0.3);
     --line-strong: rgba(23, 35, 31, 0.55);
   }

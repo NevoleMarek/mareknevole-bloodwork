@@ -39,7 +39,6 @@ export function MetricsSection({
       }),
     )
       .then((data) => {
-        if (data.points.length === 0) throw new Error("Trend is empty");
         setTrends((current) => ({
           ...current,
           [key]: { kind: "ready", points: data.points },
@@ -70,6 +69,8 @@ export function MetricsSection({
     loadTrend(key);
   }
 
+  const limitReached = selected.length >= MAX_SELECTED;
+
   return (
     <>
       <div className="grid grid-cols-1 gap-3 min-[370px]:grid-cols-2 md:grid-cols-4 md:gap-4">
@@ -82,10 +83,12 @@ export function MetricsSection({
             onClick={() => toggle(m.vocabularyKey)}
             type="button"
             aria-pressed={selected.includes(m.vocabularyKey)}
-            aria-label={`${m.label}: ${m.value} ${m.unit}. ${selected.includes(m.vocabularyKey) ? "Remove from trends" : "Add to trends"}`}
+            aria-disabled={
+              (limitReached && !selected.includes(m.vocabularyKey)) || undefined
+            }
             className={`min-w-0 rounded-3xl text-left ${
               selected.includes(m.vocabularyKey)
-                ? "[&>div]:border-emerald-600 [&>div]:shadow-[0_0_0_3px_rgba(20,119,95,0.1)]"
+                ? "[&>div]:border-accent [&>div]:shadow-[0_0_0_3px_rgba(20,119,95,0.1)]"
                 : ""
             }`}
           >
@@ -119,13 +122,16 @@ export function MetricsSection({
             <h3 className="text-sm font-semibold tracking-[-0.01em] text-zinc-800">
               All biomarkers
             </h3>
-            <p className="text-xs text-zinc-500">
-              Select up to {MAX_SELECTED} to compare
+            <p className="text-muted text-xs">
+              {limitReached
+                ? `${selected.length} of ${MAX_SELECTED} selected. Remove one to add another.`
+                : `Select up to ${MAX_SELECTED} to compare`}
             </p>
           </div>
           <BiomarkerTable
             metrics={nonFeatured}
             selected={selected}
+            limitReached={limitReached}
             onToggle={toggle}
             onIntent={preloadTrend}
           />

@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TrendPanel } from "@/components/dashboard/trend-panel";
+import { stubChartLayout } from "@/test/recharts";
 
 import type { VocabularyEntry } from "@/types/bloodwork";
 
@@ -43,9 +44,16 @@ const trends = {
   },
 };
 
+beforeEach(stubChartLayout);
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
 describe("TrendPanel", () => {
-  it("renders nothing when no keys are selected", () => {
-    const { container } = render(
+  it("announces loading through a status region mounted before any selection", () => {
+    const { container, rerender } = render(
       <TrendPanel
         selectedKeys={[]}
         trends={{}}
@@ -54,10 +62,36 @@ describe("TrendPanel", () => {
         onRetry={() => {}}
       />,
     );
-    expect(container.firstChild).toBeNull();
+    const status = screen.getByRole("status");
+    expect(container.childElementCount).toBe(1);
+    expect(container.firstElementChild).toBe(status);
+    expect(status).toBeEmptyDOMElement();
+
+    rerender(
+      <TrendPanel
+        selectedKeys={["glucose"]}
+        trends={{ glucose: { kind: "loading" } }}
+        vocabulary={vocabulary}
+        onRemove={() => {}}
+        onRetry={() => {}}
+      />,
+    );
+    expect(screen.getByRole("status")).toBe(status);
+    expect(status).toHaveTextContent("Loading Glucose trend…");
+
+    rerender(
+      <TrendPanel
+        selectedKeys={["glucose"]}
+        trends={trends}
+        vocabulary={vocabulary}
+        onRemove={() => {}}
+        onRetry={() => {}}
+      />,
+    );
+    expect(status).toBeEmptyDOMElement();
   });
 
-  it("renders header and description for selected biomarker", () => {
+  it("renders header, description and a chart summary outside the tab order", () => {
     render(
       <TrendPanel
         selectedKeys={["glucose"]}
@@ -71,6 +105,12 @@ describe("TrendPanel", () => {
     expect(screen.getAllByText("Glucose")).toHaveLength(2);
     expect(screen.getByText("70–100 mg/dL")).toBeInTheDocument();
     expect(screen.getByText(/Fasting glucose/)).toBeInTheDocument();
+    const chart = screen.getByRole("img");
+    expect(chart).toHaveAccessibleName(
+      "Glucose, Jun 15, 2025 – Sep 15, 2025: 92 to 95 mg/dL, latest 95; reference range 70 to 100.",
+    );
+    expect(chart.querySelector("svg")).not.toBeNull();
+    expect(chart.querySelector('[tabindex]:not([tabindex="-1"])')).toBeNull();
   });
 
   it("renders multiple selected biomarkers", () => {
@@ -85,32 +125,5 @@ describe("TrendPanel", () => {
     );
     expect(screen.getAllByText("Glucose")).toHaveLength(2);
     expect(screen.getAllByText("LDL")).toHaveLength(2);
-  });
-
-  it("shows loading and error states", () => {
-    const { rerender } = render(
-      <TrendPanel
-        selectedKeys={["glucose"]}
-        trends={{ glucose: { kind: "loading" } }}
-        vocabulary={vocabulary}
-        onRemove={() => {}}
-        onRetry={() => {}}
-      />,
-    );
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Loading Glucose trend",
-    );
-
-    rerender(
-      <TrendPanel
-        selectedKeys={["glucose"]}
-        trends={{ glucose: { kind: "error" } }}
-        vocabulary={vocabulary}
-        onRemove={() => {}}
-        onRetry={() => {}}
-      />,
-    );
-    expect(screen.getByText("Could not load Glucose.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
 });

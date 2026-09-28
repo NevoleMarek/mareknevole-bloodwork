@@ -1,6 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import * as Schema from "effect/Schema";
+import { HEALTH_METRIC_NAMES } from "@/lib/health-metrics";
 import {
   BiomarkerTrendRow,
   HealthMetricConfigRow,
@@ -85,10 +86,11 @@ export function mapSupplementChangelogRow(
 export function mapHealthMetricConfigRow(
   row: HealthMetricConfigRow,
 ): HealthMetricConfig {
+  const name = HEALTH_METRIC_NAMES.get(row.metric);
   return {
     metric: row.metric,
-    label: row.label,
-    unit: row.unit,
+    label: name?.label ?? row.label,
+    unit: name?.unit ?? row.unit,
     aggregation: row.aggregation,
     visible: row.visible === 1,
   };
@@ -445,7 +447,7 @@ export async function getVisibleHealthMetrics(
   const [metricResults, configResults] = await db.batch([
     metricsQuery,
     db.prepare(
-      "SELECT metric, label, unit, aggregation, visible FROM health_metric_config WHERE visible = 1 ORDER BY label",
+      "SELECT metric, label, unit, aggregation, visible FROM health_metric_config WHERE visible = 1",
     ),
   ]);
   return {
@@ -458,7 +460,9 @@ export async function getVisibleHealthMetrics(
         HealthMetricConfigRow,
         resultsOf("visible-health-config", configResults),
       )
-    ).map(mapHealthMetricConfigRow),
+    )
+      .map(mapHealthMetricConfigRow)
+      .sort((a, b) => a.label.localeCompare(b.label)),
   };
 }
 
@@ -467,12 +471,14 @@ export async function getHealthMetricConfigs(
 ): Promise<HealthMetricConfig[]> {
   const result = await db
     .prepare(
-      "SELECT metric, label, unit, aggregation, visible FROM health_metric_config ORDER BY label",
+      "SELECT metric, label, unit, aggregation, visible FROM health_metric_config",
     )
     .all<HealthMetricConfigRow>();
   const rows = await decodeRows(
     HealthMetricConfigRow,
     resultsOf("health-config", result),
   );
-  return rows.map(mapHealthMetricConfigRow);
+  return rows
+    .map(mapHealthMetricConfigRow)
+    .sort((a, b) => a.label.localeCompare(b.label));
 }

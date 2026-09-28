@@ -30,6 +30,7 @@ describe("BiomarkerTable", () => {
       <BiomarkerTable
         metrics={metrics}
         selected={[]}
+        limitReached={false}
         onToggle={() => {}}
         onIntent={() => {}}
       />,
@@ -40,17 +41,39 @@ describe("BiomarkerTable", () => {
     expect(screen.getByText("0.4 – 4")).toBeInTheDocument();
   });
 
-  it("highlights selected rows", () => {
-    const { container } = render(
+  it("marks the selected biomarker's toggle as pressed", () => {
+    render(
       <BiomarkerTable
         metrics={metrics}
         selected={["tsh"]}
+        limitReached={false}
         onToggle={() => {}}
         onIntent={() => {}}
       />,
     );
-    const rows = container.querySelectorAll("tbody tr");
-    expect(rows[0].className).toContain("bg-zinc-50");
-    expect(rows[1].className).not.toContain("bg-zinc-50");
+    expect(screen.getByRole("button", { name: /^TSH/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: /^Vitamin D/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("shows each status as visible text", () => {
+    render(
+      <BiomarkerTable
+        metrics={metrics}
+        selected={[]}
+        limitReached={false}
+        onToggle={() => {}}
+        onIntent={() => {}}
+      />,
+    );
+    for (const status of ["In range", "Low"]) {
+      const text = screen.getByText(status);
+      expect(text.closest('[aria-hidden="true"], .sr-only')).toBeNull();
+    }
   });
 });
