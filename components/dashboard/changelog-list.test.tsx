@@ -86,7 +86,7 @@ describe("ChangelogList", () => {
 
     expect(await screen.findAllByTestId("changelog-entry")).toHaveLength(3);
     const dates = screen.getAllByTestId("changelog-date");
-    expect(dates[0]).toHaveTextContent(entries[0].date);
+    expect(dates[0]).toHaveTextContent(/^Jun 15, 2025$/);
     expect(dates[1]).toHaveTextContent("");
     expect(requestPath(fetch.mock.calls[0][0])).toBe("/api/changelog");
   });
@@ -164,5 +164,47 @@ describe("ChangelogList", () => {
     await user.click(button);
     expect(await screen.findAllByTestId("changelog-entry")).toHaveLength(25);
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps Load more enabled while loading, ignores repeat presses, and announces a failure", async () => {
+    const firstEntries = makeEntries(20);
+    let respondMore: (response: Response) => void = () => {};
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          entries: firstEntries,
+          nextCursor: {
+            date: firstEntries[19].date,
+            createdAt: firstEntries[19].createdAt,
+            id: firstEntries[19].id,
+          },
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          respondMore = resolve;
+        }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const user = userEvent.setup();
+
+    render(<ChangelogList />);
+    enterViewport();
+    const button = await screen.findByRole("button", { name: "Load more" });
+    const status = screen.getByRole("status");
+    await user.click(button);
+
+    expect(button).toHaveTextContent("Loading…");
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(button).toBeEnabled();
+    await user.click(button);
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    await act(async () => respondMore(jsonResponse({ error: "boom" }, 500)));
+    expect(
+      await screen.findByRole("button", { name: "Retry" }),
+    ).not.toHaveAttribute("aria-disabled");
+    expect(status).toHaveTextContent("Could not load more entries.");
   });
 });

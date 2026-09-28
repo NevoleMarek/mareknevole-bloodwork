@@ -126,7 +126,8 @@ export function HealthGridContent({
   return (
     <div ref={section}>
       <div className="mb-4 flex justify-end">
-        <nav
+        <div
+          role="group"
           aria-label="Health history period"
           className="flex shrink-0 gap-0.5 rounded-full border border-zinc-900/10 bg-white/75 p-1 text-xs shadow-sm"
         >
@@ -141,14 +142,14 @@ export function HealthGridContent({
               aria-pressed={period === option}
               className={`flex min-h-9 min-w-11 items-center justify-center rounded-full px-3 font-semibold ${
                 period === option
-                  ? "bg-emerald-700 text-white shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-900"
+                  ? "bg-accent text-white shadow-sm"
+                  : "text-muted hover:text-zinc-900"
               }`}
             >
               {option}
             </button>
           ))}
-        </nav>
+        </div>
       </div>
       {state.kind === "ready" ? (
         <HealthCharts data={state.data} />
@@ -163,16 +164,21 @@ export function HealthGridContent({
             Retry
           </button>
         </div>
-      ) : (
-        <div
-          className="surface flex min-h-72 items-center justify-center p-6 text-sm text-zinc-500"
-          role="status"
-        >
-          {state.kind === "loading"
-            ? `Loading ${period} health trends…`
-            : "Health trends load as you approach this section."}
-        </div>
-      )}
+      ) : null}
+      <div
+        className={
+          state.kind === "idle" || state.kind === "loading"
+            ? "surface text-muted flex min-h-72 items-center justify-center p-6 text-sm"
+            : "sr-only"
+        }
+        role="status"
+      >
+        {state.kind === "loading"
+          ? `Loading ${period} health trends…`
+          : state.kind === "idle"
+            ? "Health trends load as you approach this section."
+            : ""}
+      </div>
     </div>
   );
 }

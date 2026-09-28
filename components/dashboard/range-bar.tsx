@@ -46,7 +46,7 @@ export function RangeBar({
           style={{ left: `${valuePos}%` }}
         />
       </div>
-      <div className="data-value mt-1.5 flex justify-between text-[0.65rem] text-zinc-500">
+      <div className="data-value text-muted mt-1.5 flex justify-between text-xs">
         <span>{min}</span>
         <span>{max}</span>
       </div>

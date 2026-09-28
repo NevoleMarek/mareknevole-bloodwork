@@ -236,13 +236,13 @@ describe("row mappers", () => {
     const row = {
       metric: "heart_rate",
       label: "Heart Rate",
-      unit: "bpm",
+      unit: "count/min",
       aggregation: "avg" as const,
       visible: 1,
     };
     expect(mapHealthMetricConfigRow(row)).toEqual({
       metric: "heart_rate",
-      label: "Heart Rate",
+      label: "Heart rate",
       unit: "bpm",
       aggregation: "avg",
       visible: true,

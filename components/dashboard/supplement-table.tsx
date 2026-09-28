@@ -17,7 +17,7 @@ export function SupplementTable({
         <table className="supplement-table w-full text-sm">
           <caption className="sr-only">Current active supplements</caption>
           <thead>
-            <tr className="text-[0.68rem] font-semibold tracking-[0.07em] text-zinc-500 uppercase">
+            <tr className="text-muted text-xs font-semibold tracking-[0.07em] uppercase">
               <th scope="col" className="pb-3 text-left">
                 Supplement
               </th>
@@ -34,11 +34,11 @@ export function SupplementTable({
           </thead>
           <tbody className="text-zinc-900">
             {supplements.map((s) => (
-              <tr key={s.id} className="border-t border-zinc-900/8">
-                <td className="py-3 font-medium">{s.name}</td>
-                <td className="data-value py-3 text-zinc-700">{s.dose}</td>
-                <td className="py-3 text-zinc-600">{s.frequency}</td>
-                <td className="data-value py-3 text-zinc-500">
+              <tr key={s.id} className="sm:border-t sm:border-zinc-900/8">
+                <td className="sm:py-3 sm:font-medium">{s.name}</td>
+                <td className="data-value text-zinc-700 sm:py-3">{s.dose}</td>
+                <td className="text-zinc-600 sm:py-3">{s.frequency}</td>
+                <td className="data-value text-muted sm:py-3">
                   {formatMonth(s.startedAt)}
                 </td>
               </tr>

@@ -71,16 +71,16 @@ export default async function Home() {
           className="pointer-events-none absolute -top-32 -right-20 h-80 w-80 rounded-full bg-emerald-200/30 blur-3xl"
         />
         <div className="relative">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="eyebrow">Personal health record</p>
-              <p className="mt-1 text-sm font-semibold tracking-[-0.01em] text-zinc-700">
-                BLOODWORK
+              <p className="mt-1 text-sm font-semibold tracking-[-0.01em] text-zinc-700 uppercase">
+                Bloodwork
               </p>
             </div>
             <a
               href="https://mareknevole.com"
-              className="hero-owner-link button-secondary gap-1.5"
+              className="button-secondary gap-1.5"
             >
               Marek Nevole <span aria-hidden="true">↗</span>
             </a>
@@ -99,9 +99,9 @@ export default async function Home() {
               </p>
             </div>
 
-            <dl className="grid grid-cols-2 gap-2 rounded-[1.35rem] border border-white/70 bg-white/68 p-2 shadow-sm backdrop-blur-xl">
+            <dl className="grid grid-cols-2 gap-2 rounded-3xl border border-white/70 bg-white/68 p-2 shadow-sm backdrop-blur-xl">
               <div className="rounded-2xl bg-white px-4 py-3.5">
-                <dt className="text-[0.68rem] font-semibold tracking-[0.08em] text-zinc-500 uppercase">
+                <dt className="text-muted text-xs font-semibold tracking-[0.08em] uppercase">
                   Latest panel
                 </dt>
                 <dd className="data-value mt-1.5 text-lg font-semibold tracking-tight text-zinc-950">
@@ -109,7 +109,7 @@ export default async function Home() {
                 </dd>
               </div>
               <div className="rounded-2xl bg-white px-4 py-3.5">
-                <dt className="text-[0.68rem] font-semibold tracking-[0.08em] text-zinc-500 uppercase">
+                <dt className="text-muted text-xs font-semibold tracking-[0.08em] uppercase">
                   Biomarkers
                 </dt>
                 <dd className="data-value mt-1.5 text-lg font-semibold tracking-tight text-zinc-950">
@@ -117,7 +117,7 @@ export default async function Home() {
                 </dd>
               </div>
               <div className="rounded-2xl bg-white px-4 py-3.5">
-                <dt className="text-[0.68rem] font-semibold tracking-[0.08em] text-zinc-500 uppercase">
+                <dt className="text-muted text-xs font-semibold tracking-[0.08em] uppercase">
                   Lab panels
                 </dt>
                 <dd className="data-value mt-1.5 text-lg font-semibold tracking-tight text-zinc-950">
@@ -125,7 +125,7 @@ export default async function Home() {
                 </dd>
               </div>
               <div className="rounded-2xl bg-white px-4 py-3.5">
-                <dt className="text-[0.68rem] font-semibold tracking-[0.08em] text-zinc-500 uppercase">
+                <dt className="text-muted text-xs font-semibold tracking-[0.08em] uppercase">
                   Active stack
                 </dt>
                 <dd className="data-value mt-1.5 text-lg font-semibold tracking-tight text-zinc-950">
@@ -163,7 +163,7 @@ export default async function Home() {
         <div className="section-heading">
           <div>
             <p className="eyebrow">Latest measurements</p>
-            <h2 className="mt-2">Blood markers</h2>
+            <h2 className="mt-2">Biomarkers</h2>
           </div>
           <p>{latestDate}</p>
         </div>
@@ -211,7 +211,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <footer className="mt-20 flex flex-col gap-2 border-t border-zinc-900/8 pt-6 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="text-muted mt-20 flex flex-col gap-2 border-t border-zinc-900/8 pt-6 text-xs sm:flex-row sm:items-center sm:justify-between">
         <p>Personal tracking, not clinical guidance.</p>
         <p>Built and maintained by Marek Nevole.</p>
       </footer>

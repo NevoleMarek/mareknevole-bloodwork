@@ -1,18 +1,5 @@
+import { statusLabel, statusStyle } from "@/components/dashboard/metric-card";
 import type { Status } from "@/types/bloodwork";
-
-const statusColor = {
-  normal: "bg-emerald-600",
-  borderline: "bg-amber-500",
-  high: "bg-rose-500",
-  low: "bg-sky-500",
-} satisfies Record<Status, string>;
-
-const statusLabel = {
-  normal: "In range",
-  borderline: "Borderline",
-  high: "High",
-  low: "Low",
-} satisfies Record<Status, string>;
 
 export type BiomarkerMetric = {
   vocabularyKey: string;
@@ -27,11 +14,13 @@ export type BiomarkerMetric = {
 export function BiomarkerTable({
   metrics,
   selected,
+  limitReached,
   onToggle,
   onIntent,
 }: {
   metrics: BiomarkerMetric[];
   selected: string[];
+  limitReached: boolean;
   onToggle: (key: string) => void;
   onIntent: (key: string, pointerType: string) => void;
 }) {
@@ -43,9 +32,9 @@ export function BiomarkerTable({
           trend.
         </caption>
         <thead>
-          <tr className="text-[0.68rem] font-semibold tracking-[0.07em] text-zinc-500 uppercase">
-            <th className="w-10 px-4 py-3 text-left font-semibold">
-              <span className="sr-only">Status</span>
+          <tr className="text-muted text-xs font-semibold tracking-[0.07em] uppercase">
+            <th className="w-px px-4 py-3 text-left font-semibold whitespace-nowrap">
+              Status
             </th>
             <th className="py-3 text-left font-semibold">Biomarker</th>
             <th className="py-3 text-left font-semibold">Value</th>
@@ -61,13 +50,13 @@ export function BiomarkerTable({
                 onIntent(m.vocabularyKey, event.pointerType)
               }
               onClick={() => onToggle(m.vocabularyKey)}
-              className={`cursor-pointer border-t border-zinc-100 ${
+              className={`cursor-pointer ${
                 selected.includes(m.vocabularyKey)
-                  ? "bg-zinc-50 shadow-[inset_3px_0_0_#14775f]"
+                  ? "bg-zinc-50 shadow-[inset_3px_0_0_var(--accent)]"
                   : "bg-white"
               }`}
             >
-              <td className="py-1 pl-2">
+              <td className="sm:py-1 sm:pl-2">
                 <button
                   type="button"
                   onClick={(event) => {
@@ -75,24 +64,28 @@ export function BiomarkerTable({
                     onToggle(m.vocabularyKey);
                   }}
                   aria-pressed={selected.includes(m.vocabularyKey)}
+                  aria-disabled={
+                    (limitReached && !selected.includes(m.vocabularyKey)) ||
+                    undefined
+                  }
                   aria-label={`${m.label}: ${m.value} ${m.unit}, ${statusLabel[m.status]}. ${selected.includes(m.vocabularyKey) ? "Remove from trends" : "Add to trends"}`}
-                  className="flex h-10 w-10 items-center justify-center rounded-full"
+                  className="flex min-h-10 items-center rounded-full px-2"
                 >
                   <span
-                    aria-hidden="true"
-                    title={statusLabel[m.status]}
-                    className={`inline-block h-2 w-2 rounded-full ${statusColor[m.status]}`}
-                  />
+                    className={`rounded-full px-2 py-1 text-xs leading-none font-semibold whitespace-nowrap ${statusStyle[m.status]}`}
+                  >
+                    {statusLabel[m.status]}
+                  </span>
                 </button>
               </td>
-              <td className="py-2.5 text-sm font-medium">{m.label}</td>
-              <td className="data-value py-2.5 text-sm font-semibold">
+              <td className="text-sm sm:py-2.5 sm:font-medium">{m.label}</td>
+              <td className="data-value sm:py-2.5 sm:text-sm sm:font-semibold">
                 {m.value}
               </td>
-              <td className="data-value py-2.5 text-xs text-zinc-500">
+              <td className="data-value text-muted text-xs sm:py-2.5">
                 {m.min} – {m.max}
               </td>
-              <td className="py-2.5 pr-4 text-xs text-zinc-500">{m.unit}</td>
+              <td className="text-muted text-xs sm:py-2.5 sm:pr-4">{m.unit}</td>
             </tr>
           ))}
         </tbody>
